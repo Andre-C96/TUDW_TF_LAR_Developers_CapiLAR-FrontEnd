@@ -1,0 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-capilar-violet: #A35FDA; 
+  --color-capilar-peach: #F98D56;
+  --color-capilar-grey: #737373;
+
+  /* Gradient */
+  --background-image-capilar-gradient: linear-gradient(to right, var(--color-capilar-violet), var(--color-capilar-peach));
+  --background-image-capilar-gradient-reverse: linear-gradient(to right, var(--color-capilar-peach), var(--color-capilar-violet));
+
+  /* Tipography */
+  --font-sans: "Montserrat", sans-serif; 
+  --font-inter: "Inter", sans-serif;
+}
