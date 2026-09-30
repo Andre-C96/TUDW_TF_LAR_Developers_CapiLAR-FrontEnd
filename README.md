@@ -1,75 +1,118 @@
-# React + TypeScript + Vite
+# CapiLAR – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend web application for CapiLAR, a platform for the operational and technical management of hair salons and professional stylists.
 
-Currently, two official plugins are available:
+Final project of the Tecnicatura Universitaria en Desarrollo Web – Facultad de Informática, Universidad Nacional del Comahue (2026).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Team: LAR Developers**
+* Crespillo, Andrea
+* Navarrete, Ramiro Rafael
+* Parra Sanhueza, Linda Cristal
 
-## React Compiler
+## About the project
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Salons usually lack traceability of chemical treatments, accurate cost control of supplies, flexible recurring appointments, and objective hair diagnosis. CapiLAR addresses these problems with the following modules:
 
-## Expanding the ESLint configuration
+| Module | Description |
+| :--- | :--- |
+| **Scheduling & Appointments** | Availability based on service duration and professional schedules, single and recurring appointments, WhatsApp reminders to clients and a daily email agenda for professionals. |
+| **Technical Records & Treatment History** | Digital record of each treatment: colorimetry formulas, oxidant volumes, pose times, diagnostics and an evolutionary photo log. |
+| **Inventory Management** | Automatic stock deduction from the technical record, QR-based stock in/out, suppliers and delivery notes, low-stock alerts. |
+| **AI Hair Diagnosis Engine** | Assessment of damage level, porosity and previous chemical work to recommend services, home-care products and incompatibility alerts. |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+The project is developed with real hair professionals as test users, who provide feedback on requirements and screens.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Tech stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Layer | Technology |
+| :--- | :--- |
+| **Runtime / Build Tool** | Node.js, Vite |
+| **Library / Language** | React, TypeScript |
+| **Styling** | Tailwind CSS v4 |
+| **Routing** | React Router DOM |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Repositories
 
+CapiLAR is split into separate repositories:
+* **Backend:** NestJS + Prisma + MySQL
+* **Frontend (this repository):** Vite + React + Tailwind CSS
+* **Mobile:** React Native + Expo
+
+## Getting started
+
+### Prerequisites
+
+* Node.js LTS (20.x or higher) and npm
+* Git
+
+### Installation
+
+```bash
+git clone <repository-url>
+cd <repository-folder>
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+### Environment variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create a `.env` file in the project root (it is git-ignored and must never be committed). For Vite, custom variables must be prefixed with `VITE_`:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```env
+VITE_API_URL="http://localhost:3000"
 ```
+A `.env.example` file with the required variable names is kept in the repository as a reference.
+
+## Running the app
+
+```bash
+# development (watch mode with HMR)
+npm run dev
+
+# production build
+npm run build
+
+# preview production build locally
+npm run preview
+```
+
+The web application runs on `http://localhost:5173` by default.
+
+## Project structure
+
+* `src/components/` - Reusable UI elements (e.g., buttons, inputs) and layout components (e.g., Header).
+* `src/pages/` - Main route components (Landing, Dashboard, etc.).
+* `src/customHook/` - Custom React hooks for shared logic.
+* `src/assets/` - Static assets like images and global styles.
+
+## Git workflow
+
+* `main`: stable, deliverable versions. Protected: changes only arrive through a Pull Request.
+* `develop`: day-to-day integration branch. Default branch of the repository.
+* Feature branches are created from `develop`, one per Linear issue, using the branch name suggested by Linear (e.g. `username/pwa-165-implement-authentication`).
+* Pull Requests target `develop`. Include `Closes PWA-XXX` in the description so the Linear issue is closed automatically on merge.
+* When a set of features is ready to be delivered, `develop` is merged into `main` through a Pull Request.
+
+## Commit convention
+
+Commits are written in English following Conventional Commits:
+* `- Feat: add user registration form`
+* `- Fix: resolve responsive layout on mobile`
+* `- Chore: update dependencies or setup`
+* `- Docs: update README`
+
+## Project management
+
+Tasks are organized in Linear (team PWA LAR, project CapiLAR) as milestones (epics) with issues and checklists:
+* Core Setup & User Management
+* Scheduling & Appointments
+* Technical Records & Treatment History
+* Inventory Management
+* AI Hair Diagnosis Engine
+* Mobile App
+* Deployment & Environments
+
+## Status
+
+🚧 In development.
+
+*Trabajo Final 2026 – Tecnicatura Universitaria en Desarrollo Web – Facultad de Informática – Universidad Nacional del Comahue*
