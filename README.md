@@ -81,7 +81,7 @@ The web application runs on `http://localhost:5173` by default.
 
 * `src/components/` - Reusable UI elements (e.g., buttons, inputs) and layout components (e.g., Header).
 * `src/pages/` - Main route components (Landing, Dashboard, etc.).
-* `src/customHook/` - Custom React hooks for shared logic.
+* `src/customHooks/` - Custom React hooks for shared logic.
 * `src/assets/` - Static assets like images and global styles.
 
 ## Git workflow
