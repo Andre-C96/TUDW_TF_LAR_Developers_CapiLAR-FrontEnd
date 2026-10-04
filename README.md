@@ -55,12 +55,17 @@ npm install
 
 ### Environment variables
 
-Create a `.env` file in the project root (it is git-ignored and must never be committed). For Vite, custom variables must be prefixed with `VITE_`:
+Copy `.env.example` to `.env` in the project root and adjust the values if needed (`.env` is git-ignored and must never be committed):
+
+```bash
+cp .env.example .env
+```
+
+For Vite, custom variables must be prefixed with `VITE_`:
 
 ```env
 VITE_API_URL="http://localhost:3000"
 ```
-A `.env.example` file with the required variable names is kept in the repository as a reference.
 
 ## Running the app
 
