@@ -43,7 +43,7 @@ export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '' }: 
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
-        className={`relative w-full max-w-md bg-white rounded-3xl shadow-xl p-8 ${className}`}
+        className={`relative w-full max-w-md bg-white rounded-[6px] shadow-xl p-8 ${className}`}
         // Un click dentro de la caja no debe cerrar el modal
         onClick={(event) => event.stopPropagation()}
       >
