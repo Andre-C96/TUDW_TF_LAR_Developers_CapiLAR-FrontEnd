@@ -4,6 +4,9 @@ import { useActiveSection } from '../../customHooks/activeSection/useActiveSecti
 interface HeaderProps {
   onLoginClick?: () => void;
   onRegisterClick?: () => void;
+  // Nombre del usuario logueado: si viene, se muestra el saludo y "Cerrar sesión" en lugar de los botones de acceso
+  userName?: string;
+  onLogoutClick?: () => void;
 }
 
 // Anclas a las secciones de la landing (scroll suave, no cambian de ruta)
@@ -17,7 +20,7 @@ const navLinks = [
 // Fuera del componente para que no cambie en cada render (si no, el hook se reinicia siempre)
 const sectionIds = navLinks.map((link) => link.href.slice(1));
 
-export const Header = ({ onLoginClick, onRegisterClick }: HeaderProps) => {
+export const Header = ({ onLoginClick, onRegisterClick, userName, onLogoutClick }: HeaderProps) => {
   const activeId = useActiveSection(sectionIds);
 
   return (
@@ -54,12 +57,26 @@ export const Header = ({ onLoginClick, onRegisterClick }: HeaderProps) => {
 
       {/* Acciones */}
       <div className="flex items-center gap-3">
-        <Button variant="primario" className="text-sm" onClick={onRegisterClick}>
-          REGISTRARSE
-        </Button>
-        <Button variant="secundario" className="text-sm" onClick={onLoginClick}>
-          INICIAR SESIÓN
-        </Button>
+        {userName ? (
+          <>
+            {/* El saludo resalta más que la acción de salir */}
+            <span className="font-inter text-base xl:text-lg font-semibold">
+              Hola, <span className="bg-capilar-gradient bg-clip-text text-transparent">{userName}</span>
+            </span>
+            <Button variant="grey" className="text-xs px-3! py-1! border! shadow-none!" onClick={onLogoutClick}>
+              CERRAR SESIÓN
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="primario" className="text-sm" onClick={onRegisterClick}>
+              REGISTRARSE
+            </Button>
+            <Button variant="secundario" className="text-sm" onClick={onLoginClick}>
+              INICIAR SESIÓN
+            </Button>
+          </>
+        )}
       </div>
     </header>
   );

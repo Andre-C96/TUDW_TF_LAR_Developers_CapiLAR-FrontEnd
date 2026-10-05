@@ -5,7 +5,7 @@ import { Form, FormField } from '../form/form';
 import { Title } from '../title/title';
 
 export interface LoginCredentials {
-  identifier: string;
+  email: string;
   password: string;
 }
 
@@ -21,9 +21,11 @@ interface LoginFormProps {
 }
 
 interface FieldErrors {
-  identifier?: string;
+  email?: string;
   password?: string;
 }
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Botón con aspecto de link (no navega: ejecuta el callback)
 const linkClasses = 'font-semibold text-capilar-violet hover:underline';
@@ -36,7 +38,7 @@ export const LoginForm = ({
   onRegisterClick,
   onForgotPasswordClick,
 }: LoginFormProps) => {
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
@@ -44,12 +46,13 @@ export const LoginForm = ({
     event.preventDefault();
 
     const errors: FieldErrors = {};
-    if (!identifier.trim()) errors.identifier = 'Ingresá tu usuario o correo';
+    if (!email.trim()) errors.email = 'Ingresá tu correo electrónico';
+    else if (!EMAIL_REGEX.test(email.trim())) errors.email = 'Ingresá un correo válido';
     if (!password) errors.password = 'Ingresá tu contraseña';
     setFieldErrors(errors);
 
     if (Object.keys(errors).length > 0) return;
-    onSubmit({ identifier: identifier.trim(), password });
+    onSubmit({ email: email.trim().toLowerCase(), password });
   };
 
   return (
@@ -61,12 +64,13 @@ export const LoginForm = ({
 
       <Form onSubmit={handleSubmit} noValidate>
         <FormField
-          label="Usuario o correo"
+          label="Correo electrónico"
+          type="email"
           placeholder="ej. cliente@capilar.com"
-          autoComplete="username"
-          value={identifier}
-          onChange={(event) => setIdentifier(event.target.value)}
-          error={fieldErrors.identifier}
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          error={fieldErrors.email}
         />
         <FormField
           label="Contraseña"
