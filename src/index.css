@@ -16,3 +16,8 @@
   --font-sans: "Montserrat", sans-serif; 
   --font-inter: "Inter", sans-serif;
 }
+
+/* Scroll suave para los links del header (anclas #inicio, #servicios, etc.) */
+html {
+  scroll-behavior: smooth;
+}
