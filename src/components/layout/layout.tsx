@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../../context/auth/useAuth';
 import { AuthModal } from '../authModal/authModal';
@@ -15,11 +15,17 @@ export interface LayoutContext {
 // Estructura común de las páginas públicas: header fijo, contenido y footer
 export const Layout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const requestedView = (location.state as { authView?: AuthView } | null)?.authView;
   // Otra página puede abrir el modal al volver acá (ej. "Iniciar sesión" después de restablecer la contraseña)
-  const [authView, setAuthView] = useState<AuthView | null>(
-    () => (location.state as { authView?: AuthView } | null)?.authView ?? null,
-  );
+  const [authView, setAuthView] = useState<AuthView | null>(requestedView ?? null);
+
+  // El state queda guardado en el historial y sobrevive al recargar: se borra una vez usado
+  // para que el modal no vuelva a abrirse en cada recarga
+  useEffect(() => {
+    if (requestedView) navigate(location.pathname, { replace: true, state: null });
+  }, [requestedView, location.pathname, navigate]);
 
   return (
     <div className="flex min-h-screen flex-col">
