@@ -1,19 +1,17 @@
 import { Routes, Route } from 'react-router-dom'
-
+import { Layout } from './components/layout/layout'
+import { Home } from './pages/home/home'
+import { NotFound } from './pages/notFound/notFound'
 
 function App() {
   return (
     <Routes>
-      {/* Landing page */}
-      <Route path="/" element={
-        <>
-          <h1 className="text-capilar-violet font-bold text-3xl p-8">
-            ¡CapiLAR está listo para maquetar!
-          </h1>
-        </>
-      } />
+      {/* Páginas públicas con header y footer */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<Home />} />
+      </Route>
 
-
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
