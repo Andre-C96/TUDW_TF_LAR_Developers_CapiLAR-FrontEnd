@@ -2,9 +2,9 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 interface LoaderProps extends HTMLAttributes<HTMLDivElement> {
   size?: 'sm' | 'md' | 'lg';
-  // Texto debajo del spinner (opcional). Si no hay, se anuncia "Cargando..." solo para lectores de pantalla
+  // Texto debajo del spinner (opcional). 
   label?: ReactNode;
-  // Cubre toda la pantalla con un fondo semitransparente (carga de página)
+  // Cubre toda la pantalla con un fondo semitransparente
   fullScreen?: boolean;
 }
 
