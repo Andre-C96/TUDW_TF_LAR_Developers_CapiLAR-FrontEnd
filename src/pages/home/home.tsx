@@ -5,6 +5,7 @@ import { Button } from '../../components/button/button';
 import { Card } from '../../components/card/card';
 import type { LayoutContext } from '../../components/layout/layout';
 import { Title } from '../../components/title/title';
+import { useAuth } from '../../context/auth/useAuth';
 
 // Ícono de línea con el degradado de marca (cada uno necesita un id de degradado propio)
 const GradientIcon = ({ id, children }: { id: string; children: ReactNode }) => (
@@ -79,6 +80,7 @@ const ComingSoon = ({ children }: { children: ReactNode }) => (
 
 export const Home = () => {
   const { openAuth } = useOutletContext<LayoutContext>();
+  const { isAuthenticated, isCheckingSession } = useAuth();
 
   return (
     <>
@@ -121,19 +123,22 @@ export const Home = () => {
         <ComingSoon>Próximamente vas a encontrar acá nuestra dirección, horarios y redes.</ComingSoon>
       </HomeSection>
 
+      {/* CTA de registro: solo sin sesión (mientras se valida una sesión guardada tampoco, para que no aparezca y desaparezca) */}
       {/* borde con degradado (contenedor con degradado + caja interna) */}
-      <section className="bg-white px-6 pb-16">
-        <div className="mx-auto max-w-4xl rounded-[6px] bg-capilar-gradient p-[2px] shadow-md">
-          <div className="rounded-[4px] bg-white">
-            <div className="flex flex-col items-center justify-between gap-4 rounded-[4px] bg-capilar-violet/10 px-6 py-4 text-center md:flex-row md:text-left">
-              <h2 className="font-inter text-lg font-medium text-black">¿Listo para potenciar tu identidad?</h2>
-              <Button className="text-sm text-white! font-semibold! tracking-wider" onClick={() => openAuth('register')}>
-                REGISTRARSE
-              </Button>
+      {!isAuthenticated && !isCheckingSession && (
+        <section className="bg-white px-6 pb-16">
+          <div className="mx-auto max-w-4xl rounded-[6px] bg-capilar-gradient p-[2px] shadow-md">
+            <div className="rounded-[4px] bg-white">
+              <div className="flex flex-col items-center justify-between gap-4 rounded-[4px] bg-capilar-violet/10 px-6 py-4 text-center md:flex-row md:text-left">
+                <h2 className="font-inter text-lg font-medium text-black">¿Listo para potenciar tu identidad?</h2>
+                <Button className="text-sm text-white! font-semibold! tracking-wider" onClick={() => openAuth('register')}>
+                  REGISTRARSE
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   );
 };
