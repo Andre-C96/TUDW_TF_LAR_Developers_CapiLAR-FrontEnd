@@ -84,7 +84,7 @@ export const Home = () => {
     <>
       {/* Inicio: hero + features */}
       <section id="inicio">
-        {/* Hero: foto a lo ancho con el título centrado */}
+        {/* foto a lo ancho con el título centrado */}
         <div
           className="flex min-h-[80vh] items-center justify-center bg-cover bg-center px-6 pt-24 pb-12"
           style={{ backgroundImage: `url(${heroImage})` }}
@@ -106,22 +106,22 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* TODO: cards de servicios */}
+      {/* cards de servicios */}
       <HomeSection id="servicios" title="Servicios">
         <ComingSoon>Próximamente vas a ver acá los servicios disponibles.</ComingSoon>
       </HomeSection>
 
-      {/* TODO: foto y nombre de los profesionales */}
+      {/* foto y nombre de los profesionales */}
       <HomeSection id="nosotros" title="Nosotros">
         <ComingSoon>Próximamente vas a conocer a nuestro equipo de profesionales.</ComingSoon>
       </HomeSection>
 
-      {/* TODO: dirección, horario y redes */}
+      {/* dirección, horario y redes */}
       <HomeSection id="contacto" title="Contacto">
         <ComingSoon>Próximamente vas a encontrar acá nuestra dirección, horarios y redes.</ComingSoon>
       </HomeSection>
 
-      {/* CTA: borde con degradado (contenedor con degradado + caja interna) */}
+      {/* borde con degradado (contenedor con degradado + caja interna) */}
       <section className="bg-white px-6 pb-16">
         <div className="mx-auto max-w-4xl rounded-[6px] bg-capilar-gradient p-[2px] shadow-md">
           <div className="rounded-[4px] bg-white">
