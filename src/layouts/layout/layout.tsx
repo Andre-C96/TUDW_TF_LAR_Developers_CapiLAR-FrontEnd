@@ -16,6 +16,7 @@ export interface LayoutContext {
 
 // Secciones del cliente en el menú del saludo
 const clientMenu: UserMenuItem[] = [
+  { label: 'Reservar turno', to: '/reservar' },
   { label: 'Mis turnos', to: '/mis-turnos' },
   { label: 'Historial', to: '/historial' },
   { label: 'Mi perfil', to: '/mi-perfil' },
