@@ -1,33 +1,13 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useLocation, useOutletContext } from 'react-router-dom';
 import heroImage from '../../assets/hero.jpg';
 import { Button } from '../../components/button/button';
 import { Card } from '../../components/card/card';
-import type { LayoutContext } from '../../components/layout/layout';
+import { GradientIcon } from '../../components/gradientIcon/gradientIcon';
+import type { LayoutContext } from '../../layouts/layout/layout';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
-
-// Ícono de línea con el degradado de marca (cada uno necesita un id de degradado propio)
-const GradientIcon = ({ id, children }: { id: string; children: ReactNode }) => (
-  <svg
-    viewBox="0 0 24 24"
-    className="h-8 w-8"
-    fill="none"
-    stroke={`url(#${id})`}
-    strokeWidth={1.75}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <defs>
-      <linearGradient id={id} x1="0" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stopColor="var(--color-capilar-violet)" />
-        <stop offset="1" stopColor="var(--color-capilar-peach)" />
-      </linearGradient>
-    </defs>
-    {children}
-  </svg>
-);
 
 const features = [
   {
@@ -81,6 +61,12 @@ const ComingSoon = ({ children }: { children: ReactNode }) => (
 export const Home = () => {
   const { openAuth } = useOutletContext<LayoutContext>();
   const { isAuthenticated, isCheckingSession } = useAuth();
+  const { hash } = useLocation();
+
+  // Al llegar desde otra página con un link del header (ej. "/#servicios"), bajar a esa sección
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash]);
 
   return (
     <>
