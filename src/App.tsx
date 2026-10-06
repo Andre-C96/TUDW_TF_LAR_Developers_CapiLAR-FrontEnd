@@ -3,6 +3,7 @@ import { Layout } from './layouts/layout/layout'
 import { PanelLayout } from './layouts/panelLayout/panelLayout'
 import { ProtectedRoute } from './components/protectedRoute/protectedRoute'
 import { AdminServices } from './pages/adminServices/adminServices'
+import { Agenda } from './pages/agenda/agenda'
 import { Booking } from './pages/booking/booking'
 import { ComingSoon } from './pages/comingSoon/comingSoon'
 import { Home } from './pages/home/home'
@@ -35,7 +36,7 @@ function App() {
           <Route path="/panel" element={<Panel />} />
 
           <Route element={<ProtectedRoute roles={['PROFESIONAL']} />}>
-            <Route path="/panel/agenda" element={<ComingSoon title="Agenda" />} />
+            <Route path="/panel/agenda" element={<Agenda />} />
             <Route path="/panel/perfil" element={<Profile />} />
           </Route>
 
