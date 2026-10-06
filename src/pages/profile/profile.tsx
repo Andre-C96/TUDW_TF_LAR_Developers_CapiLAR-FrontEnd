@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
+import { getProfessionalServicesRequest } from '../../api/professionals';
+import { formatDuration } from '../../api/services';
+import type { Servicio } from '../../api/services';
 import { deactivateMeRequest, updateProfileRequest } from '../../api/users';
 import type { UpdateProfileData } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
 import { Form, FormField } from '../../components/form/form';
+import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
@@ -32,7 +36,9 @@ const ReadOnlyField = ({ label, children }: { label: string; children: ReactNode
   </div>
 );
 
-// Perfil del usuario logueado: nombre, apellido y correo fijos; teléfono y alergias (solo CLIENTE) editables.
+// Perfil del usuario logueado (CLIENTE en /mi-perfil, PROFESIONAL en /panel/perfil): nombre, apellido y correo fijos;
+// teléfono editable; alergias editables solo para CLIENTE; legajo y servicios fijos solo para PROFESIONAL
+// (los servicios los asigna el ADMIN desde Usuarios).
 // La foto de perfil queda para cuando el back la guarde: por ahora, las iniciales.
 export const Profile = () => {
   const { user, token, updateUser, logout } = useAuth();
@@ -49,6 +55,27 @@ export const Profile = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Servicios asignados al profesional (null mientras cargan). Se mira el rol porque el back no borra el subtipo:
+  // alguien que fue profesional y ahora es cliente conserva su legajo
+  const legajo = user?.rol === 'PROFESIONAL' ? user.profesional?.legajo : undefined;
+  const [services, setServices] = useState<Servicio[] | null>(null);
+  const [servicesError, setServicesError] = useState('');
+
+  useEffect(() => {
+    if (!token || legajo === undefined) return;
+    let ignore = false;
+    getProfessionalServicesRequest(token, legajo)
+      .then((data) => {
+        if (!ignore) setServices(data);
+      })
+      .catch((err) => {
+        if (!ignore) setServicesError(err instanceof ApiError ? err.message : unexpectedError);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [token, legajo]);
 
   // ProtectedRoute ya garantiza la sesión
   if (!user || !token) return null;
@@ -111,7 +138,13 @@ export const Profile = () => {
   return (
     <section className="mx-auto flex max-w-3xl flex-col gap-8 px-6 pt-32 pb-16">
       <div className="flex flex-col gap-4">
-        <Breadcrumbs items={[{ label: 'Inicio', to: '/' }, { label: 'Mi perfil' }]} />
+        <Breadcrumbs
+          items={
+            isCliente
+              ? [{ label: 'Inicio', to: '/' }, { label: 'Mi perfil' }]
+              : [{ label: 'Panel', to: '/panel' }, { label: 'Perfil' }]
+          }
+        />
         <Title>Mi perfil</Title>
       </div>
 
@@ -148,6 +181,7 @@ export const Profile = () => {
           <ReadOnlyField label="Nombre">{user.nombre}</ReadOnlyField>
           <ReadOnlyField label="Apellido">{user.apellido}</ReadOnlyField>
           <ReadOnlyField label="Correo electrónico">{user.email}</ReadOnlyField>
+          {legajo !== undefined && <ReadOnlyField label="Legajo">{legajo}</ReadOnlyField>}
           <FormField
             label="Teléfono"
             type="tel"
@@ -188,6 +222,44 @@ export const Profile = () => {
           {isSaving ? 'Guardando...' : 'Guardar cambios'}
         </Button>
       </Form>
+
+      {/* Servicios del profesional: solo lectura, los asigna el ADMIN */}
+      {legajo !== undefined && (
+        <div className={sectionClasses}>
+          <div className="flex flex-col gap-1">
+            <Title as="h2" className="text-xl! md:text-2xl!">
+              Mis servicios
+            </Title>
+            <p className="font-inter text-sm text-capilar-grey">
+              Los servicios que podés realizar. Los asigna la administración del salón.
+            </p>
+          </div>
+
+          {servicesError ? (
+            <Alert variant="error" title="No se pudieron cargar tus servicios">
+              {servicesError}
+            </Alert>
+          ) : !services ? (
+            <Loader label="Cargando servicios..." className="py-4" />
+          ) : services.length === 0 ? (
+            <p className="font-inter text-sm text-capilar-grey">
+              Todavía no tenés servicios asignados. Pedíselos a la administración.
+            </p>
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {services.map((servicio) => (
+                <li
+                  key={servicio.id}
+                  className="rounded-full border border-capilar-violet/20 bg-capilar-violet/10 px-4 py-1.5 font-inter text-sm text-black"
+                >
+                  {servicio.tipo}
+                  <span className="text-capilar-grey"> · {formatDuration(servicio.tiempoDuracion)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Baja de la cuenta: al final y con confirmación */}
       <div className={`${sectionClasses} md:flex-row md:items-center md:justify-between`}>
