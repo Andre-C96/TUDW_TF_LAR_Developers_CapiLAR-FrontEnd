@@ -33,7 +33,7 @@ function App() {
 
           <Route element={<ProtectedRoute roles={['PROFESIONAL']} />}>
             <Route path="/panel/agenda" element={<ComingSoon title="Agenda" />} />
-            <Route path="/panel/perfil" element={<ComingSoon title="Perfil" />} />
+            <Route path="/panel/perfil" element={<Profile />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>
