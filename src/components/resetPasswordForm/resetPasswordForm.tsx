@@ -80,6 +80,7 @@ export const ResetPasswordForm = ({
             label="Nueva contraseña"
             type="password"
             autoComplete="new-password"
+            hint="Mínimo 8 caracteres, con al menos una letra y un número"
             value={contrasena}
             onChange={(event) => setContrasena(event.target.value)}
             error={fieldErrors.contrasena}
