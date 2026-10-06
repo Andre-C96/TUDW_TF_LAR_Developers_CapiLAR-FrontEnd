@@ -17,6 +17,27 @@
   --font-inter: "Inter", sans-serif;
 }
 
+/* Calendario (react-day-picker) con los colores de marca: día elegido con el degradado */
+.rdp-root {
+  --rdp-accent-color: var(--color-capilar-violet);
+  --rdp-accent-background-color: color-mix(in srgb, var(--color-capilar-violet) 12%, white);
+  --rdp-day_button-height: 40px;
+  --rdp-day_button-width: 40px;
+  font-family: var(--font-inter);
+  font-size: 0.875rem;
+}
+
+.rdp-root .rdp-selected .rdp-day_button {
+  border: none;
+  background-image: var(--background-image-capilar-gradient);
+  color: white;
+  font-weight: 600;
+}
+
+.rdp-root .rdp-caption_label {
+  text-transform: capitalize;
+}
+
 /* Scroll suave para los links del header (anclas #inicio, #servicios, etc.) */
 html {
   scroll-behavior: smooth;

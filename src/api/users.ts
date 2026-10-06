@@ -40,3 +40,10 @@ export const updateProfileRequest = (token: string, data: UpdateProfileData) =>
 // Baja lógica de la propia cuenta: el token actual deja de funcionar
 export const deactivateMeRequest = (token: string) =>
   apiFetch<{ message: string }>('/users/me', { method: 'DELETE', token });
+
+// Clientes activos para cargarles un turno desde la agenda (PROFESIONAL y ADMIN). Busca en nombre, apellido y email
+export const searchClientsRequest = (token: string, search: string) => {
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  return apiFetch<Usuario[]>(`/users/clientes?${params}`, { token });
+};
