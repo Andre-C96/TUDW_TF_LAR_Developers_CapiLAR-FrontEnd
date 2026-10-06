@@ -7,6 +7,7 @@ import { Home } from './pages/home/home'
 import { NotFound } from './pages/notFound/notFound'
 import { Panel } from './pages/panel/panel'
 import { ResetPassword } from './pages/resetPassword/resetPassword'
+import { Users } from './pages/users/users'
 
 function App() {
   return (
@@ -34,7 +35,7 @@ function App() {
           </Route>
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>
-            <Route path="/panel/usuarios" element={<ComingSoon title="Usuarios" />} />
+            <Route path="/panel/usuarios" element={<Users />} />
           </Route>
         </Route>
       </Route>
