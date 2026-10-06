@@ -62,7 +62,7 @@ const validate = (values: FormValues): FieldErrors => {
   if (!values.contrasena) errors.contrasena = 'Ingresá una contraseña';
   else if (values.contrasena.length < 8 || !/[A-Za-z]/.test(values.contrasena) || !/\d/.test(values.contrasena)) {
     errors.contrasena = 'Mínimo 8 caracteres, con al menos una letra y un número';
-  }
+  } else if (values.contrasena.length > 72) errors.contrasena = 'Máximo 72 caracteres';
 
   if (!values.confirmacion) errors.confirmacion = 'Repetí la contraseña';
   else if (values.confirmacion !== values.contrasena) errors.confirmacion = 'Las contraseñas no coinciden';
