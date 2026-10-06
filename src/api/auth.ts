@@ -13,6 +13,9 @@ export interface Usuario {
   rol: Rol;
   fechaAlta: string;
   fechaBaja: string | null;
+  // Subtipo según el rol: alergia del cliente, legajo del profesional (null si no lo tiene)
+  cliente?: { alergia: string | null } | null;
+  profesional?: { legajo: number } | null;
 }
 
 export interface AuthResponse {

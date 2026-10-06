@@ -27,3 +27,16 @@ export const deactivateUserRequest = (token: string, id: number) =>
 // Vuelve a dar de alta: el back borra fechaBaja
 export const reactivateUserRequest = (token: string, id: number) =>
   apiFetch<Usuario>(`/users/${id}/alta`, { method: 'PATCH', token });
+
+// Perfil propio (cualquier rol). Solo se mandan los campos a cambiar; alergia solo para CLIENTE ("" o null la borra)
+export interface UpdateProfileData {
+  telefono?: string;
+  alergia?: string | null;
+}
+
+export const updateProfileRequest = (token: string, data: UpdateProfileData) =>
+  apiFetch<Usuario>('/users/me', { method: 'PATCH', body: data, token });
+
+// Baja lógica de la propia cuenta: el token actual deja de funcionar
+export const deactivateMeRequest = (token: string) =>
+  apiFetch<{ message: string }>('/users/me', { method: 'DELETE', token });

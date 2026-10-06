@@ -16,6 +16,8 @@ export interface AuthContextValue {
   login: (email: string, contrasena: string) => Promise<Usuario>;
   register: (data: RegisterData) => Promise<Usuario>;
   logout: () => void;
+  // Reemplaza el usuario logueado por el que devuelve el backend después de editarlo (ej. PATCH /users/me)
+  updateUser: (user: Usuario) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
