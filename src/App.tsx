@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { Layout } from './layouts/layout/layout'
 import { PanelLayout } from './layouts/panelLayout/panelLayout'
 import { ProtectedRoute } from './components/protectedRoute/protectedRoute'
+import { AdminServices } from './pages/adminServices/adminServices'
 import { ComingSoon } from './pages/comingSoon/comingSoon'
 import { Home } from './pages/home/home'
 import { NotFound } from './pages/notFound/notFound'
@@ -37,6 +38,7 @@ function App() {
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>
             <Route path="/panel/usuarios" element={<Users />} />
+            <Route path="/panel/servicios" element={<AdminServices />} />
           </Route>
         </Route>
       </Route>

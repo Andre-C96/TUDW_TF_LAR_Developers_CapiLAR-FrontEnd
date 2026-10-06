@@ -5,6 +5,7 @@ import heroImage from '../../assets/hero.jpg';
 import { Button } from '../../components/button/button';
 import { Card } from '../../components/card/card';
 import { GradientIcon } from '../../components/gradientIcon/gradientIcon';
+import { ServicesCarousel } from '../../components/servicesCarousel/servicesCarousel';
 import type { LayoutContext } from '../../layouts/layout/layout';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
@@ -44,10 +45,28 @@ const features = [
 ];
 
 // Sección de la landing con título centrado (el id es el ancla del header)
-const HomeSection = ({ id, title, children }: { id: string; title: string; children: ReactNode }) => (
+// Con `boxed`, todo el contenido va en un recuadro con el degradado de marca suave, para darle identidad a la sección
+const HomeSection = ({
+  id,
+  title,
+  children,
+  boxed = false,
+}: {
+  id: string;
+  // Sin título, el contenido lo dibuja (ej. el carrusel de servicios, con los circulitos al lado)
+  title?: string;
+  children: ReactNode;
+  boxed?: boolean;
+}) => (
   <section id={id} className="bg-white px-6 py-16">
-    <div className="mx-auto flex max-w-6xl flex-col items-center gap-8">
-      <Title as="h2">{title}</Title>
+    <div
+      className={`mx-auto flex flex-col items-center gap-8 ${
+        boxed
+          ? 'max-w-7xl rounded-[6px] border border-capilar-violet/20 bg-linear-to-br from-capilar-violet/10 to-capilar-peach/15 px-6 py-12 shadow-md md:px-12'
+          : 'max-w-6xl'
+      }`}
+    >
+      {title && <Title as="h2">{title}</Title>}
       {children}
     </div>
   </section>
@@ -95,8 +114,8 @@ export const Home = () => {
       </section>
 
       {/* cards de servicios */}
-      <HomeSection id="servicios" title="Servicios">
-        <ComingSoon>Próximamente vas a ver acá los servicios disponibles.</ComingSoon>
+      <HomeSection id="servicios" boxed>
+        <ServicesCarousel title="Servicios" />
       </HomeSection>
 
       {/* foto y nombre de los profesionales */}
