@@ -22,11 +22,13 @@ export const SERVICIO_DURACION_MIN = 15;
 export const SERVICIO_DURACION_MAX = 7 * 60;
 export const SERVICIO_TIPO_MAX = 100;
 
-// Endpoints de servicios. Listar: cualquier usuario logueado; el resto, solo ADMIN.
+// Endpoints de servicios. El listado de activos es público; el resto, solo ADMIN.
 
-// Sin incluirBajas el back oculta los dados de baja 
-export const getServicesRequest = (token: string, incluirBajas = false) =>
-  apiFetch<Servicio[]>(`/servicios${incluirBajas ? '?incluirBajas=true' : ''}`, { token });
+// Servicios que ofrece el salón (solo activos), sin iniciar sesión
+export const getServicesRequest = () => apiFetch<Servicio[]>('/servicios');
+
+// Todos, incluidos los dados de baja (ADMIN), para poder volver a darlos de alta
+export const getAllServicesRequest = (token: string) => apiFetch<Servicio[]>('/servicios/todos', { token });
 
 export const createServiceRequest = (token: string, data: ServicioData) =>
   apiFetch<Servicio>('/servicios', { method: 'POST', body: data, token });

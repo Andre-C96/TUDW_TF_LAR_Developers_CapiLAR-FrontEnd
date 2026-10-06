@@ -7,7 +7,7 @@ import {
   deactivateServiceRequest,
   formatDuration,
   formatPrice,
-  getServicesRequest,
+  getAllServicesRequest,
   reactivateServiceRequest,
   updateServiceRequest,
 } from '../../api/services';
@@ -81,7 +81,7 @@ export const AdminServices = () => {
     if (!token) return;
     let ignore = false;
 
-    getServicesRequest(token, true)
+    getAllServicesRequest(token)
       .then((data) => {
         if (!ignore) setServices(data);
       })
