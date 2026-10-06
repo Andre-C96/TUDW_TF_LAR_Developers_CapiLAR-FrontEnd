@@ -6,6 +6,7 @@ import { ComingSoon } from './pages/comingSoon/comingSoon'
 import { Home } from './pages/home/home'
 import { NotFound } from './pages/notFound/notFound'
 import { Panel } from './pages/panel/panel'
+import { Profile } from './pages/profile/profile'
 import { ResetPassword } from './pages/resetPassword/resetPassword'
 import { Users } from './pages/users/users'
 
@@ -20,7 +21,7 @@ function App() {
         <Route element={<ProtectedRoute roles={['CLIENTE']} />}>
           <Route path="/mis-turnos" element={<ComingSoon title="Mis turnos" />} />
           <Route path="/historial" element={<ComingSoon title="Historial" />} />
-          <Route path="/mi-perfil" element={<ComingSoon title="Mi perfil" />} />
+          <Route path="/mi-perfil" element={<Profile />} />
         </Route>
       </Route>
 
