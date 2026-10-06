@@ -23,7 +23,7 @@ export const useActiveSection = (sectionIds: string[]) => {
     // Al llegar al final de la página se activa la última sección, aunque sea muy baja para cruzar la mitad
     const handleScroll = () => {
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-      if (atBottom) setActiveId(sectionIds[sectionIds.length - 1]);
+      if (atBottom && sectionIds.length > 0) setActiveId(sectionIds[sectionIds.length - 1]);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
 
