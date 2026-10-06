@@ -54,6 +54,19 @@ const workspaces: Workspace[] = [
       </GradientIcon>
     ),
   },
+  {
+    title: 'Servicios',
+    text: 'Cargá los servicios con su duración y precio.',
+    to: '/panel/servicios',
+    roles: ['ADMIN'],
+    icon: (
+      <GradientIcon id="icon-servicios">
+        <circle cx="6" cy="6" r="3" />
+        <circle cx="6" cy="18" r="3" />
+        <path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12" />
+      </GradientIcon>
+    ),
+  },
 ];
 
 // Inicio de profesional y admin: accesos a sus espacios de trabajo
