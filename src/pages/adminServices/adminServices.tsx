@@ -230,7 +230,7 @@ export const AdminServices = () => {
                 className={isInactive ? 'bg-gray-50 opacity-60' : ''}
                 trailing={
                   <>
-                    <span className="font-inter text-sm font-semibold text-black">{formatPrice(servicio.precio)}</span>
+                    <span className="font-inter text-sm font-semibold text-black">Desde {formatPrice(servicio.precio)}</span>
                     {isInactive ? (
                       <button
                         type="button"

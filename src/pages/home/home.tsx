@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation, useOutletContext } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import heroImage from '../../assets/hero.jpg';
 import { Button } from '../../components/button/button';
 import { Card } from '../../components/card/card';
@@ -81,6 +81,7 @@ export const Home = () => {
   const { openAuth } = useOutletContext<LayoutContext>();
   const { isAuthenticated, isCheckingSession } = useAuth();
   const { hash } = useLocation();
+  const navigate = useNavigate();
 
   // Al llegar desde otra página con un link del header (ej. "/#servicios"), bajar a esa sección
   useEffect(() => {
@@ -115,7 +116,11 @@ export const Home = () => {
 
       {/* cards de servicios */}
       <HomeSection id="servicios" boxed>
-        <ServicesCarousel title="Servicios" />
+        <ServicesCarousel
+          title="Servicios"
+          // Sin sesión, primero el login; con sesión (en la home solo hay clientes), a la reserva con el servicio elegido
+          onReserve={(servicio) => (isAuthenticated ? navigate(`/reservar?servicio=${servicio.id}`) : openAuth('login'))}
+        />
       </HomeSection>
 
       {/* foto y nombre de los profesionales */}

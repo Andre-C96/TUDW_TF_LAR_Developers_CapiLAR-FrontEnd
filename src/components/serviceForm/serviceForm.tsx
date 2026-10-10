@@ -96,7 +96,7 @@ export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, e
             error={fieldErrors.tiempoDuracion}
           />
           <FormField
-            label="Precio ($)"
+            label="Precio desde ($)"
             inputMode="decimal"
             value={precio}
             onChange={(event) => setPrecio(event.target.value)}

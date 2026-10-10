@@ -3,8 +3,11 @@ import { Layout } from './layouts/layout/layout'
 import { PanelLayout } from './layouts/panelLayout/panelLayout'
 import { ProtectedRoute } from './components/protectedRoute/protectedRoute'
 import { AdminServices } from './pages/adminServices/adminServices'
+import { Agenda } from './pages/agenda/agenda'
+import { Booking } from './pages/booking/booking'
 import { ComingSoon } from './pages/comingSoon/comingSoon'
 import { Home } from './pages/home/home'
+import { MyTurnos } from './pages/myTurnos/myTurnos'
 import { NotFound } from './pages/notFound/notFound'
 import { Panel } from './pages/panel/panel'
 import { Profile } from './pages/profile/profile'
@@ -20,7 +23,8 @@ function App() {
 
         {/* Secciones del cliente (menú del saludo) */}
         <Route element={<ProtectedRoute roles={['CLIENTE']} />}>
-          <Route path="/mis-turnos" element={<ComingSoon title="Mis turnos" />} />
+          <Route path="/reservar" element={<Booking />} />
+          <Route path="/mis-turnos" element={<MyTurnos />} />
           <Route path="/historial" element={<ComingSoon title="Historial" />} />
           <Route path="/mi-perfil" element={<Profile />} />
         </Route>
@@ -32,7 +36,7 @@ function App() {
           <Route path="/panel" element={<Panel />} />
 
           <Route element={<ProtectedRoute roles={['PROFESIONAL']} />}>
-            <Route path="/panel/agenda" element={<ComingSoon title="Agenda" />} />
+            <Route path="/panel/agenda" element={<Agenda />} />
             <Route path="/panel/perfil" element={<Profile />} />
           </Route>
 

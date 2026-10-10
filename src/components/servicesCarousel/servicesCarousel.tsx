@@ -3,6 +3,7 @@ import { ApiError } from '../../api/client';
 import { formatDuration, formatPrice, getServicesRequest } from '../../api/services';
 import type { Servicio } from '../../api/services';
 import { Alert } from '../alert/alert';
+import { Button } from '../button/button';
 import { Card } from '../card/card';
 import { Carousel } from '../carousel/carousel';
 import { Loader } from '../loader/loader';
@@ -11,12 +12,14 @@ import { Title } from '../title/title';
 interface ServicesCarouselProps {
   // Título de la sección: va a la altura de los circulitos de página del carrusel
   title: string;
+  // Botón Reservar de cada card (sin sesión, la home abre el login)
+  onReserve?: (servicio: Servicio) => void;
 }
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
-// Carrusel con los servicios activos del salón: nombre, duración y precio (el listado es público)
-export const ServicesCarousel = ({ title }: ServicesCarouselProps) => {
+// Carrusel con los servicios activos del salón: nombre, duración, precio y botón Reservar (el listado es público)
+export const ServicesCarousel = ({ title, onReserve }: ServicesCarouselProps) => {
   const [services, setServices] = useState<Servicio[] | null>(null);
   const [error, setError] = useState('');
 
@@ -99,9 +102,22 @@ export const ServicesCarousel = ({ title }: ServicesCarouselProps) => {
               </svg>
               {formatDuration(servicio.tiempoDuracion)}
             </span>
-            <span className="bg-capilar-gradient bg-clip-text text-2xl font-semibold text-transparent">
-              {formatPrice(servicio.precio)}
+            {/* Precio base: el final depende del largo y del estado del cabello */}
+            <span className="flex flex-col items-center">
+              <span className="text-xs uppercase tracking-widest text-capilar-grey">Desde</span>
+              <span className="bg-capilar-gradient bg-clip-text text-2xl font-semibold text-transparent">
+                {formatPrice(servicio.precio)}
+              </span>
             </span>
+            {onReserve && (
+              <Button
+                onClick={() => onReserve(servicio)}
+                aria-label={`Reservar ${servicio.tipo}`}
+                className="mt-2 text-sm text-white! font-semibold! uppercase tracking-wider"
+              >
+                Reservar
+              </Button>
+            )}
           </div>
         </Card>
       )}

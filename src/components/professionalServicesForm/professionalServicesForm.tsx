@@ -77,7 +77,7 @@ export const ProfessionalServicesForm = ({
                 />
                 <span className="flex-1 font-inter text-sm text-black">{servicio.tipo}</span>
                 <span className="shrink-0 font-inter text-xs text-capilar-grey">
-                  {formatDuration(servicio.tiempoDuracion)} · {formatPrice(servicio.precio)}
+                  {formatDuration(servicio.tiempoDuracion)} · Desde {formatPrice(servicio.precio)}
                 </span>
               </label>
             ))}
