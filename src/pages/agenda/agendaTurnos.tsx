@@ -360,13 +360,13 @@ const RescheduleForm = ({ token, legajo, turno, onSubmit, onCancel, isLoading, e
       )}
 
       <div className="flex gap-3">
-        <Button variant="grey" onClick={onCancel} disabled={isLoading} className="flex-1 py-3 uppercase">
+        <Button variant="grey" onClick={onCancel} disabled={isLoading} className="flex-1 py-2 text-sm uppercase">
           Volver
         </Button>
         <Button
           onClick={() => onSubmit(slot)}
           disabled={isLoading || !slot.hora}
-          className="flex-1 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex-1 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? 'Enviando...' : 'Proponer horario'}
         </Button>

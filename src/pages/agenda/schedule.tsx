@@ -308,14 +308,14 @@ const WorkHours = ({ token, legajo }: ScheduleProps) => {
           )}
           <div className="flex justify-end gap-3">
             {fechas.length > 0 && (
-              <Button type="button" variant="grey" onClick={() => setFechas([])} className="py-3 uppercase">
+              <Button type="button" variant="grey" onClick={() => setFechas([])} className="py-2 text-sm uppercase">
                 Limpiar
               </Button>
             )}
             <Button
               type="submit"
               disabled={isSaving}
-              className="px-8 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+              className="px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? 'Guardando...' : 'Agregar'}
             </Button>
@@ -447,7 +447,7 @@ const Blocks = ({ token, legajo }: ScheduleProps) => {
         <Button
           type="submit"
           disabled={isSaving}
-          className="self-end px-8 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+          className="self-end px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSaving ? 'Guardando...' : 'Bloquear'}
         </Button>

@@ -292,7 +292,7 @@ export const Profile = () => {
         <Button
           type="submit"
           disabled={!hasChanges || isSaving}
-          className="self-end px-8 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+          className="self-end px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSaving ? 'Guardando...' : 'Guardar cambios'}
         </Button>
@@ -382,7 +382,7 @@ export const Profile = () => {
             <Alert variant="error" title="No se pudo cargar el catálogo">
               {servicesSaveError}
             </Alert>
-            <Button variant="grey" onClick={closeServices} className="py-3 uppercase">
+            <Button variant="grey" onClick={closeServices} className="py-2 text-sm uppercase">
               Cerrar
             </Button>
           </div>
@@ -407,13 +407,13 @@ export const Profile = () => {
           )}
 
           <div className="flex gap-3">
-            <Button variant="grey" onClick={closeDeleteModal} disabled={isDeleting} className="flex-1 py-3 uppercase">
+            <Button variant="grey" onClick={closeDeleteModal} disabled={isDeleting} className="flex-1 py-2 text-sm uppercase">
               Cancelar
             </Button>
             <Button
               onClick={confirmDelete}
               disabled={isDeleting}
-              className="flex-1 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isDeleting ? 'Procesando...' : 'Dar de baja'}
             </Button>

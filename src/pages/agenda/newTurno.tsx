@@ -211,7 +211,7 @@ export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
           <Button
             onClick={save}
             disabled={isSaving}
-            className="shrink-0 px-8 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+            className="shrink-0 px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? 'Guardando...' : 'Cargar turno'}
           </Button>
