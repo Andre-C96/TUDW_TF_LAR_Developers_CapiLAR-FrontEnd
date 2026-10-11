@@ -2,19 +2,22 @@ import { apiFetch } from './client';
 import type { Servicio } from './services';
 import { MAX_DIAS_ANTICIPACION, addDays, toIsoDate } from './turnos';
 
-// Servicios que hace cada profesional. Ver: cualquier usuario logueado; asignar y quitar: solo ADMIN.
+// Servicios que hace cada profesional. Ver: cualquier usuario logueado. Cada profesional elige los suyos del catálogo
+// del ADMIN (/me/servicios, solo PROFESIONAL).
 
-// Solo los servicios activos que tiene asignados
+// Solo los servicios activos que tiene
 export const getProfessionalServicesRequest = (token: string, legajo: number) =>
   apiFetch<Servicio[]>(`/profesionales/${legajo}/servicios`, { token });
 
-// 409 si ya lo tiene; si se lo habían quitado antes, se lo vuelve a asignar
-export const assignServiceRequest = (token: string, legajo: number, servicioId: number) =>
-  apiFetch<Servicio>(`/profesionales/${legajo}/servicios`, { method: 'POST', body: { servicioId }, token });
+export const getMyServicesRequest = (token: string) => apiFetch<Servicio[]>('/profesionales/me/servicios', { token });
+
+// 409 si ya lo tiene; si lo había quitado antes, lo vuelve a sumar
+export const addMyServiceRequest = (token: string, servicioId: number) =>
+  apiFetch<Servicio>('/profesionales/me/servicios', { method: 'POST', body: { servicioId }, token });
 
 // Baja lógica: los turnos ya reservados con ese servicio no se tocan
-export const removeServiceRequest = (token: string, legajo: number, servicioId: number) =>
-  apiFetch<{ message: string }>(`/profesionales/${legajo}/servicios/${servicioId}`, { method: 'DELETE', token });
+export const removeMyServiceRequest = (token: string, servicioId: number) =>
+  apiFetch<{ message: string }>(`/profesionales/me/servicios/${servicioId}`, { method: 'DELETE', token });
 
 // --- Profesionales, horarios de trabajo y bloqueos de agenda ---
 
@@ -69,7 +72,7 @@ export const bloqueoLocal = (iso: string) => iso.slice(0, 16);
 export const getProfessionalsRequest = (servicioId?: number) =>
   apiFetch<ProfesionalResumen[]>(servicioId ? `/profesionales?servicioId=${servicioId}` : '/profesionales');
 
-// Ver: cualquier usuario logueado. Cargar y quitar: el propio profesional o ADMIN.
+// Ver: cualquier usuario logueado. Cargar y quitar: el propio profesional.
 // Horarios entre dos fechas (incluidas, de a 31 días como máximo), por fecha y hora
 export const getAvailabilityRequest = (token: string, legajo: number, desde: string, hasta: string) =>
   apiFetch<Disponibilidad[]>(`/profesionales/${legajo}/disponibilidad?${new URLSearchParams({ desde, hasta })}`, { token });

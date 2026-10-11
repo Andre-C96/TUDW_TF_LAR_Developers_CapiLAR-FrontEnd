@@ -9,20 +9,12 @@ import {
   reactivateUserRequest,
   updateUserRoleRequest,
 } from '../../api/users';
-import {
-  assignServiceRequest,
-  getProfessionalServicesRequest,
-  removeServiceRequest,
-} from '../../api/professionals';
-import { getServicesRequest } from '../../api/services';
-import type { Servicio } from '../../api/services';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
 import { List, ListItem } from '../../components/list/list';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
-import { ProfessionalServicesForm } from '../../components/professionalServicesForm/professionalServicesForm';
 import { SearchBox } from '../../components/searchBox/searchBox';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
@@ -66,32 +58,6 @@ const TrashIcon = () => (
     className="h-5 w-5"
   >
     <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
-  </svg>
-);
-
-// Tijera con el degradado de marca; blanca al pasar el mouse (el botón onlyborder se llena con el degradado).
-// El trazo va por CSS porque el botón pone el texto transparente y currentColor no serviría.
-// El id del degradado tiene que ser único en la página.
-const ScissorsIcon = ({ id }: { id: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    className="h-4 w-4 group-hover:stroke-white!"
-    style={{ stroke: `url(#${id})` }}
-  >
-    <defs>
-      <linearGradient id={id} x1="0" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stopColor="var(--color-capilar-violet)" />
-        <stop offset="1" stopColor="var(--color-capilar-peach)" />
-      </linearGradient>
-    </defs>
-    <circle cx="6" cy="6" r="3" />
-    <circle cx="6" cy="18" r="3" />
-    <path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12" />
   </svg>
 );
 
@@ -163,12 +129,6 @@ export const Users = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  // Modal de servicios del profesional: opciones y asignados (null mientras cargan)
-  const [servicesFor, setServicesFor] = useState<Usuario | null>(null);
-  const [assignment, setAssignment] = useState<{ all: Servicio[]; assignedIds: number[] } | null>(null);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [assignError, setAssignError] = useState('');
-
   // Pide el listado al cambiar la búsqueda o el filtro (la búsqueda espera a que se deje de escribir)
   useEffect(() => {
     if (!token) return;
@@ -220,7 +180,7 @@ export const Users = () => {
     setSaveError('');
     try {
       if (pending.type === 'rol') {
-        // Se usa lo que devuelve el back: al pasar a PROFESIONAL trae su legajo nuevo (para asignarle servicios)
+        // Se usa lo que devuelve el back: al pasar a PROFESIONAL trae su legajo nuevo
         const updated = await updateUserRoleRequest(token, user.id, pending.rol);
         replaceUser(user.id, updated);
         toast.success('Rol actualizado', { description: `${fullName(user)} ahora es ${pending.rol}.` });
@@ -242,67 +202,6 @@ export const Users = () => {
   };
 
   const texts = pending && confirmTexts(pending);
-
-  // Abre el modal de servicios del profesional: pide en paralelo los servicios activos y los que ya tiene
-  const openServices = async (user: Usuario) => {
-    if (!token || !user.profesional) return;
-    const { legajo } = user.profesional;
-    setServicesFor(user);
-    setAssignment(null);
-    setAssignError('');
-    try {
-      const [all, assigned] = await Promise.all([
-        getServicesRequest(),
-        getProfessionalServicesRequest(token, legajo),
-      ]);
-      setAssignment({ all, assignedIds: assigned.map((servicio) => servicio.id) });
-    } catch (err) {
-      setAssignError(err instanceof ApiError ? err.message : unexpectedError);
-    }
-  };
-
-  const closeServices = () => {
-    if (isAssigning) return;
-    setServicesFor(null);
-  };
-
-  // Manda solo las diferencias: asigna los tildados nuevos y quita los destildados
-  const saveServices = async (selectedIds: number[]) => {
-    if (!token || !servicesFor?.profesional || !assignment) return;
-    const { legajo } = servicesFor.profesional;
-    const toAssign = selectedIds.filter((id) => !assignment.assignedIds.includes(id));
-    const toRemove = assignment.assignedIds.filter((id) => !selectedIds.includes(id));
-    if (toAssign.length === 0 && toRemove.length === 0) {
-      setServicesFor(null);
-      return;
-    }
-
-    setIsAssigning(true);
-    setAssignError('');
-    const results = await Promise.allSettled([
-      ...toAssign.map((id) => assignServiceRequest(token, legajo, id)),
-      ...toRemove.map((id) => removeServiceRequest(token, legajo, id)),
-    ]);
-    const failed = results.find((result) => result.status === 'rejected');
-
-    if (!failed) {
-      setIsAssigning(false);
-      setServicesFor(null);
-      toast.success('Servicios actualizados', { description: `Se guardaron los servicios de ${fullName(servicesFor)}.` });
-      return;
-    }
-
-    // Si algo falló, el formulario vuelve a mostrar lo que quedó guardado de verdad
-    const reason = failed.reason;
-    setAssignError(reason instanceof ApiError ? reason.message : unexpectedError);
-    try {
-      const assigned = await getProfessionalServicesRequest(token, legajo);
-      setAssignment({ ...assignment, assignedIds: assigned.map((servicio) => servicio.id) });
-    } catch {
-      // Se queda con el error de arriba
-    }
-    setIsAssigning(false);
-  };
 
   return (
     <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 pt-32 pb-16">
@@ -386,23 +285,8 @@ export const Users = () => {
                       {user.rol}
                     </span>
                   ) : (
-                    // Servicios (solo profesionales) · rol · eliminar. Sin el botón de servicios queda un hueco
-                    // del mismo ancho, así el selector de rol está alineado en todas las filas
+                    // Rol · eliminar
                     <>
-                      {user.rol === 'PROFESIONAL' && user.profesional ? (
-                        <Button
-                          variant="onlyborder"
-                          onClick={() => openServices(user)}
-                          aria-label={`Servicios de ${fullName(user)}`}
-                          title="Servicios"
-                          // Mismo alto que el selector de rol (34 px con el borde): el botón de adentro mide 30 px
-                          className="[&>button]:h-[30px] [&>button]:w-[30px]"
-                        >
-                          <ScissorsIcon id={`tijera-${user.id}`} />
-                        </Button>
-                      ) : (
-                        <span aria-hidden="true" className="w-[34px]" />
-                      )}
                       <span className="relative">
                         <select
                           value={user.rol}
@@ -465,48 +349,19 @@ export const Users = () => {
             )}
 
             <div className="flex gap-3">
-              <Button variant="grey" onClick={closeModal} disabled={isSaving} className="flex-1 py-3 uppercase">
+              <Button variant="grey" onClick={closeModal} disabled={isSaving} className="flex-1 py-2 text-sm uppercase">
                 Cancelar
               </Button>
               <Button
                 onClick={confirmAction}
                 disabled={isSaving}
-                className="flex-1 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? 'Guardando...' : texts.confirm}
               </Button>
             </div>
           </div>
         )}
-      </Modal>
-
-      {/* Servicios que hace un profesional */}
-      <Modal isOpen={servicesFor !== null} onClose={closeServices} ariaLabel="Servicios del profesional">
-        {servicesFor &&
-          (assignment ? (
-            <ProfessionalServicesForm
-              // Si cambian los asignados (ej. después de un error), el formulario arranca de nuevo con lo guardado
-              key={`${servicesFor.id}-${assignment.assignedIds.join(',')}`}
-              name={fullName(servicesFor)}
-              services={assignment.all}
-              assignedIds={assignment.assignedIds}
-              onSubmit={saveServices}
-              onCancel={closeServices}
-              isLoading={isAssigning}
-              error={assignError}
-            />
-          ) : assignError ? (
-            <div className="flex flex-col gap-6">
-              <Alert variant="error" title="No se pudieron cargar los servicios">
-                {assignError}
-              </Alert>
-              <Button variant="grey" onClick={closeServices} className="py-3 uppercase">
-                Cerrar
-              </Button>
-            </div>
-          ) : (
-            <Loader label="Cargando servicios..." className="py-8" />
-          ))}
       </Modal>
     </section>
   );

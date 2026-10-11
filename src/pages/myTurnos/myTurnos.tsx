@@ -115,7 +115,7 @@ export const MyTurnos = () => {
           </div>
           <Button
             onClick={() => navigate('/reservar')}
-            className="shrink-0 self-start px-6 py-3 text-white! font-bold! uppercase tracking-wider md:self-auto"
+            className="shrink-0 self-start px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider md:self-auto"
           >
             Reservar turno
           </Button>

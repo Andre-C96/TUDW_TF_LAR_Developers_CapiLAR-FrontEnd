@@ -195,7 +195,7 @@ export const AdminServices = () => {
           </div>
           <Button
             onClick={() => setPending({ type: 'crear' })}
-            className="shrink-0 self-start px-6 py-3 text-white! font-bold! uppercase tracking-wider md:self-auto"
+            className="shrink-0 self-start px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider md:self-auto"
           >
             Nuevo servicio
           </Button>
@@ -300,13 +300,13 @@ export const AdminServices = () => {
             )}
 
             <div className="flex gap-3">
-              <Button variant="grey" onClick={closeModal} disabled={isSaving} className="flex-1 py-3 uppercase">
+              <Button variant="grey" onClick={closeModal} disabled={isSaving} className="flex-1 py-2 text-sm uppercase">
                 Cancelar
               </Button>
               <Button
                 onClick={confirmAction}
                 disabled={isSaving}
-                className="flex-1 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? 'Guardando...' : texts.confirm}
               </Button>

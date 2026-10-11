@@ -41,7 +41,7 @@ export const updateProfileRequest = (token: string, data: UpdateProfileData) =>
 export const deactivateMeRequest = (token: string) =>
   apiFetch<{ message: string }>('/users/me', { method: 'DELETE', token });
 
-// Clientes activos para cargarles un turno desde la agenda (PROFESIONAL y ADMIN). Busca en nombre, apellido y email
+// Clientes activos para cargarles un turno desde la agenda (PROFESIONAL). Busca en nombre, apellido y email
 export const searchClientsRequest = (token: string, search: string) => {
   const params = new URLSearchParams();
   if (search) params.set('search', search);

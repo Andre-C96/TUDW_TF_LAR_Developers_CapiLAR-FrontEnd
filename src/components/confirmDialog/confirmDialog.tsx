@@ -103,13 +103,13 @@ const ConfirmContent = ({
       )}
 
       <div className="flex gap-3">
-        <Button type="button" variant="grey" onClick={onClose} disabled={isLoading} className="flex-1 py-3 uppercase">
+        <Button type="button" variant="grey" onClick={onClose} disabled={isLoading} className="flex-1 py-2 text-sm uppercase">
           Volver
         </Button>
         <Button
           type="submit"
           disabled={isLoading}
-          className="flex-1 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex-1 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? 'Procesando...' : confirmLabel}
         </Button>

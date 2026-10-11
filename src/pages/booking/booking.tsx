@@ -232,7 +232,7 @@ export const Booking = () => {
           <Button
             onClick={confirm}
             disabled={isSaving}
-            className="self-end px-8 py-3 text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
+            className="self-end px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? 'Reservando...' : 'Confirmar reserva'}
           </Button>
