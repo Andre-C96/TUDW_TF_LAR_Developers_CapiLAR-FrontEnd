@@ -1,5 +1,54 @@
 import { apiFetch } from './client';
 import type { Rol, Usuario } from './auth';
+import { addDays, toIsoDate } from './turnos';
+
+// --- Datos personales: mismas reglas en el registro y en el perfil ---
+
+// Teléfono: solo números, con característica y sin 0 ni 15 (ej. 2994567890), de 10 a 13 dígitos
+export const TELEFONO_MIN = 10;
+export const TELEFONO_MAX = 13;
+export const TELEFONO_HINT = 'Solo números, con característica y sin 0 ni 15. Ej.: 2994567890';
+
+// Para el onChange: descarta todo lo que no sea un número
+export const onlyDigits = (value: string) => value.replace(/\D/g, '').slice(0, TELEFONO_MAX);
+
+// Mensaje de error o undefined si está bien
+export const validateTelefono = (telefono: string) => {
+  if (!telefono) return 'Ingresá tu teléfono';
+  if (!/^\d+$/.test(telefono)) return 'Usá solo números';
+  if (telefono.length < TELEFONO_MIN || telefono.length > TELEFONO_MAX) {
+    return `Tiene que tener entre ${TELEFONO_MIN} y ${TELEFONO_MAX} números`;
+  }
+  return undefined;
+};
+
+// Alergias o sensibilidades (texto libre, opcional, solo CLIENTE)
+export const ALERGIA_MAX = 255;
+
+// Fecha de nacimiento "YYYY-MM-DD", opcional: desde 1900 y anterior a hoy (igual que el back)
+export const FECHA_NACIMIENTO_MIN = '1900-01-01';
+// Para el max del input: ayer
+export const fechaNacimientoMax = () => toIsoDate(addDays(new Date(), -1));
+
+export const validateFechaNacimiento = (fecha: string) => {
+  if (!fecha) return undefined;
+  if (fecha < FECHA_NACIMIENTO_MIN) return 'Tiene que ser posterior a 1900';
+  if (fecha >= toIsoDate(new Date())) return 'Tiene que ser anterior a hoy';
+  return undefined;
+};
+
+// Años cumplidos a hoy
+export const edad = (fechaNacimiento: string) => {
+  const [y, m, d] = fechaNacimiento.split('-').map(Number);
+  const today = new Date();
+  const cumplioEsteAnio = today.getMonth() + 1 > m || (today.getMonth() + 1 === m && today.getDate() >= d);
+  return today.getFullYear() - y - (cumplioEsteAnio ? 0 : 1);
+};
+
+export const formatEdad = (fechaNacimiento: string) => {
+  const anios = edad(fechaNacimiento);
+  return `${anios} ${anios === 1 ? 'año' : 'años'}`;
+};
 
 export interface UsersFilters {
   // Busca en nombre, apellido y email
@@ -32,6 +81,8 @@ export const reactivateUserRequest = (token: string, id: number) =>
 export interface UpdateProfileData {
   telefono?: string;
   alergia?: string | null;
+  // "YYYY-MM-DD"; null la borra
+  fechaNacimiento?: string | null;
 }
 
 export const updateProfileRequest = (token: string, data: UpdateProfileData) =>

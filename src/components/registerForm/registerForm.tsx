@@ -1,15 +1,27 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import {
+  ALERGIA_MAX,
+  FECHA_NACIMIENTO_MIN,
+  TELEFONO_HINT,
+  TELEFONO_MAX,
+  fechaNacimientoMax,
+  onlyDigits,
+  validateFechaNacimiento,
+  validateTelefono,
+} from '../../api/users';
 import { Button } from '../button/button';
 import { Form, FormField } from '../form/form';
 import { Title } from '../title/title';
 
-// Mismos nombres que Usuario del BE. 
+// Mismos nombres que Usuario del BE. Fecha de nacimiento ("YYYY-MM-DD") y alergia son opcionales
 export interface RegisterData {
   nombre: string;
   apellido: string;
   email: string;
   telefono: string;
+  fechaNacimiento?: string;
+  alergia?: string;
   contrasena: string;
 }
 
@@ -28,6 +40,8 @@ interface FormValues {
   apellido: string;
   email: string;
   telefono: string;
+  fechaNacimiento: string;
+  alergia: string;
   contrasena: string;
   confirmacion: string;
 }
@@ -39,13 +53,13 @@ const initialValues: FormValues = {
   apellido: '',
   email: '',
   telefono: '',
+  fechaNacimiento: '',
+  alergia: '',
   contrasena: '',
   confirmacion: '',
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Dígitos con +, espacios, guiones o paréntesis opcionales
-const PHONE_REGEX = /^\+?[\d\s()-]{8,20}$/;
 
 const validate = (values: FormValues): FieldErrors => {
   const errors: FieldErrors = {};
@@ -56,8 +70,13 @@ const validate = (values: FormValues): FieldErrors => {
   if (!values.email.trim()) errors.email = 'Ingresá tu correo';
   else if (!EMAIL_REGEX.test(values.email.trim())) errors.email = 'Ingresá un correo válido';
 
-  if (!values.telefono.trim()) errors.telefono = 'Ingresá tu teléfono';
-  else if (!PHONE_REGEX.test(values.telefono.trim())) errors.telefono = 'Ingresá un teléfono válido';
+  const telefonoError = validateTelefono(values.telefono);
+  if (telefonoError) errors.telefono = telefonoError;
+
+  const fechaError = validateFechaNacimiento(values.fechaNacimiento);
+  if (fechaError) errors.fechaNacimiento = fechaError;
+
+  if (values.alergia.trim().length > ALERGIA_MAX) errors.alergia = `Hasta ${ALERGIA_MAX} caracteres`;
 
   if (!values.contrasena) errors.contrasena = 'Ingresá una contraseña';
   else if (values.contrasena.length < 8 || !/[A-Za-z]/.test(values.contrasena) || !/\d/.test(values.contrasena)) {
@@ -98,7 +117,10 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error, onLoginClick 
       nombre: values.nombre.trim(),
       apellido: values.apellido.trim(),
       email: values.email.trim().toLowerCase(),
-      telefono: values.telefono.trim(),
+      telefono: values.telefono,
+      // Los opcionales vacíos no se mandan
+      fechaNacimiento: values.fechaNacimiento || undefined,
+      alergia: values.alergia.trim() || undefined,
       contrasena: values.contrasena,
     });
   };
@@ -122,12 +144,35 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error, onLoginClick 
           autoComplete="email"
           {...bind('email')}
         />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField
+            label="Teléfono"
+            type="tel"
+            inputMode="numeric"
+            placeholder="ej. 2994567890"
+            autoComplete="tel-national"
+            maxLength={TELEFONO_MAX}
+            hint={TELEFONO_HINT}
+            {...bind('telefono')}
+            // Solo deja escribir números
+            onChange={(event) => setValues((prev) => ({ ...prev, telefono: onlyDigits(event.target.value) }))}
+          />
+          <FormField
+            label="Fecha de nacimiento"
+            type="date"
+            autoComplete="bday"
+            min={FECHA_NACIMIENTO_MIN}
+            max={fechaNacimientoMax()}
+            hint="Opcional"
+            {...bind('fechaNacimiento')}
+          />
+        </div>
         <FormField
-          label="Teléfono"
-          type="tel"
-          placeholder="ej. 299 123 4567"
-          autoComplete="tel"
-          {...bind('telefono')}
+          label="Alergias"
+          placeholder="Ej.: amoníaco, tinturas con PPD"
+          maxLength={ALERGIA_MAX}
+          hint="Opcional. Nos ayuda a cuidarte en cada servicio."
+          {...bind('alergia')}
         />
         <FormField label="Contraseña" type="password" autoComplete="new-password" {...bind('contrasena')} />
         <FormField
