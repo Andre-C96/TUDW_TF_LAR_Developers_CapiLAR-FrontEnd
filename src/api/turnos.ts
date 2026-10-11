@@ -57,7 +57,7 @@ export interface CreateTurnoData {
   fecha: string;
   horaInicio: string;
   items: TurnoItem[];
-  // Solo PROFESIONAL o ADMIN, al cargar un turno a nombre de un cliente (nace CONFIRMADO)
+  // Solo PROFESIONAL, al cargar un turno a nombre de un cliente (nace CONFIRMADO)
   clienteId?: number;
 }
 
@@ -79,7 +79,7 @@ export interface HorariosLibresOptions {
 export const getHorariosLibresRequest = (token: string, fecha: string, items: TurnoItem[], options: HorariosLibresOptions = {}) =>
   apiFetch<HorariosLibres>('/turnos/horarios-libres', { method: 'POST', body: { fecha, items, ...options }, token });
 
-// CLIENTE: queda PENDIENTE. PROFESIONAL / ADMIN con clienteId: queda CONFIRMADO
+// CLIENTE: queda PENDIENTE. PROFESIONAL con clienteId: queda CONFIRMADO
 export const createTurnoRequest = (token: string, data: CreateTurnoData) =>
   apiFetch<Turno>('/turnos', { method: 'POST', body: data, token });
 

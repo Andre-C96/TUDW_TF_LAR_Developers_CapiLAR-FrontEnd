@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getProfessionalServicesRequest, getUpcomingWorkDatesRequest } from '../../api/professionals';
@@ -154,7 +155,13 @@ export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
           ) : !services.data ? (
             <Loader size="sm" className="items-start! py-2" />
           ) : services.data.length === 0 ? (
-            <p className="font-inter text-sm text-capilar-grey">Todavía no tenés servicios asignados. Pedíselos a la administración.</p>
+            <p className="font-inter text-sm text-capilar-grey">
+              Todavía no elegiste servicios. Sumalos desde{' '}
+              <Link to="/panel/perfil" className="font-semibold text-capilar-violet hover:underline">
+                Mi perfil
+              </Link>
+              .
+            </p>
           ) : (
             <div role="radiogroup" aria-label="Servicio" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {services.data.map((s) => (

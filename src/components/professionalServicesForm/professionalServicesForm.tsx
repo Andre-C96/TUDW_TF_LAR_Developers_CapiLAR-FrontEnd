@@ -7,13 +7,11 @@ import { Form } from '../form/form';
 import { Title } from '../title/title';
 
 interface ProfessionalServicesFormProps {
-  // Nombre del profesional, para el título
-  name: string;
-  // Servicios activos del salón (las opciones)
+  // Servicios activos del catálogo del salón (las opciones)
   services: Servicio[];
-  // Ids de los que ya tiene asignados
+  // Ids de los que ya tiene
   assignedIds: number[];
-  // Recibe los ids tildados; quien lo usa calcula qué asignar y qué quitar y llama a la API
+  // Recibe los ids tildados; quien lo usa calcula qué sumar y qué quitar y llama a la API
   onSubmit: (selectedIds: number[]) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -21,9 +19,8 @@ interface ProfessionalServicesFormProps {
   error?: string;
 }
 
-// Servicios que hace un profesional (ADMIN): lista de servicios activos para tildar o destildar
+// Servicios que hace el profesional logueado: lista del catálogo para tildar o destildar
 export const ProfessionalServicesForm = ({
-  name,
   services,
   assignedIds,
   onSubmit,
@@ -49,21 +46,20 @@ export const ProfessionalServicesForm = ({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 text-center">
-        <Title as="h2">Servicios</Title>
+        <Title as="h2">Mis servicios</Title>
         <p className="font-inter text-sm text-capilar-grey">
-          Elegí qué servicios hace <span className="font-semibold text-black">{name}</span>. Los clientes solo van a
-          poder reservarlos con quien los tenga asignados.
+          Elegí qué servicios hacés. Los clientes solo van a poder reservarlos con vos si los tenés tildados.
         </p>
       </div>
 
       <Form onSubmit={handleSubmit} noValidate>
         {services.length === 0 ? (
           <p className="text-center font-inter text-sm text-capilar-grey">
-            Todavía no hay servicios cargados. Crealos desde Panel › Servicios.
+            Todavía no hay servicios en el catálogo del salón. Los carga la administración.
           </p>
         ) : (
           <fieldset className="max-h-80 divide-y divide-gray-200 overflow-y-auto rounded-[6px] border border-gray-200">
-            <legend className="sr-only">Servicios de {name}</legend>
+            <legend className="sr-only">Servicios del catálogo</legend>
             {services.map((servicio) => (
               <label
                 key={servicio.id}
