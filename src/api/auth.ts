@@ -10,6 +10,8 @@ export interface Usuario {
   apellido: string;
   email: string;
   telefono: string | null;
+  // "YYYY-MM-DD" (opcional)
+  fechaNacimiento: string | null;
   rol: Rol;
   fechaAlta: string;
   fechaBaja: string | null;

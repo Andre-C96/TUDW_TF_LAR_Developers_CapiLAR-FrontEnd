@@ -5,7 +5,19 @@ import { ApiError } from '../../api/client';
 import { addMyServiceRequest, getMyServicesRequest, removeMyServiceRequest } from '../../api/professionals';
 import { formatDuration, getServicesRequest } from '../../api/services';
 import type { Servicio } from '../../api/services';
-import { deactivateMeRequest, updateProfileRequest } from '../../api/users';
+import {
+  ALERGIA_MAX,
+  FECHA_NACIMIENTO_MIN,
+  TELEFONO_HINT,
+  TELEFONO_MAX,
+  deactivateMeRequest,
+  fechaNacimientoMax,
+  formatEdad,
+  onlyDigits,
+  updateProfileRequest,
+  validateFechaNacimiento,
+  validateTelefono,
+} from '../../api/users';
 import type { UpdateProfileData } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
@@ -16,10 +28,6 @@ import { Modal } from '../../components/modal/modal';
 import { ProfessionalServicesForm } from '../../components/professionalServicesForm/professionalServicesForm';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
-
-// Mismo criterio que el registro
-const PHONE_REGEX = /^\+?[\d\s()-]{8,20}$/;
-const ALERGIA_MAX = 255;
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
@@ -54,7 +62,7 @@ const PencilIcon = () => (
 );
 
 // Perfil del usuario logueado (CLIENTE en /mi-perfil, PROFESIONAL en /panel/perfil): nombre, apellido y correo fijos;
-// teléfono editable; alergias editables solo para CLIENTE; legajo fijo y servicios editables solo para PROFESIONAL
+// teléfono y fecha de nacimiento (con la edad) editables; alergias editables solo para CLIENTE; legajo fijo y servicios editables solo para PROFESIONAL
 // (los elige del catálogo del salón).
 // La foto de perfil queda para cuando el back la guarde: por ahora, las iniciales.
 export const Profile = () => {
@@ -63,9 +71,11 @@ export const Profile = () => {
 
   const initialTelefono = user?.telefono ?? '';
   const initialAlergia = user?.cliente?.alergia ?? '';
+  const initialFechaNacimiento = user?.fechaNacimiento ?? '';
   const [telefono, setTelefono] = useState(initialTelefono);
   const [alergia, setAlergia] = useState(initialAlergia);
-  const [errors, setErrors] = useState<{ telefono?: string; alergia?: string }>({});
+  const [fechaNacimiento, setFechaNacimiento] = useState(initialFechaNacimiento);
+  const [errors, setErrors] = useState<{ telefono?: string; alergia?: string; fechaNacimiento?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
@@ -103,12 +113,17 @@ export const Profile = () => {
   // ProtectedRoute ya garantiza la sesión
   if (!user || !token) return null;
 
-  const hasChanges = telefono.trim() !== initialTelefono || (isCliente && alergia.trim() !== initialAlergia);
+  const telefonoChanged = telefono !== initialTelefono;
+  const fechaChanged = fechaNacimiento !== initialFechaNacimiento;
+  const hasChanges = telefonoChanged || fechaChanged || (isCliente && alergia.trim() !== initialAlergia);
 
   const validate = () => {
     const next: typeof errors = {};
-    if (!telefono.trim()) next.telefono = 'Ingresá tu teléfono';
-    else if (!PHONE_REGEX.test(telefono.trim())) next.telefono = 'Ingresá un teléfono válido';
+    // Solo si lo cambió: los teléfonos cargados antes pueden tener espacios o guiones y no traban el resto
+    const telefonoError = telefonoChanged ? validateTelefono(telefono) : undefined;
+    if (telefonoError) next.telefono = telefonoError;
+    const fechaError = validateFechaNacimiento(fechaNacimiento);
+    if (fechaError) next.fechaNacimiento = fechaError;
     if (alergia.trim().length > ALERGIA_MAX) next.alergia = `Hasta ${ALERGIA_MAX} caracteres`;
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -119,9 +134,10 @@ export const Profile = () => {
     setSaveError('');
     if (!validate()) return;
 
-    // Solo los campos que cambiaron; alergia vacía la borra
+    // Solo los campos que cambiaron; alergia o fecha vacías se borran
     const data: UpdateProfileData = {};
-    if (telefono.trim() !== initialTelefono) data.telefono = telefono.trim();
+    if (telefonoChanged) data.telefono = telefono;
+    if (fechaChanged) data.fechaNacimiento = fechaNacimiento || null;
     if (isCliente && alergia.trim() !== initialAlergia) data.alergia = alergia.trim() || null;
 
     setIsSaving(true);
@@ -130,6 +146,7 @@ export const Profile = () => {
       updateUser(updated);
       setTelefono(updated.telefono ?? '');
       setAlergia(updated.cliente?.alergia ?? '');
+      setFechaNacimiento(updated.fechaNacimiento ?? '');
       toast.success('Perfil actualizado', { description: 'Tus datos se guardaron correctamente.' });
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : unexpectedError);
@@ -223,7 +240,7 @@ export const Profile = () => {
         <Title>Mi perfil</Title>
       </div>
 
-      {/* Encabezado: iniciales (después, la foto), nombre y antigüedad */}
+      {/* Encabezado: iniciales (después, la foto), nombre, antigüedad y edad */}
       <div className={`${sectionClasses} items-center text-center md:flex-row md:text-left`}>
         <span
           aria-hidden="true"
@@ -238,6 +255,7 @@ export const Profile = () => {
           </p>
           <p className="font-inter text-sm text-capilar-grey">
             {isCliente ? 'Cliente' : 'Profesional'} desde {formatMonthYear(user.fechaAlta)}
+            {user.fechaNacimiento && ` · ${formatEdad(user.fechaNacimiento)}`}
           </p>
         </div>
       </div>
@@ -260,10 +278,29 @@ export const Profile = () => {
           <FormField
             label="Teléfono"
             type="tel"
-            autoComplete="tel"
+            inputMode="numeric"
+            autoComplete="tel-national"
+            maxLength={TELEFONO_MAX}
             value={telefono}
-            onChange={(event) => setTelefono(event.target.value)}
+            // Solo deja escribir números
+            onChange={(event) => setTelefono(onlyDigits(event.target.value))}
+            hint={TELEFONO_HINT}
             error={errors.telefono}
+          />
+          <FormField
+            label="Fecha de nacimiento"
+            type="date"
+            autoComplete="bday"
+            min={FECHA_NACIMIENTO_MIN}
+            max={fechaNacimientoMax()}
+            value={fechaNacimiento}
+            onChange={(event) => setFechaNacimiento(event.target.value)}
+            hint={
+              fechaNacimiento && !validateFechaNacimiento(fechaNacimiento)
+                ? `Tenés ${formatEdad(fechaNacimiento)}.`
+                : 'Opcional.'
+            }
+            error={errors.fechaNacimiento}
           />
         </div>
 
