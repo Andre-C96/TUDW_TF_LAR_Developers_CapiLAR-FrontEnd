@@ -19,7 +19,7 @@ export const addMyServiceRequest = (token: string, servicioId: number) =>
 export const removeMyServiceRequest = (token: string, servicioId: number) =>
   apiFetch<{ message: string }>(`/profesionales/me/servicios/${servicioId}`, { method: 'DELETE', token });
 
-// --- Profesionales, horarios de trabajo y bloqueos de agenda ---
+// --- Profesionales y horarios de trabajo ---
 
 export interface ProfesionalResumen {
   legajo: number;
@@ -42,31 +42,10 @@ export interface DisponibilidadData {
   horarioFin: string;
 }
 
-// Vacaciones, trámites, etc. El back guarda la hora local tal cual, como si fuera UTC
-// ("2026-10-10T09:00:00.000Z" son las 9 del salón): usar bloqueoLocal() para leerla
-export interface Bloqueo {
-  id: number;
-  fechaInicio: string;
-  fechaFin: string;
-  motivo: string | null;
-}
-
-export interface BloqueoData {
-  // "YYYY-MM-DDTHH:mm", hora local del salón
-  fechaInicio: string;
-  fechaFin: string;
-  motivo?: string;
-}
-
 // Mismas reglas que el back
 export const MAX_JORNADA_MINUTOS = 12 * 60;
 // Los horarios se consultan y se cargan de a 31 días
 export const MAX_DIAS_CONSULTA = 31;
-export const BLOQUEO_MOTIVO_MAX = 255;
-
-
-// "2026-10-10T09:00:00.000Z" -> "2026-10-10T09:00" (sin pasar por la zona horaria del navegador)
-export const bloqueoLocal = (iso: string) => iso.slice(0, 16);
 
 // Público: con servicioId, solo los que hacen ese servicio
 export const getProfessionalsRequest = (servicioId?: number) =>
@@ -99,14 +78,3 @@ export const removeAvailabilityRequest = (token: string, legajo: number, id: num
 // Baja lógica de todos los horarios de una fecha. 409 si hay turnos reservados ese día
 export const removeAvailabilityDateRequest = (token: string, legajo: number, fecha: string) =>
   apiFetch<{ message: string }>(`/profesionales/${legajo}/disponibilidad?fecha=${fecha}`, { method: 'DELETE', token });
-
-// Solo los que todavía no terminaron
-export const getBlocksRequest = (token: string, legajo: number) =>
-  apiFetch<Bloqueo[]>(`/profesionales/${legajo}/bloqueos`, { token });
-
-// 409 si hay turnos reservados en ese período
-export const createBlockRequest = (token: string, legajo: number, data: BloqueoData) =>
-  apiFetch<Bloqueo>(`/profesionales/${legajo}/bloqueos`, { method: 'POST', body: data, token });
-
-export const removeBlockRequest = (token: string, legajo: number, id: number) =>
-  apiFetch<{ message: string }>(`/profesionales/${legajo}/bloqueos/${id}`, { method: 'DELETE', token });
