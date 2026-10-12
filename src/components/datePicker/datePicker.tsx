@@ -24,6 +24,15 @@ const disabledDays = ({ min, max, enabledDates }: BaseProps) => {
   return disabled;
 };
 
+// Marca los días de enabledDates (ver .rdp-available en index.css)
+const availableDays = ({ enabledDates }: BaseProps) => {
+  if (!enabledDates) return undefined;
+  const enabled = new Set(enabledDates);
+  return { available: (date: Date) => enabled.has(toIsoDate(date)) };
+};
+
+const modifiersClassNames = { available: 'rdp-available' };
+
 interface DatePickerProps extends BaseProps {
   // "YYYY-MM-DD" elegido ("" si todavía no hay)
   value: string;
@@ -39,6 +48,8 @@ export const DatePicker = ({ value, onChange, className = '', ...rest }: DatePic
     // Tocar el día ya elegido no lo deselecciona
     onSelect={(date) => date && onChange(toIsoDate(date))}
     disabled={disabledDays(rest)}
+    modifiers={availableDays(rest)}
+    modifiersClassNames={modifiersClassNames}
     startMonth={rest.min}
     endMonth={rest.max}
     defaultMonth={value ? fromIsoDate(value) : rest.min}
@@ -63,6 +74,8 @@ export const MultiDatePicker = ({ value, onChange, maxSelected, className = '', 
     onSelect={(dates) => onChange((dates ?? []).map(toIsoDate).sort())}
     max={maxSelected}
     disabled={disabledDays(rest)}
+    modifiers={availableDays(rest)}
+    modifiersClassNames={modifiersClassNames}
     startMonth={rest.min}
     endMonth={rest.max}
     defaultMonth={rest.min}

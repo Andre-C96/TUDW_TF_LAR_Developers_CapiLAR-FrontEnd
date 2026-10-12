@@ -7,6 +7,7 @@
   --color-capilar-violet: #A35FDA; 
   --color-capilar-peach: #F98D56;
   --color-capilar-grey: #737373;
+  --color-capilar-plum: #8A2B5E;
 
   /* Gradient */
   --background-image-capilar-gradient: linear-gradient(to right, var(--color-capilar-violet), var(--color-capilar-peach));
@@ -32,6 +33,18 @@
   background-image: var(--background-image-capilar-gradient);
   color: white;
   font-weight: 600;
+}
+
+/* Días con horarios disponibles (prop enabledDates): en negrita y ciruela */
+.rdp-root .rdp-available:not(.rdp-selected):not(.rdp-disabled) .rdp-day_button {
+  color: var(--color-capilar-plum);
+  font-weight: 700;
+}
+
+/* Días que no se pueden elegir: en gris claro, sin la transparencia por defecto */
+.rdp-root .rdp-disabled:not(.rdp-selected) {
+  opacity: 1;
+  color: var(--color-gray-300);
 }
 
 .rdp-root .rdp-caption_label {
