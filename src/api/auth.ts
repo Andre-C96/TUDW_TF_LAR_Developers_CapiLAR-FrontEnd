@@ -15,9 +15,10 @@ export interface Usuario {
   rol: Rol;
   fechaAlta: string;
   fechaBaja: string | null;
-  // Subtipo según el rol: alergia del cliente, legajo del profesional (null si no lo tiene)
-  cliente?: { alergia: string | null } | null;
-  profesional?: { legajo: number } | null;
+  // Subtipo según el rol: alergia del cliente, legajo del profesional (null si no lo tiene).
+  // foto: nombre del archivo en el back o null (la imagen se pide con getUserPhotoRequest)
+  cliente?: { alergia: string | null; foto?: string | null } | null;
+  profesional?: { legajo: number; foto?: string | null } | null;
 }
 
 export interface AuthResponse {

@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchBlob } from './client';
 import type { Rol, Usuario } from './auth';
 import { addDays, toIsoDate } from './turnos';
 
@@ -87,6 +87,35 @@ export interface UpdateProfileData {
 
 export const updateProfileRequest = (token: string, data: UpdateProfileData) =>
   apiFetch<Usuario>('/users/me', { method: 'PATCH', body: data, token });
+
+// --- Foto de perfil (CLIENTE y PROFESIONAL; el ADMIN no tiene) ---
+
+// Mismas reglas que el back
+export const FOTO_MAX_BYTES = 2 * 1024 * 1024;
+export const FOTO_TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
+
+// Mensaje de error o undefined si está bien (el back igual revisa el formato real del archivo)
+export const validateFoto = (file: File) => {
+  if (!FOTO_TIPOS.includes(file.type)) return 'La foto tiene que ser JPG, PNG o WEBP';
+  if (file.size > FOTO_MAX_BYTES) return 'La foto no puede superar los 2 MB';
+};
+
+// La foto del perfil del rol actual: nombre del archivo o null
+export const userPhoto = (user: Usuario) =>
+  (user.rol === 'CLIENTE' ? user.cliente?.foto : user.rol === 'PROFESIONAL' ? user.profesional?.foto : null) ?? null;
+
+// Sube o reemplaza la foto propia; devuelve el usuario actualizado
+export const updatePhotoRequest = (token: string, file: File) => {
+  const body = new FormData();
+  body.append('foto', file);
+  return apiFetch<Usuario>('/users/me/foto', { method: 'PATCH', body, token });
+};
+
+// 404 si no tenía foto
+export const removePhotoRequest = (token: string) => apiFetch<Usuario>('/users/me/foto', { method: 'DELETE', token });
+
+// La propia, o la de cualquiera para PROFESIONAL y ADMIN. 404 si no tiene
+export const getUserPhotoRequest = (token: string, id: number) => apiFetchBlob(`/users/${id}/foto`, token);
 
 // Baja lógica de la propia cuenta: el token actual deja de funcionar
 export const deactivateMeRequest = (token: string) =>

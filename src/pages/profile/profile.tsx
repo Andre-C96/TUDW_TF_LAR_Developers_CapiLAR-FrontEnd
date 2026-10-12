@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { addMyServiceRequest, getMyServicesRequest, removeMyServiceRequest } from '../../api/professionals';
@@ -8,18 +8,24 @@ import type { Servicio } from '../../api/services';
 import {
   ALERGIA_MAX,
   FECHA_NACIMIENTO_MIN,
+  FOTO_TIPOS,
   TELEFONO_HINT,
   TELEFONO_MAX,
   deactivateMeRequest,
   fechaNacimientoMax,
   formatEdad,
   onlyDigits,
+  removePhotoRequest,
+  updatePhotoRequest,
   updateProfileRequest,
+  userPhoto,
   validateFechaNacimiento,
+  validateFoto,
   validateTelefono,
 } from '../../api/users';
 import type { UpdateProfileData } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
+import { Avatar } from '../../components/avatar/avatar';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
 import { Form, FormField } from '../../components/form/form';
@@ -61,10 +67,27 @@ const PencilIcon = () => (
   </svg>
 );
 
+// Cámara del botón de la foto, con el color del texto
+const CameraIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className="h-4 w-4"
+  >
+    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3Z" />
+    <circle cx="12" cy="13" r="3" />
+  </svg>
+);
+
 // Perfil del usuario logueado (CLIENTE en /mi-perfil, PROFESIONAL en /panel/perfil): nombre, apellido y correo fijos;
 // teléfono y fecha de nacimiento (con la edad) editables; alergias editables solo para CLIENTE; legajo fijo y servicios editables solo para PROFESIONAL
 // (los elige del catálogo del salón).
-// La foto de perfil queda para cuando el back la guarde: por ahora, las iniciales.
+// Foto de perfil con la cámara sobre el círculo (sin foto, las iniciales).
 export const Profile = () => {
   const { user, token, updateUser, logout } = useAuth();
   const isCliente = user?.rol === 'CLIENTE';
@@ -82,6 +105,10 @@ export const Profile = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Foto de perfil: el input de archivo está oculto y lo abre el botón de la cámara
+  const photoInput = useRef<HTMLInputElement>(null);
+  const [isPhotoSaving, setIsPhotoSaving] = useState(false);
 
   // Servicios del profesional (null mientras cargan). Se mira el rol porque el back no borra el subtipo:
   // alguien que fue profesional y ahora es cliente conserva su legajo
@@ -152,6 +179,43 @@ export const Profile = () => {
       setSaveError(err instanceof ApiError ? err.message : unexpectedError);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const foto = userPhoto(user);
+
+  // Sube o reemplaza la foto apenas se elige el archivo
+  const changePhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Para poder volver a elegir el mismo archivo
+    event.target.value = '';
+    if (!file) return;
+    const error = validateFoto(file);
+    if (error) {
+      toast.error('No se pudo cambiar la foto', { description: error });
+      return;
+    }
+
+    setIsPhotoSaving(true);
+    try {
+      updateUser(await updatePhotoRequest(token, file));
+      toast.success(foto ? 'Foto actualizada' : 'Foto cargada');
+    } catch (err) {
+      toast.error('No se pudo cambiar la foto', { description: err instanceof ApiError ? err.message : unexpectedError });
+    } finally {
+      setIsPhotoSaving(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    setIsPhotoSaving(true);
+    try {
+      updateUser(await removePhotoRequest(token));
+      toast('Foto quitada', { description: 'Se van a ver tus iniciales.' });
+    } catch (err) {
+      toast.error('No se pudo quitar la foto', { description: err instanceof ApiError ? err.message : unexpectedError });
+    } finally {
+      setIsPhotoSaving(false);
     }
   };
 
@@ -240,15 +304,29 @@ export const Profile = () => {
         <Title>Mi perfil</Title>
       </div>
 
-      {/* Encabezado: iniciales (después, la foto), nombre, antigüedad y edad */}
+      {/* Encabezado: foto (o iniciales) con la cámara para cambiarla, nombre, antigüedad y edad */}
       <div className={`${sectionClasses} items-center text-center md:flex-row md:text-left`}>
-        <span
-          aria-hidden="true"
-          className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-capilar-gradient font-inter text-3xl font-semibold text-white shadow-md"
-        >
-          {user.nombre[0]}
-          {user.apellido[0]}
-        </span>
+        <div className="relative shrink-0">
+          <Avatar
+            token={token}
+            userId={user.id}
+            nombre={user.nombre}
+            apellido={user.apellido}
+            foto={foto}
+            className={`h-24 w-24 text-3xl transition-opacity ${isPhotoSaving ? 'opacity-60' : ''}`}
+          />
+          <button
+            type="button"
+            onClick={() => photoInput.current?.click()}
+            disabled={isPhotoSaving}
+            aria-label={foto ? 'Cambiar foto' : 'Subir foto'}
+            title={foto ? 'Cambiar foto' : 'Subir foto'}
+            className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-capilar-grey shadow-md transition-colors hover:border-capilar-violet hover:text-capilar-violet disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <CameraIcon />
+          </button>
+          <input ref={photoInput} type="file" accept={FOTO_TIPOS.join(',')} onChange={changePhoto} className="hidden" />
+        </div>
         <div className="flex flex-col gap-1">
           <p className="font-inter text-2xl font-semibold text-black">
             {user.nombre} {user.apellido}
@@ -257,6 +335,18 @@ export const Profile = () => {
             {isCliente ? 'Cliente' : 'Profesional'} desde {formatMonthYear(user.fechaAlta)}
             {user.fechaNacimiento && ` · ${formatEdad(user.fechaNacimiento)}`}
           </p>
+          {foto ? (
+            <button
+              type="button"
+              onClick={removePhoto}
+              disabled={isPhotoSaving}
+              className="mt-1 self-center font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:text-red-500 disabled:opacity-50 md:self-start"
+            >
+              Quitar foto
+            </button>
+          ) : (
+            <p className="mt-1 font-inter text-xs text-capilar-grey">Tocá la cámara para subir una foto (JPG, PNG o WEBP, hasta 2 MB).</p>
+          )}
         </div>
       </div>
 
