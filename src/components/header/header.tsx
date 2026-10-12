@@ -3,6 +3,7 @@ import { Button } from '../button/button';
 import { UserMenu } from '../userMenu/userMenu';
 import type { UserMenuItem } from '../userMenu/userMenu';
 import { useActiveSection } from '../../customHooks/activeSection/useActiveSection';
+import { useScrolled } from '../../customHooks/scrolled/useScrolled';
 
 interface HeaderProps {
   onLoginClick?: () => void;
@@ -42,10 +43,16 @@ export const Header = ({
   const isHome = useLocation().pathname === '/';
   // Al cambiar la lista, el hook vuelve a observar (ej. al volver a la home desde "Mis turnos")
   const activeId = useActiveSection(showNav && isHome ? sectionIds : noSections);
+  // Al bajar, sombra violeta para que el header no se pierda sobre el fondo blanco
+  const scrolled = useScrolled();
   const logo = <img src="/capiLAR_logo1.png" alt="CapiLAR" className="h-8 w-auto" />;
 
   return (
-    <header className="fixed top-4 inset-x-4 z-50 flex items-center justify-between gap-5 px-5 py-2 bg-white/80 backdrop-blur-md rounded-[6px] shadow-md">
+    <header
+      className={`fixed top-4 inset-x-4 z-50 flex items-center justify-between gap-5 px-5 py-2 bg-white/80 backdrop-blur-md rounded-[6px] transition-shadow duration-300 ${
+        scrolled ? 'shadow-lg shadow-capilar-violet/30' : 'shadow-md'
+      }`}
+    >
       {/* Logo: en la home sube al inicio; en cualquier otra página vuelve a la ruta principal */}
       {showNav && isHome ? <a href="#inicio">{logo}</a> : <Link to="/">{logo}</Link>}
 
