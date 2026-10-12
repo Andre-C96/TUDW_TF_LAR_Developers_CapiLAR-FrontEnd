@@ -10,6 +10,8 @@ interface BaseProps {
   max?: Date;
   // Si se pasa, solo se pueden elegir estas fechas ("YYYY-MM-DD"), ej. los días con horario cargado
   enabledDates?: string[];
+  // Fechas resaltadas sin deshabilitar las demás, ej. los días que ya tienen horario (por defecto, enabledDates)
+  markedDates?: string[];
   className?: string;
 }
 
@@ -24,11 +26,11 @@ const disabledDays = ({ min, max, enabledDates }: BaseProps) => {
   return disabled;
 };
 
-// Marca los días de enabledDates (ver .rdp-available en index.css)
-const availableDays = ({ enabledDates }: BaseProps) => {
-  if (!enabledDates) return undefined;
-  const enabled = new Set(enabledDates);
-  return { available: (date: Date) => enabled.has(toIsoDate(date)) };
+// Resalta los días de markedDates o enabledDates (ver .rdp-available en index.css)
+const availableDays = ({ enabledDates, markedDates = enabledDates }: BaseProps) => {
+  if (!markedDates) return undefined;
+  const marked = new Set(markedDates);
+  return { available: (date: Date) => marked.has(toIsoDate(date)) };
 };
 
 const modifiersClassNames = { available: 'rdp-available' };
