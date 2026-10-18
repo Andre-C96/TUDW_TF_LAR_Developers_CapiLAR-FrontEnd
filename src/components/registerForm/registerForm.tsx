@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { validatePassword } from '../../api/auth';
 import {
   ALERGIA_MAX,
   FECHA_NACIMIENTO_MIN,
@@ -78,10 +79,8 @@ const validate = (values: FormValues): FieldErrors => {
 
   if (values.alergia.trim().length > ALERGIA_MAX) errors.alergia = `Hasta ${ALERGIA_MAX} caracteres`;
 
-  if (!values.contrasena) errors.contrasena = 'Ingresá una contraseña';
-  else if (values.contrasena.length < 8 || !/[A-Za-z]/.test(values.contrasena) || !/\d/.test(values.contrasena)) {
-    errors.contrasena = 'Mínimo 8 caracteres, con al menos una letra y un número';
-  } else if (values.contrasena.length > 72) errors.contrasena = 'Máximo 72 caracteres';
+  const contrasenaError = validatePassword(values.contrasena);
+  if (contrasenaError) errors.contrasena = contrasenaError;
 
   if (!values.confirmacion) errors.confirmacion = 'Repetí la contraseña';
   else if (values.confirmacion !== values.contrasena) errors.confirmacion = 'Las contraseñas no coinciden';

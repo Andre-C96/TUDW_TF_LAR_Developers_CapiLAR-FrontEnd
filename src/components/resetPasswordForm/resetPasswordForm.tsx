@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { PASSWORD_HINT, validatePassword } from '../../api/auth';
 import { Alert } from '../alert/alert';
 import { Button } from '../button/button';
 import { Form, FormField } from '../form/form';
@@ -38,12 +39,9 @@ export const ResetPasswordForm = ({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    // Mismas reglas que el registro (el backend pide entre 8 y 72 caracteres)
     const errors: FieldErrors = {};
-    if (!contrasena) errors.contrasena = 'Ingresá una contraseña';
-    else if (contrasena.length < 8 || !/[A-Za-z]/.test(contrasena) || !/\d/.test(contrasena)) {
-      errors.contrasena = 'Mínimo 8 caracteres, con al menos una letra y un número';
-    } else if (contrasena.length > 72) errors.contrasena = 'Máximo 72 caracteres';
+    const contrasenaError = validatePassword(contrasena);
+    if (contrasenaError) errors.contrasena = contrasenaError;
 
     if (!confirmacion) errors.confirmacion = 'Repetí la contraseña';
     else if (confirmacion !== contrasena) errors.confirmacion = 'Las contraseñas no coinciden';
@@ -80,7 +78,7 @@ export const ResetPasswordForm = ({
             label="Nueva contraseña"
             type="password"
             autoComplete="new-password"
-            hint="Mínimo 8 caracteres, con al menos una letra y un número"
+            hint={PASSWORD_HINT}
             value={contrasena}
             onChange={(event) => setContrasena(event.target.value)}
             error={fieldErrors.contrasena}

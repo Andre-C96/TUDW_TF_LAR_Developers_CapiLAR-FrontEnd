@@ -15,6 +15,8 @@ export interface AuthContextValue {
   // Devuelven el usuario logueado; lanzan ApiError con el mensaje del backend si fallan
   login: (email: string, contrasena: string) => Promise<Usuario>;
   register: (data: RegisterData) => Promise<Usuario>;
+  // Cambia la contraseña con la sesión iniciada y guarda la sesión nueva que devuelve el back
+  changePassword: (actual: string, nueva: string) => Promise<Usuario>;
   logout: () => void;
   // Reemplaza el usuario logueado por el que devuelve el backend después de editarlo (ej. PATCH /users/me)
   updateUser: (user: Usuario) => void;
