@@ -28,6 +28,7 @@ import { Alert } from '../../components/alert/alert';
 import { Avatar } from '../../components/avatar/avatar';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
+import { ChangePasswordForm } from '../../components/changePasswordForm/changePasswordForm';
 import { Form, FormField } from '../../components/form/form';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
@@ -87,9 +88,9 @@ const CameraIcon = () => (
 // Perfil del usuario logueado (CLIENTE en /mi-perfil, PROFESIONAL en /panel/perfil): nombre, apellido y correo fijos;
 // teléfono y fecha de nacimiento (con la edad) editables; alergias editables solo para CLIENTE; legajo fijo y servicios editables solo para PROFESIONAL
 // (los elige del catálogo del salón).
-// Foto de perfil con la cámara sobre el círculo (sin foto, las iniciales).
+// Foto de perfil con la cámara sobre el círculo (sin foto, las iniciales). Cambio de contraseña y baja de la cuenta al final.
 export const Profile = () => {
-  const { user, token, updateUser, logout } = useAuth();
+  const { user, token, updateUser, changePassword, logout } = useAuth();
   const isCliente = user?.rol === 'CLIENTE';
 
   const initialTelefono = user?.telefono ?? '';
@@ -101,6 +102,10 @@ export const Profile = () => {
   const [errors, setErrors] = useState<{ telefono?: string; alergia?: string; fechaNacimiento?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -269,6 +274,27 @@ export const Profile = () => {
     }
     setIsServicesOpen(false);
     toast.success('Servicios actualizados', { description: 'Los clientes ya pueden reservarlos con vos.' });
+  };
+
+  const closePasswordModal = () => {
+    if (isChangingPassword) return;
+    setIsPasswordOpen(false);
+    setPasswordError('');
+  };
+
+  // El contexto guarda la sesión nueva que devuelve el back (las de otros dispositivos se cierran)
+  const submitPassword = async (actual: string, nueva: string) => {
+    setIsChangingPassword(true);
+    setPasswordError('');
+    try {
+      await changePassword(actual, nueva);
+      setIsPasswordOpen(false);
+      toast.success('Contraseña actualizada', { description: 'Cerramos la sesión en tus otros dispositivos.' });
+    } catch (err) {
+      setPasswordError(err instanceof ApiError ? err.message : unexpectedError);
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const closeDeleteModal = () => {
@@ -477,6 +503,21 @@ export const Profile = () => {
         </div>
       )}
 
+      {/* Cambio de contraseña con la sesión iniciada */}
+      <div className={`${sectionClasses} md:flex-row md:items-center md:justify-between`}>
+        <div className="flex flex-col gap-1">
+          <p className="font-inter font-semibold text-black">Contraseña</p>
+          <p className="font-inter text-sm text-capilar-grey">Cambiala cuando quieras. Vas a necesitar la actual.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsPasswordOpen(true)}
+          className="shrink-0 rounded-lg border border-gray-300 bg-white px-4 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors hover:border-capilar-violet hover:text-capilar-violet"
+        >
+          Cambiar contraseña
+        </button>
+      </div>
+
       {/* Baja de la cuenta: al final y con confirmación */}
       <div className={`${sectionClasses} md:flex-row md:items-center md:justify-between`}>
         <div className="flex flex-col gap-1">
@@ -518,7 +559,16 @@ export const Profile = () => {
         )}
       </Modal>
 
-      <Modal isOpen={isDeleteOpen} onClose={closeDeleteModal} ariaLabel="Dar de baja mi cuenta">
+      <Modal isOpen={isPasswordOpen} onClose={closePasswordModal} ariaLabel="Cambiar contraseña">
+        <ChangePasswordForm
+          onSubmit={submitPassword}
+          onCancel={closePasswordModal}
+          isLoading={isChangingPassword}
+          error={passwordError}
+        />
+      </Modal>
+
+      <Modal isOpen={isDeleteOpen}onClose={closeDeleteModal} ariaLabel="Dar de baja mi cuenta">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2 text-center">
             <Title as="h2">Dar de baja mi cuenta</Title>

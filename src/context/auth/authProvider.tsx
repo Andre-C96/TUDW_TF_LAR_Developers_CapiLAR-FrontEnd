@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { loginRequest, logoutRequest, meRequest, registerRequest } from '../../api/auth';
+import { changePasswordRequest, loginRequest, logoutRequest, meRequest, registerRequest } from '../../api/auth';
 import type { AuthResponse, Rol, Usuario } from '../../api/auth';
 import { ApiError, setSessionHandlers } from '../../api/client';
 import type { AuthView } from '../../components/authModal/authModal';
@@ -86,6 +86,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // El registro ya devuelve el token: el usuario queda logueado
   const register = async (data: RegisterData) => startSession(await registerRequest(data));
 
+  // El back cierra la sesión en los otros dispositivos y devuelve una nueva para este
+  const changePassword = async (actual: string, nueva: string) => {
+    if (!token) throw new ApiError('Tu sesión se cerró. Iniciá sesión de nuevo.', 401);
+    return startSession(await changePasswordRequest(token, actual, nueva));
+  };
+
   const logout = () => {
     // Invalida el refresh token en el back; si falla (sin conexión), igual se cierra en este navegador
     logoutRequest().catch(() => {});
@@ -97,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isAuthenticated: user !== null, isCheckingSession, hasRole, login, register, logout, updateUser: setUser }}
+      value={{ user, token, isAuthenticated: user !== null, isCheckingSession, hasRole, login, register, changePassword, logout, updateUser: setUser }}
     >
       {children}
     </AuthContext.Provider>

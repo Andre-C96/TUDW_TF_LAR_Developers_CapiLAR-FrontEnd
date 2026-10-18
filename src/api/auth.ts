@@ -30,6 +30,16 @@ interface MessageResponse {
   message: string;
 }
 
+export const PASSWORD_HINT = 'Mínimo 8 caracteres, con al menos una letra y un número';
+
+// Mismas reglas que el back: 8 a 72 caracteres, con letra y número. Devuelve el error o undefined
+export const validatePassword = (contrasena: string) => {
+  if (!contrasena) return 'Ingresá una contraseña';
+  if (contrasena.length < 8 || !/[A-Za-z]/.test(contrasena) || !/\d/.test(contrasena)) return PASSWORD_HINT;
+  if (contrasena.length > 72) return 'Máximo 72 caracteres';
+  return undefined;
+};
+
 export const loginRequest = (email: string, contrasena: string) =>
   apiFetch<AuthResponse>('/auth/login', { method: 'POST', body: { email, contrasena } });
 
@@ -44,5 +54,10 @@ export const meRequest =(token: string) => apiFetch<Usuario>('/auth/me', { token
 export const forgotPasswordRequest = (email: string) =>
   apiFetch<MessageResponse>('/auth/forgot-password', { method: 'POST', body: { email } });
 
-export const resetPasswordRequest = (token: string, contrasena: string) =>
+// Con la sesión iniciada. Devuelve una sesión nueva (como el login) y cierra la de los otros dispositivos.
+// 400 si la actual no es correcta o la nueva es igual
+export const changePasswordRequest = (token: string, actual: string, nueva: string) =>
+  apiFetch<AuthResponse>('/auth/password', { method: 'PATCH', body: { actual, nueva }, token });
+
+export const resetPasswordRequest =(token: string, contrasena: string) =>
   apiFetch<MessageResponse>('/auth/reset-password', { method: 'POST', body: { token, contrasena } });
