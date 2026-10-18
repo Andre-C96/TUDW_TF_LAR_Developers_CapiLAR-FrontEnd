@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 // Lee un valor guardado; si no existe o no se puede leer (modo privado, JSON inválido) devuelve el inicial
-const readValue = <T,>(key: string, initialValue: T): T => {
+export const readValue = <T,>(key: string, initialValue: T): T => {
   try {
     const stored = localStorage.getItem(key);
     return stored !== null ? (JSON.parse(stored) as T) : initialValue;

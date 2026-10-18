@@ -36,7 +36,10 @@ export const loginRequest = (email: string, contrasena: string) =>
 export const registerRequest = (data: RegisterData) =>
   apiFetch<AuthResponse>('/auth/register', { method: 'POST', body: data });
 
-export const meRequest = (token: string) => apiFetch<Usuario>('/auth/me', { token });
+// Invalida el refresh token y borra la cookie (responde 200 aunque la sesión ya no exista)
+export const logoutRequest = () => apiFetch<MessageResponse>('/auth/logout', { method: 'POST' });
+
+export const meRequest =(token: string) => apiFetch<Usuario>('/auth/me', { token });
 
 export const forgotPasswordRequest = (email: string) =>
   apiFetch<MessageResponse>('/auth/forgot-password', { method: 'POST', body: { email } });
