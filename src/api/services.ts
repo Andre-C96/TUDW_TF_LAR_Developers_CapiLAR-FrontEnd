@@ -7,6 +7,8 @@ export interface Servicio {
   tiempoDuracion: number;
   // El back lo manda como texto con 2 decimales
   precio: string;
+  // Servicio exclusivo: el turno queda PENDIENTE hasta que el profesional lo acepta. Si no, se confirma solo
+  requiereEvaluacion: boolean;
   fechaBaja: string | null;
 }
 
@@ -15,6 +17,7 @@ export interface ServicioData {
   tipo: string;
   tiempoDuracion: number;
   precio: number;
+  requiereEvaluacion: boolean;
 }
 
 // Mismas reglas que el back: de un diagnóstico de 15 min al máximo de un turno, 7 h

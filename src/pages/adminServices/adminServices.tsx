@@ -148,6 +148,7 @@ export const AdminServices = () => {
     if (data.tipo !== servicio.tipo) changes.tipo = data.tipo;
     if (data.tiempoDuracion !== servicio.tiempoDuracion) changes.tiempoDuracion = data.tiempoDuracion;
     if (data.precio !== Number(servicio.precio)) changes.precio = data.precio;
+    if (data.requiereEvaluacion !== servicio.requiereEvaluacion) changes.requiereEvaluacion = data.requiereEvaluacion;
     if (Object.keys(changes).length === 0) {
       setPending(null);
       return;
@@ -221,12 +222,14 @@ export const AdminServices = () => {
           }
           renderItem={(servicio) => {
             const isInactive = servicio.fechaBaja !== null;
-            const duration = formatDuration(servicio.tiempoDuracion);
+            const summary = servicio.requiereEvaluacion
+              ? `${formatDuration(servicio.tiempoDuracion)} · Requiere aprobación`
+              : formatDuration(servicio.tiempoDuracion);
 
             return (
               <ListItem
                 title={servicio.tipo}
-                description={isInactive ? `${duration} · Dado de baja el ${formatDate(servicio.fechaBaja!)}` : duration}
+                description={isInactive ? `${summary} · Dado de baja el ${formatDate(servicio.fechaBaja!)}` : summary}
                 className={isInactive ? 'bg-gray-50 opacity-60' : ''}
                 trailing={
                   <>

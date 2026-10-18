@@ -1,8 +1,8 @@
 import { apiFetch } from './client';
 
 // PENDIENTE: lo pidió el cliente y espera al profesional. REPROGRAMADO: el salón propuso otro horario y espera al cliente.
-// RECHAZADO y CANCELADO liberan el horario.
-export type EstadoTurno = 'PENDIENTE' | 'CONFIRMADO' | 'REPROGRAMADO' | 'COMPLETADO' | 'RECHAZADO' | 'CANCELADO';
+// RECHAZADO y CANCELADO liberan el horario. AUSENTE: estaba confirmado y el cliente no vino.
+export type EstadoTurno = 'PENDIENTE' | 'CONFIRMADO' | 'REPROGRAMADO' | 'COMPLETADO' | 'RECHAZADO' | 'CANCELADO' | 'AUSENTE';
 
 export type MetodoPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
 
@@ -26,6 +26,8 @@ export interface Turno {
   horaInicio: string;
   horaFin: string;
   estado: EstadoTurno;
+  // Cuándo el cliente avisó que va (link opcional del recordatorio); null si no avisó
+  asistenciaConfirmadaEn: string | null;
   metodoPago: MetodoPago | null;
   // Motivo de la cancelación (lo ven las dos partes) o del rechazo (el cliente no lo recibe)
   motivo?: string | null;
@@ -35,6 +37,8 @@ export interface Turno {
     apellido: string;
     telefono: string;
     alergia: string | null;
+    // null: todavía no verificó su correo (la agenda lo marca)
+    emailVerificadoEn: string | null;
   };
   detalles: TurnoDetalle[];
 }
@@ -79,16 +83,17 @@ export interface HorariosLibresOptions {
 export const getHorariosLibresRequest = (token: string, fecha: string, items: TurnoItem[], options: HorariosLibresOptions = {}) =>
   apiFetch<HorariosLibres>('/turnos/horarios-libres', { method: 'POST', body: { fecha, items, ...options }, token });
 
-// CLIENTE: queda PENDIENTE. PROFESIONAL con clienteId: queda CONFIRMADO
+// CLIENTE: queda PENDIENTE si algún servicio requiere aprobación; si no, CONFIRMADO. PROFESIONAL con clienteId: CONFIRMADO
 export const createTurnoRequest = (token: string, data: CreateTurnoData) =>
   apiFetch<Turno>('/turnos', { method: 'POST', body: data, token });
 
 // Turnos del cliente logueado, del más nuevo al más viejo
 export const getMyTurnosRequest = (token: string) => apiFetch<Turno[]>('/turnos/mios', { token });
 
-// Turnos del profesional logueado entre dos fechas (incluidas), ordenados por fecha y hora
-export const getAgendaRequest = (token: string, desde: string, hasta: string) =>
-  apiFetch<Turno[]>(`/turnos/agenda?${new URLSearchParams({ desde, hasta })}`, { token });
+// Turnos de un profesional entre dos fechas (incluidas), ordenados por fecha y hora.
+// Sin legajo el back devuelve todo el salón: para "Mi agenda" se manda el propio
+export const getAgendaRequest = (token: string, legajo: number, desde: string, hasta: string) =>
+  apiFetch<Turno[]>(`/turnos/agenda?${new URLSearchParams({ desde, hasta, legajo: String(legajo) })}`, { token });
 
 export const acceptTurnoRequest = (token: string, id: number) =>
   apiFetch<Turno>(`/turnos/${id}/aceptar`, { method: 'PATCH', token });
@@ -110,6 +115,10 @@ export const cancelTurnoRequest = (token: string, id: number, motivo?: string) =
 
 export const completeTurnoRequest = (token: string, id: number) =>
   apiFetch<Turno>(`/turnos/${id}/completar`, { method: 'PATCH', token });
+
+// PROFESIONAL: el cliente no vino (turno CONFIRMADO, desde su hora de fin)
+export const markAbsentRequest = (token: string, id: number) =>
+  apiFetch<Turno>(`/turnos/${id}/ausente`, { method: 'PATCH', token });
 
 // --- Fechas: viajan como "YYYY-MM-DD" y "HH:mm" locales, así no hay corrimientos por zona horaria ---
 
@@ -157,6 +166,9 @@ export const clientePuedeCancelar = (turno: Turno) => {
   if (faltan <= 0) return false;
   return turno.estado !== 'CONFIRMADO' || faltan >= HORAS_CANCELACION_CLIENTE * 60;
 };
+
+// Mismo criterio que el back: CONFIRMADO y desde su hora de fin
+export const puedeMarcarAusente = (turno: Turno) => turno.estado === 'CONFIRMADO' && yaTermino(turno);
 
 // Lunes de la semana de `date`
 export const startOfWeek = (date: Date) => {

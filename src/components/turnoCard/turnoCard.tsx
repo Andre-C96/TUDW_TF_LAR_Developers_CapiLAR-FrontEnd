@@ -15,6 +15,7 @@ const estados: Record<EstadoTurno, { label: string; clienteLabel: string; classe
   COMPLETADO: { label: 'Completado', clienteLabel: 'Completado', classes: 'bg-gray-100 text-gray-700 border-gray-300' },
   RECHAZADO: { label: 'Rechazado', clienteLabel: 'No confirmado', classes: 'bg-red-50 text-red-700 border-red-300' },
   CANCELADO: { label: 'Cancelado', clienteLabel: 'Cancelado', classes: 'bg-red-50 text-red-700 border-red-300' },
+  AUSENTE: { label: 'Ausente', clienteLabel: 'No asististe', classes: 'bg-orange-50 text-orange-800 border-orange-300' },
 };
 
 export const TurnoStatus = ({ estado, paraCliente = false }: { estado: EstadoTurno; paraCliente?: boolean }) => {
@@ -40,7 +41,7 @@ interface TurnoCardProps {
 // Para el salón muestra también el cliente con su teléfono y sus alergias.
 export const TurnoCard = ({ turno, paraCliente = false, actions, note }: TurnoCardProps) => {
   const date = fromIsoDate(turno.fecha);
-  const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO';
+  const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO' || turno.estado === 'AUSENTE';
   const total = turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioBase), 0);
 
   return (
@@ -62,6 +63,11 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note }: TurnoCa
             {turno.horaInicio} – {turno.horaFin}
           </span>
           <TurnoStatus estado={turno.estado} paraCliente={paraCliente} />
+          {turno.estado === 'CONFIRMADO' && turno.asistenciaConfirmadaEn && (
+            <span className="inline-flex shrink-0 items-center gap-1 font-inter text-xs font-semibold text-green-700">
+              ✓ Asistencia confirmada
+            </span>
+          )}
         </div>
 
         {!paraCliente && (
