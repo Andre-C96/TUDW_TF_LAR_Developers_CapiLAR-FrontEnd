@@ -88,6 +88,10 @@ export interface UpdateProfileData {
 export const updateProfileRequest = (token: string, data: UpdateProfileData) =>
   apiFetch<Usuario>('/users/me', { method: 'PATCH', body: data, token });
 
+// Manda otro enlace de verificación al correo (el anterior deja de servir). 400 si ya está verificado
+export const resendVerificationRequest = (token: string) =>
+  apiFetch<{ message: string }>('/users/me/verificar-email', { method: 'POST', token });
+
 // --- Foto de perfil (CLIENTE y PROFESIONAL; el ADMIN no tiene) ---
 
 // Mismas reglas que el back

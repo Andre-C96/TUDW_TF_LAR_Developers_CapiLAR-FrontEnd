@@ -35,27 +35,23 @@ export const ResetPassword = () => {
   const goToLogin = () => navigate('/', { state: { authView: 'login' satisfies AuthView } });
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 py-10">
-      <img src="/capiLAR_logo1.png" alt="CapiLAR" className="h-10 w-auto" />
-
-      <div className="w-full max-w-md rounded-[6px] bg-white p-8 shadow-md">
-        {token ? (
-          <ResetPasswordForm
-            onSubmit={handleSubmit}
-            isLoading={isLoading}
-            error={error}
-            isDone={isDone}
-            onLoginClick={goToLogin}
-          />
-        ) : (
-          <div className="flex flex-col gap-4">
-            <Alert variant="error" title="Enlace no válido">
-              Abrí el enlace completo que te enviamos por correo o pedí uno nuevo desde "¿Olvidaste tu contraseña?".
-            </Alert>
-            <Button onClick={() => navigate('/')}>VOLVER AL INICIO</Button>
-          </div>
-        )}
-      </div>
-    </main>
+    <div className="w-full max-w-md rounded-[6px] bg-white p-8 shadow-md">
+      {token ? (
+        <ResetPasswordForm
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+          error={error}
+          isDone={isDone}
+          onLoginClick={goToLogin}
+        />
+      ) : (
+        <div className="flex flex-col gap-4">
+          <Alert variant="error" title="Enlace no válido">
+            Abrí el enlace completo que te enviamos por correo o pedí uno nuevo desde "¿Olvidaste tu contraseña?".
+          </Alert>
+          <Button onClick={() => navigate('/')}>VOLVER AL INICIO</Button>
+        </div>
+      )}
+    </div>
   );
 };

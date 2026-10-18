@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from './layouts/layout/layout'
+import { LinkLayout } from './layouts/linkLayout/linkLayout'
 import { PanelLayout } from './layouts/panelLayout/panelLayout'
 import { ProtectedRoute } from './components/protectedRoute/protectedRoute'
 import { AdminServices } from './pages/adminServices/adminServices'
@@ -12,7 +13,9 @@ import { NotFound } from './pages/notFound/notFound'
 import { Panel } from './pages/panel/panel'
 import { Profile } from './pages/profile/profile'
 import { ResetPassword } from './pages/resetPassword/resetPassword'
+import { TurnoLink } from './pages/turnoLink/turnoLink'
 import { Users } from './pages/users/users'
+import { VerifyEmail } from './pages/verifyEmail/verifyEmail'
 
 function App() {
   return (
@@ -47,8 +50,13 @@ function App() {
         </Route>
       </Route>
 
-      {/* Link del correo de recupero de contraseña */}
-      <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Enlaces de los correos: recupero de contraseña, verificación y recordatorio del turno */}
+      <Route element={<LinkLayout />}>
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verificar-email" element={<VerifyEmail />} />
+        <Route path="/turno/confirmar" element={<TurnoLink key="confirmar" accion="confirmar" />} />
+        <Route path="/turno/cancelar" element={<TurnoLink key="cancelar" accion="cancelar" />} />
+      </Route>
 
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getProfessionalsRequest, getUpcomingWorkDatesRequest } from '../../api/professionals';
@@ -61,6 +61,8 @@ export const Booking = () => {
   const [slot, setSlot] = useState<Slot>({ fecha: '', hora: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  // 403: el back no deja reservar sin verificar el correo
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   const services = useFetch('servicios', getServicesRequest);
   const professionals = useFetch(servicioId ? `profesionales-${servicioId}` : null, () =>
@@ -105,6 +107,7 @@ export const Booking = () => {
     } catch (err) {
       // Si alguien tomó el horario mientras tanto, el back responde 409 con el motivo; 403 si falta verificar el correo
       setSaveError(err instanceof ApiError ? err.message : unexpectedError);
+      setNeedsVerification(err instanceof ApiError && err.status === 403);
       setIsSaving(false);
     }
   };
@@ -242,6 +245,11 @@ export const Booking = () => {
           {saveError && (
             <Alert variant="error" title="No se pudo reservar el turno">
               {saveError}
+              {needsVerification && (
+                <Link to="/mi-perfil" className="mt-2 block font-semibold text-capilar-violet hover:underline">
+                  Ir a mi perfil para pedir otro enlace
+                </Link>
+              )}
             </Alert>
           )}
 

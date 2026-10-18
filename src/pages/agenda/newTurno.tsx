@@ -71,13 +71,18 @@ export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
     setIsSaving(true);
     setSaveError('');
     try {
-      await createTurnoRequest(token, {
+      const turno = await createTurnoRequest(token, {
         fecha: slot.fecha,
         horaInicio: slot.hora,
         items: [{ servicioId, legajo }],
         clienteId: cliente.id,
       });
-      toast.success('Turno cargado y confirmado', { description: `Le avisamos a ${cliente.nombre} por mail.` });
+      // El salón puede cargarle turnos aunque no haya verificado el correo; el back le pide por mail que lo verifique
+      toast.success('Turno cargado y confirmado', {
+        description: turno.cliente.emailVerificadoEn
+          ? `Le avisamos a ${cliente.nombre} por mail.`
+          : `${cliente.nombre} todavía no verificó su correo: le pedimos por mail que lo haga.`,
+      });
       reset();
       onCreated();
     } catch (err) {

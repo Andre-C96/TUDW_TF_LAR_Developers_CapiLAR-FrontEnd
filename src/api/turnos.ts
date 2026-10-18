@@ -120,6 +120,23 @@ export const completeTurnoRequest = (token: string, id: number) =>
 export const markAbsentRequest = (token: string, id: number) =>
   apiFetch<Turno>(`/turnos/${id}/ausente`, { method: 'PATCH', token });
 
+// --- Enlaces del recordatorio (/turno/confirmar y /turno/cancelar?token=): públicos, con el token del mail ---
+
+// El turno del recordatorio. puedeCancelar: false si faltan menos de 12 h
+export interface TurnoDelEnlace extends Turno {
+  puedeCancelar: boolean;
+}
+
+// 400 si el enlace no sirve: el turno cambió de horario, ya no está confirmado o ya empezó
+export const getTurnoByLinkRequest = (token: string) =>
+  apiFetch<TurnoDelEnlace>(`/turnos/accion?${new URLSearchParams({ token })}`);
+
+export const confirmAttendanceByLinkRequest = (token: string) =>
+  apiFetch<Turno>('/turnos/accion/confirmar', { method: 'POST', body: { token } });
+
+export const cancelTurnoByLinkRequest = (token: string, motivo?: string) =>
+  apiFetch<Turno>('/turnos/accion/cancelar', { method: 'POST', body: motivo ? { token, motivo } : { token } });
+
 // --- Fechas: viajan como "YYYY-MM-DD" y "HH:mm" locales, así no hay corrimientos por zona horaria ---
 
 const pad = (n: number) => String(n).padStart(2, '0');

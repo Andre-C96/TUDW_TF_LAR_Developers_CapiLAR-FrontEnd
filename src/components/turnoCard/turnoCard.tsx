@@ -76,6 +76,14 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note }: TurnoCa
               {turno.cliente.nombre} {turno.cliente.apellido}
               <span className="font-normal text-capilar-grey"> · {turno.cliente.telefono}</span>
             </span>
+            {!turno.cliente.emailVerificadoEn && (
+              <span
+                title="Todavía no verificó su correo: puede no recibir los avisos del turno"
+                className="self-start rounded-md bg-gray-100 px-2 py-1 text-xs text-capilar-grey"
+              >
+                Correo sin verificar
+              </span>
+            )}
             {turno.cliente.alergia && (
               <span className="self-start rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">
                 Alergias: {turno.cliente.alergia}

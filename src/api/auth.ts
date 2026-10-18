@@ -13,6 +13,8 @@ export interface Usuario {
   // "YYYY-MM-DD" (opcional)
   fechaNacimiento: string | null;
   rol: Rol;
+  // null: todavía no abrió el enlace de verificación (el cliente no puede reservar solo)
+  emailVerificadoEn: string | null;
   fechaAlta: string;
   fechaBaja: string | null;
   // Subtipo según el rol: alergia del cliente, legajo del profesional (null si no lo tiene).
@@ -58,6 +60,10 @@ export const forgotPasswordRequest = (email: string) =>
 // 400 si la actual no es correcta o la nueva es igual
 export const changePasswordRequest = (token: string, actual: string, nueva: string) =>
   apiFetch<AuthResponse>('/auth/password', { method: 'PATCH', body: { actual, nueva }, token });
+
+// Token del enlace del correo (/verificar-email?token=), sin sesión. Sirve una vez y dura 7 días
+export const verifyEmailRequest = (token: string) =>
+  apiFetch<MessageResponse>('/auth/verificar-email', { method: 'POST', body: { token } });
 
 export const resetPasswordRequest =(token: string, contrasena: string) =>
   apiFetch<MessageResponse>('/auth/reset-password', { method: 'POST', body: { token, contrasena } });
