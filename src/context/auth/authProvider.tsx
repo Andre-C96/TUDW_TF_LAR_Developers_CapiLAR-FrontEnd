@@ -31,6 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       onExpired: () => {
         setToken(null);
         setUser(null);
+        // Sin token, el efecto de /auth/me ya no corre: si se estaba chequeando la sesión, termina acá
+        setIsCheckingSession(false);
         // Si había sesión en pantalla (no al recargar), avisar y abrir el login
         if (user) {
           toast.error('Tu sesión se cerró', { description: 'Iniciá sesión de nuevo para continuar.' });
@@ -47,8 +49,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (event.key !== TOKEN_KEY) return;
       const newToken = readValue<string | null>(TOKEN_KEY, null);
       setToken(newToken);
-      if (newToken === null) setUser(null);
-      else if (user === null) setIsCheckingSession(true);
+      if (newToken === null) {
+        setUser(null);
+        setIsCheckingSession(false);
+      } else if (user === null) setIsCheckingSession(true);
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
