@@ -12,7 +12,9 @@ import {
   formatFechaLarga,
   formatWeek,
   getAgendaRequest,
+  markAbsentRequest,
   minutosHastaInicio,
+  puedeMarcarAusente,
   rejectTurnoRequest,
   rescheduleTurnoRequest,
   startOfWeek,
@@ -35,7 +37,7 @@ const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 type Vista = 'semana' | 'pendientes';
 
 // Acción que necesita confirmación (con motivo) o elegir un horario nuevo
-type Pending = { type: 'rechazar' | 'cancelar' | 'completar' | 'reprogramar'; turno: Turno };
+type Pending = { type: 'rechazar' | 'cancelar' | 'completar' | 'ausente' | 'reprogramar'; turno: Turno };
 
 interface AgendaTurnosProps {
   token: string;
@@ -43,18 +45,19 @@ interface AgendaTurnosProps {
 }
 
 // Solicitudes pendientes de acá a 60 días (el máximo para reservar). La agenda se pide de a 31 días: dos tramos.
-const getPendingRequest = async (token: string) => {
+const getPendingRequest = async (token: string, legajo: number) => {
   const today = new Date();
   const ranges = [0, MAX_DIAS_AGENDA].map((offset) => [
     toIsoDate(addDays(today, offset)),
     toIsoDate(addDays(today, Math.min(offset + MAX_DIAS_AGENDA - 1, MAX_DIAS_ANTICIPACION))),
   ]);
-  const parts = await Promise.all(ranges.map(([desde, hasta]) => getAgendaRequest(token, desde, hasta)));
+  const parts = await Promise.all(ranges.map(([desde, hasta]) => getAgendaRequest(token, legajo, desde, hasta)));
   return parts.flat().filter((turno) => turno.estado === 'PENDIENTE');
 };
 
 // Pestaña Turnos de la agenda: la semana día por día, o las solicitudes que esperan respuesta.
-// Pendiente: confirmar o rechazar. Confirmado: cancelar o, desde que empieza, completar. Los activos se pueden reprogramar.
+// Pendiente (servicios que requieren aprobación): confirmar o rechazar. Confirmado: cancelar o, desde que empieza, completar;
+// desde la hora de fin, marcar ausente. Los activos se pueden reprogramar.
 export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   const [vista, setVista] = useState<Vista>('semana');
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
@@ -62,7 +65,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   const hasta = toIsoDate(addDays(monday, 6));
 
   const turnos = useFetch(vista === 'semana' ? `agenda-${desde}-${hasta}` : 'pendientes', () =>
-    vista === 'semana' ? getAgendaRequest(token, desde, hasta) : getPendingRequest(token),
+    vista === 'semana' ? getAgendaRequest(token, legajo, desde, hasta) : getPendingRequest(token, legajo),
   );
 
   const [pending, setPending] = useState<Pending | null>(null);
@@ -106,6 +109,9 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
     if (pending.type === 'completar') {
       return run(turno, () => completeTurnoRequest(token, turno.id), 'Turno completado', 'Ya figura en el historial del cliente.');
     }
+    if (pending.type === 'ausente') {
+      return run(turno, () => markAbsentRequest(token, turno.id), 'Marcado como ausente', 'Queda registrado que el cliente no vino.');
+    }
   };
 
   const actionsFor = (turno: Turno) => {
@@ -144,6 +150,11 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
             ) : (
               <TurnoAction disabled={busy} onClick={open('reprogramar')}>
                 Reprogramar
+              </TurnoAction>
+            )}
+            {puedeMarcarAusente(turno) && (
+              <TurnoAction disabled={busy} onClick={open('ausente')}>
+                Marcar ausente
               </TurnoAction>
             )}
             <TurnoAction variant="peligro" disabled={busy} onClick={open('cancelar')}>
@@ -190,6 +201,12 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
       title: 'Completar turno',
       text: '¿Marcar este turno como realizado?',
       confirm: 'Completar',
+      reason: undefined,
+    },
+    ausente: {
+      title: 'Marcar ausente',
+      text: '¿El cliente no vino a este turno? Queda registrado como ausente.',
+      confirm: 'Marcar ausente',
       reason: undefined,
     },
   };

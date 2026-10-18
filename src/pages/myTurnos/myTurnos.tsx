@@ -26,6 +26,7 @@ const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
 // Todos los turnos del cliente con su estado: primero los próximos (del más cercano en adelante), para cancelarlos
 // o aceptar un cambio de horario, y después los anteriores (del más nuevo al más viejo).
+// La asistencia se confirma solo desde el link opcional del recordatorio (la card muestra si ya avisó).
 // (/historial queda para las fichas técnicas)
 export const MyTurnos = () => {
   const { token } = useAuth();
@@ -99,6 +100,9 @@ export const MyTurnos = () => {
     }
     if (turno.estado === 'CONFIRMADO' && !clientePuedeCancelar(turno) && minutosHastaInicio(turno) > 0) {
       return `Faltan menos de ${HORAS_CANCELACION_CLIENTE} horas: para cancelarlo, comunicate con el salón.`;
+    }
+    if (turno.estado === 'PENDIENTE') {
+      return 'Es un servicio que tu profesional evalúa antes de confirmar. Te avisamos por correo.';
     }
     if (turno.estado === 'RECHAZADO') return 'No pudimos atenderte en ese horario. Reservá otro que te quede cómodo.';
     return undefined;

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getProfessionalsRequest, getUpcomingWorkDatesRequest } from '../../api/professionals';
 import { formatDuration, formatPrice, getServicesRequest } from '../../api/services';
-import { createTurnoRequest, formatFechaLarga } from '../../api/turnos';
+import { HORAS_CANCELACION_CLIENTE, createTurnoRequest, formatFechaLarga } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
@@ -50,7 +50,7 @@ const Option = ({ selected, onClick, children }: { selected: boolean; onClick: (
 
 // Reserva del cliente (F03): servicio → profesional que lo hace → día → horario libre → confirmar.
 // Llega desde el botón Reservar de cada servicio de la home (?servicio=id) o sin servicio elegido.
-// El turno queda PENDIENTE hasta que el profesional lo confirme.
+// Se confirma al instante, salvo los servicios que requieren aprobación: esos quedan PENDIENTE hasta que el profesional los acepta.
 export const Booking = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
@@ -95,11 +95,15 @@ export const Booking = () => {
     setIsSaving(true);
     setSaveError('');
     try {
-      await createTurnoRequest(token, { fecha: slot.fecha, horaInicio: slot.hora, items: [{ servicioId, legajo }] });
-      toast.success('¡Solicitud enviada!', { description: 'Te avisamos por mail apenas el salón confirme tu turno.' });
+      const turno = await createTurnoRequest(token, { fecha: slot.fecha, horaInicio: slot.hora, items: [{ servicioId, legajo }] });
+      if (turno.estado === 'PENDIENTE') {
+        toast.success('¡Solicitud enviada!', { description: 'Te avisamos por mail apenas tu profesional confirme el turno.' });
+      } else {
+        toast.success('¡Turno confirmado!', { description: 'Te esperamos. Te mandamos los detalles por mail.' });
+      }
       navigate('/mis-turnos');
     } catch (err) {
-      // Si alguien tomó el horario mientras tanto, el back responde 409 con el motivo
+      // Si alguien tomó el horario mientras tanto, el back responde 409 con el motivo; 403 si falta verificar el correo
       setSaveError(err instanceof ApiError ? err.message : unexpectedError);
       setIsSaving(false);
     }
@@ -219,8 +223,20 @@ export const Booking = () => {
             </div>
           </dl>
 
+          {servicio.requiereEvaluacion ? (
+            <Alert variant="advertencia" title="Tu profesional confirma este turno">
+              Es un servicio que necesita evaluación: el turno queda por confirmar hasta que {profesional.nombre} lo acepte. Te
+              avisamos por mail.
+            </Alert>
+          ) : (
+            <Alert variant="info" title="Se confirma al instante">
+              Apenas reserves, tu turno queda confirmado.
+            </Alert>
+          )}
+
           <p className="font-inter text-xs text-capilar-grey">
-            El precio final se define en el salón según tu cabello. Tu turno queda pendiente hasta que el salón lo confirme. Una vez confirmado, podés cancelarlo hasta 12 horas antes.
+            El precio final se define en el salón según tu cabello. Una vez confirmado, podés cancelarlo hasta{' '}
+            {HORAS_CANCELACION_CLIENTE} horas antes.
           </p>
 
           {saveError && (

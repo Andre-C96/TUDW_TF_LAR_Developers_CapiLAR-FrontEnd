@@ -28,12 +28,13 @@ const PRICE_REGEX = /^\d+([.,]\d{1,2})?$/;
 // La columna del back es Decimal(10, 2)
 const PRICE_MAX = 99_999_999.99;
 
-// Alta y edición de un servicio (ADMIN): nombre, duración en minutos y precio
+// Alta y edición de un servicio (ADMIN): nombre, duración en minutos, precio y si requiere aprobación del profesional
 export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, error }: ServiceFormProps) => {
   const [tipo, setTipo] = useState(servicio?.tipo ?? '');
   const [tiempoDuracion, setTiempoDuracion] = useState(servicio ? String(servicio.tiempoDuracion) : '');
   // "15000.00" se muestra como "15000"
   const [precio, setPrecio] = useState(servicio ? String(Number(servicio.precio)) : '');
+  const [requiereEvaluacion, setRequiereEvaluacion] = useState(servicio?.requiereEvaluacion ?? false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -58,7 +59,7 @@ export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, e
     setFieldErrors(errors);
 
     if (Object.keys(errors).length > 0) return;
-    onSubmit({ tipo: tipo.trim(), tiempoDuracion: duracion, precio: precioNumber });
+    onSubmit({ tipo: tipo.trim(), tiempoDuracion: duracion, precio: precioNumber, requiereEvaluacion });
   };
 
   return (
@@ -104,6 +105,23 @@ export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, e
             error={fieldErrors.precio}
           />
         </div>
+
+        {/* Servicios exclusivos: el profesional evalúa antes de confirmar. Los básicos se confirman solos */}
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 transition-colors hover:bg-capilar-violet/5">
+          <input
+            type="checkbox"
+            checked={requiereEvaluacion}
+            onChange={(event) => setRequiereEvaluacion(event.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-capilar-violet"
+          />
+          <span className="flex flex-col gap-1 font-inter">
+            <span className="text-sm font-semibold text-black">Requiere aprobación del profesional</span>
+            <span className="text-xs text-capilar-grey">
+              Para servicios exclusivos (ej.: decoloración global, alisado, corrección de color): el turno queda por
+              confirmar hasta que el profesional lo acepta. Si no, se confirma al reservar.
+            </span>
+          </span>
+        </label>
 
         {error && (
           <p role="alert" className="text-center font-inter text-sm text-red-500">
