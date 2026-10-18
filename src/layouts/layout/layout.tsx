@@ -30,6 +30,12 @@ export const Layout = () => {
   const requestedView = (location.state as { authView?: AuthView } | null)?.authView;
   // Otra página puede abrir el modal al volver acá (ej. "Iniciar sesión" después de restablecer la contraseña)
   const [authView, setAuthView] = useState<AuthView | null>(requestedView ?? null);
+  // Si el layout ya estaba montado (ej. la sesión se cerró en Mis turnos), abrir el modal igual
+  const [lastRequestedView, setLastRequestedView] = useState(requestedView);
+  if (requestedView !== lastRequestedView) {
+    setLastRequestedView(requestedView);
+    if (requestedView) setAuthView(requestedView);
+  }
 
   // El state queda guardado en el historial y sobrevive al recargar: se borra una vez usado
   // para que el modal no vuelva a abrirse en cada recarga
