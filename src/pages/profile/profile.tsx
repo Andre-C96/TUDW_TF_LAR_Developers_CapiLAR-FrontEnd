@@ -16,6 +16,7 @@ import {
   formatEdad,
   onlyDigits,
   removePhotoRequest,
+  resendVerificationRequest,
   updatePhotoRequest,
   updateProfileRequest,
   userPhoto,
@@ -102,6 +103,8 @@ export const Profile = () => {
   const [errors, setErrors] = useState<{ telefono?: string; alergia?: string; fechaNacimiento?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  const [isResending, setIsResending] = useState(false);
 
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -276,6 +279,18 @@ export const Profile = () => {
     toast.success('Servicios actualizados', { description: 'Los clientes ya pueden reservarlos con vos.' });
   };
 
+  const resendVerification = async () => {
+    setIsResending(true);
+    try {
+      const { message } = await resendVerificationRequest(token);
+      toast.success('Enlace enviado', { description: `${message}. Vence en 7 días.` });
+    } catch (err) {
+      toast.error('No se pudo enviar el enlace', { description: err instanceof ApiError ? err.message : unexpectedError });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const closePasswordModal = () => {
     if (isChangingPassword) return;
     setIsPasswordOpen(false);
@@ -375,6 +390,26 @@ export const Profile = () => {
           )}
         </div>
       </div>
+
+      {/* Sin verificar el correo, el cliente no puede reservar solo */}
+      {isCliente && !user.emailVerificadoEn && (
+        <Alert variant="advertencia" title="Verificá tu correo para reservar turnos">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <span>
+              Te mandamos un enlace a <span className="font-semibold">{user.email}</span>. Si no lo encontrás (revisá el spam)
+              o venció, pedí uno nuevo.
+            </span>
+            <button
+              type="button"
+              onClick={resendVerification}
+              disabled={isResending}
+              className="shrink-0 self-start rounded-lg border border-gray-300 bg-white px-4 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors hover:border-capilar-violet hover:text-capilar-violet disabled:cursor-not-allowed disabled:opacity-60 md:self-auto"
+            >
+              {isResending ? 'Enviando...' : 'Reenviar enlace'}
+            </button>
+          </div>
+        </Alert>
+      )}
 
       <Form onSubmit={handleSubmit} noValidate className={sectionClasses}>
         <div className="flex flex-col gap-1">
