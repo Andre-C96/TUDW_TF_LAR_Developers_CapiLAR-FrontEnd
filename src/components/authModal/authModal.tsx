@@ -64,8 +64,6 @@ export const AuthModal = ({ view, onViewChange, onClose }: AuthModalProps) => {
       isOpen={view !== null}
       onClose={close}
       ariaLabel={view ? ariaLabels[view] : undefined}
-      // En pantallas bajas el contenido scrollea dentro del modal
-      className="max-h-[90vh] overflow-y-auto"
     >
       {view === 'login' && (
         <LoginForm

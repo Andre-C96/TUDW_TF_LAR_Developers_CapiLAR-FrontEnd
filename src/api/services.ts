@@ -3,6 +3,8 @@ import { apiFetch } from './client';
 export interface Servicio {
   id: number;
   tipo: string;
+  // Qué incluye el servicio (opcional)
+  descripcion: string | null;
   // Minutos
   tiempoDuracion: number;
   // El back lo manda como texto con 2 decimales
@@ -15,6 +17,8 @@ export interface Servicio {
 // Lo que se manda al crear; al editar, solo los campos que cambiaron
 export interface ServicioData {
   tipo: string;
+  // null la borra
+  descripcion: string | null;
   tiempoDuracion: number;
   precio: number;
   requiereEvaluacion: boolean;
@@ -24,6 +28,7 @@ export interface ServicioData {
 export const SERVICIO_DURACION_MIN = 15;
 export const SERVICIO_DURACION_MAX = 7 * 60;
 export const SERVICIO_TIPO_MAX = 100;
+export const SERVICIO_DESCRIPCION_MAX = 500;
 
 // Endpoints de servicios. El listado de activos es público; el resto, solo ADMIN.
 

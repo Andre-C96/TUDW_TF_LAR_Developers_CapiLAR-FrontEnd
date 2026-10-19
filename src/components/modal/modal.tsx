@@ -43,7 +43,9 @@ export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '' }: 
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
-        className={`relative w-full max-w-md bg-white rounded-[6px] shadow-xl p-8 ${className}`}
+        // Nunca más alto que la pantalla. La caja recorta (mantiene las esquinas redondeadas)
+        // y el contenido scrollea adentro, con la cruz siempre visible
+        className={`relative flex w-full max-w-md max-h-[calc(100dvh-2rem)] flex-col overflow-hidden bg-white rounded-[6px] shadow-xl ${className}`}
         // Un click dentro de la caja no debe cerrar el modal
         onClick={(event) => event.stopPropagation()}
       >
@@ -51,11 +53,11 @@ export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '' }: 
           type="button"
           onClick={onClose}
           aria-label="Cerrar"
-          className="absolute top-4 right-5 text-2xl leading-none text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-4 right-5 z-10 text-2xl leading-none text-gray-400 hover:text-gray-600 transition-colors"
         >
           ✕
         </button>
-        {children}
+        <div className="scrollbar-soft overflow-y-auto p-8">{children}</div>
       </div>
     </div>,
     document.body

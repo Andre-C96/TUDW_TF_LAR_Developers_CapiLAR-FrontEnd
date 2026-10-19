@@ -134,6 +134,11 @@ export const Booking = () => {
             {services.data.map((s) => (
               <Option key={s.id} selected={s.id === servicioId} onClick={() => chooseService(s.id)}>
                 <span className="font-semibold text-black">{s.tipo}</span>
+                {s.descripcion && (
+                  <span className="line-clamp-2 text-xs text-capilar-grey" title={s.descripcion}>
+                    {s.descripcion}
+                  </span>
+                )}
                 <span className="text-capilar-grey">
                   {formatDuration(s.tiempoDuracion)} · Desde {formatPrice(s.precio)}
                 </span>

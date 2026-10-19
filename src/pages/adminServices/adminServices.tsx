@@ -146,6 +146,7 @@ export const AdminServices = () => {
     // Solo los campos que cambiaron; sin cambios, se cierra sin llamar al back
     const changes: Partial<ServicioData> = {};
     if (data.tipo !== servicio.tipo) changes.tipo = data.tipo;
+    if (data.descripcion !== servicio.descripcion) changes.descripcion = data.descripcion;
     if (data.tiempoDuracion !== servicio.tiempoDuracion) changes.tiempoDuracion = data.tiempoDuracion;
     if (data.precio !== Number(servicio.precio)) changes.precio = data.precio;
     if (data.requiereEvaluacion !== servicio.requiereEvaluacion) changes.requiereEvaluacion = data.requiereEvaluacion;
@@ -274,6 +275,8 @@ export const AdminServices = () => {
         isOpen={pending !== null}
         onClose={closeModal}
         ariaLabel={isForm ? (pending.type === 'crear' ? 'Nuevo servicio' : 'Editar servicio') : texts?.title}
+        // El formulario es largo: más ancho para que quede más bajo
+        className={isForm ? 'max-w-xl!' : ''}
       >
         {isForm && (
           <ServiceForm
