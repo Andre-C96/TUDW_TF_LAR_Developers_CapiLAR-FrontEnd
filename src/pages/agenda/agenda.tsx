@@ -3,6 +3,7 @@ import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
+import { AgendaSeries } from './agendaSeries';
 import { AgendaTurnos } from './agendaTurnos';
 import { NewTurno } from './newTurno';
 import { Schedule } from './schedule';
@@ -10,6 +11,7 @@ import { Schedule } from './schedule';
 const tabs = [
   { id: 'turnos', label: 'Turnos' },
   { id: 'nuevo', label: 'Nuevo turno' },
+  { id: 'series', label: 'Series' },
   { id: 'horarios', label: 'Mis horarios' },
 ] as const;
 
@@ -70,6 +72,7 @@ export const Agenda = () => {
             {tab === 'nuevo' && (
               <NewTurno key={clienteId} token={token} legajo={legajo} clienteId={clienteId} onCreated={() => goTo('turnos')} />
             )}
+            {tab === 'series' && <AgendaSeries token={token} />}
             {tab === 'horarios' && <Schedule token={token} legajo={legajo} />}
           </div>
         </>

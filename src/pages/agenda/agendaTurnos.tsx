@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { puedeCargarFicha } from '../../api/fichas';
 import { getUpcomingWorkDatesRequest } from '../../api/professionals';
+import { FRECUENCIAS, getSeriesRequest, seriesPorTurno, turnoEnSerie } from '../../api/series';
 import {
   MAX_DIAS_AGENDA,
   MAX_DIAS_ANTICIPACION,
@@ -31,9 +32,10 @@ import { Modal } from '../../components/modal/modal';
 import { SlotPicker } from '../../components/slotPicker/slotPicker';
 import type { Slot } from '../../components/slotPicker/slotPicker';
 import { Title } from '../../components/title/title';
-import { TurnoAction, TurnoCard } from '../../components/turnoCard/turnoCard';
+import { SerieBadge, TurnoAction, TurnoCard } from '../../components/turnoCard/turnoCard';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { FichaModal } from './fichaModal';
+import { SerieModal } from './serieModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
@@ -119,6 +121,16 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   const [actionError, setActionError] = useState('');
   // Servicio del turno con la ficha técnica abierta
   const [ficha, setFicha] = useState<{ turno: Turno; detalle: TurnoDetalle } | null>(null);
+  // Turno que se va a repetir (serie)
+  const [repetir, setRepetir] = useState<Turno | null>(null);
+  // Los turnos no traen su serie: se cruzan con las series del profesional
+  const series = useFetch('series', () => getSeriesRequest(token));
+  const seriePorTurno = seriesPorTurno(series.data ?? []);
+
+  const badgeFor = (turno: Turno) => {
+    const serie = seriePorTurno.get(turno.id);
+    return serie ? <SerieBadge>{FRECUENCIAS[serie.frecuencia].label}</SerieBadge> : undefined;
+  };
 
   const replace =(updated: Turno) => turnos.setData((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
 
@@ -203,6 +215,12 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
             {puedeMarcarAusente(turno) && (
               <TurnoAction disabled={busy} onClick={open('ausente')}>
                 Marcar ausente
+              </TurnoAction>
+            )}
+            {/* Se repite antes de completarlo: la serie sale de un turno confirmado */}
+            {series.data && !turnoEnSerie(series.data, turno.id) && (
+              <TurnoAction disabled={busy} onClick={() => setRepetir(turno)}>
+                Repetir
               </TurnoAction>
             )}
             <TurnoAction variant="peligro" disabled={busy} onClick={open('cancelar')}>
@@ -363,13 +381,19 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           {vista === 'hoy' ? 'No tenés turnos hoy.' : vista === 'semana' ? 'No tenés turnos esta semana.' : 'No tenés solicitudes por confirmar.'}
         </p>
       ) : vista === 'hoy' ? (
-        <TodayView turnos={turnos.data ?? []} actionsFor={actionsFor} fichaActionFor={fichaActionFor} />
+        <TodayView turnos={turnos.data ?? []} actionsFor={actionsFor} fichaActionFor={fichaActionFor} badgeFor={badgeFor} />
       ) : (
         [...byDay].map(([fecha, delDia]) => (
           <div key={fecha} className="flex flex-col gap-3">
             <h3 className="font-inter text-sm font-semibold uppercase tracking-widest text-capilar-grey">{formatFechaLarga(fecha)}</h3>
             {delDia.map((turno) => (
-              <TurnoCard key={turno.id} turno={turno} actions={actionsFor(turno)} detalleAction={fichaActionFor(turno)} />
+              <TurnoCard
+                key={turno.id}
+                turno={turno}
+                actions={actionsFor(turno)}
+                detalleAction={fichaActionFor(turno)}
+                badge={badgeFor(turno)}
+              />
             ))}
           </div>
         ))
@@ -431,6 +455,25 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           onFichaChange={(fichaId) => setFichaId(ficha.turno.id, ficha.detalle.id, fichaId)}
         />
       )}
+
+      {repetir && (
+        <SerieModal
+          token={token}
+          legajo={legajo}
+          turno={repetir}
+          onClose={() => setRepetir(null)}
+          onCreated={(serie) => {
+            setRepetir(null);
+            // La serie trae turnos nuevos: se vuelven a pedir los turnos y las series
+            turnos.reload();
+            series.reload();
+            const creados = serie.fechas.filter((f) => f.turnoId !== null).length;
+            toast.success('Serie creada', {
+              description: `Reservamos ${creados} ${creados === 1 ? 'turno' : 'turnos'} y le avisamos al cliente por mail.`,
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -439,10 +482,11 @@ interface TodayViewProps {
   turnos: Turno[];
   actionsFor: (turno: Turno) => ReactNode;
   fichaActionFor: (turno: Turno) => (detalle: TurnoDetalle) => ReactNode;
+  badgeFor: (turno: Turno) => ReactNode;
 }
 
 // Turnos de hoy: arriba un resumen con cuántos hay de cada grupo y debajo cada grupo por hora
-const TodayView = ({ turnos, actionsFor, fichaActionFor }: TodayViewProps) => {
+const TodayView = ({ turnos, actionsFor, fichaActionFor, badgeFor }: TodayViewProps) => {
   const grupos = gruposHoy
     .map((grupo) => ({ ...grupo, turnos: turnos.filter(grupo.incluye) }))
     .filter((grupo) => grupo.turnos.length > 0);
@@ -469,7 +513,13 @@ const TodayView = ({ turnos, actionsFor, fichaActionFor }: TodayViewProps) => {
             {grupo.titulo}
           </h3>
           {grupo.turnos.map((turno) => (
-            <TurnoCard key={turno.id} turno={turno} actions={actionsFor(turno)} detalleAction={fichaActionFor(turno)} />
+            <TurnoCard
+              key={turno.id}
+              turno={turno}
+              actions={actionsFor(turno)}
+              detalleAction={fichaActionFor(turno)}
+              badge={badgeFor(turno)}
+            />
           ))}
         </div>
       ))}
