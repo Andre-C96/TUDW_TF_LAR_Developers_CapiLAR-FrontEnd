@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
+import { puedeCargarFicha } from '../../api/fichas';
 import { getUpcomingWorkDatesRequest } from '../../api/professionals';
 import {
   MAX_DIAS_AGENDA,
@@ -21,7 +22,7 @@ import {
   startOfWeek,
   toIsoDate,
 } from '../../api/turnos';
-import type { Turno } from '../../api/turnos';
+import type { Turno, TurnoDetalle } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
 import { ConfirmDialog } from '../../components/confirmDialog/confirmDialog';
@@ -32,6 +33,7 @@ import type { Slot } from '../../components/slotPicker/slotPicker';
 import { Title } from '../../components/title/title';
 import { TurnoAction, TurnoCard } from '../../components/turnoCard/turnoCard';
 import { useFetch } from '../../customHooks/fetch/useFetch';
+import { FichaModal } from './fichaModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
@@ -115,8 +117,10 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   const [pending, setPending] = useState<Pending | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState('');
+  // Servicio del turno con la ficha técnica abierta
+  const [ficha, setFicha] = useState<{ turno: Turno; detalle: TurnoDetalle } | null>(null);
 
-  const replace = (updated: Turno) => turnos.setData((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  const replace =(updated: Turno) => turnos.setData((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
 
   const closePending = () => {
     if (busyId !== null) return;
@@ -224,6 +228,37 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
     }
   };
 
+  // Ficha técnica de cada servicio: verla si existe (cualquier profesional) o cargarla (el suyo, confirmado y desde que
+  // empieza ese servicio). La vista Hoy se refresca cada minuto, así que el botón aparece solo a la hora del turno
+  const fichaActionFor = (turno: Turno) => (detalle: TurnoDetalle) => {
+    const tiene = !!detalle.fichaId;
+    if (!tiene && !(detalle.legajo === legajo && puedeCargarFicha(turno, detalle))) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => setFicha({ turno, detalle })}
+        className={`ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 align-middle font-inter text-xs font-semibold transition-colors ${
+          tiene
+            ? 'border-capilar-violet/40 bg-purple-50 text-capilar-violet hover:border-capilar-violet'
+            : 'border-dashed border-gray-300 text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
+        }`}
+      >
+        {tiene ? 'Ver ficha' : '+ Cargar ficha'}
+      </button>
+    );
+  };
+
+  // La ficha se creó o se quitó: el turno de la lista se actualiza sin volver a pedir la agenda
+  const setFichaId = (turnoId: number, detalleId: number, fichaId: number | null) =>
+    turnos.setData((prev) =>
+      prev.map((t) =>
+        t.id === turnoId ? { ...t, detalles: t.detalles.map((d) => (d.id === detalleId ? { ...d, fichaId } : d)) } : t,
+      ),
+    );
+
+  // Servicios propios sin ficha: al completar el turno ya no se puede cargar
+  const sinFicha = (turno: Turno) => turno.detalles.some((d) => d.legajo === legajo && !d.fichaId);
+
   // Turnos agrupados por día, en el orden en que llegan (fecha y hora)
   const byDay = new Map<string, Turno[]>();
   for (const turno of turnos.data ?? []) byDay.set(turno.fecha, [...(byDay.get(turno.fecha) ?? []), turno]);
@@ -328,13 +363,13 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           {vista === 'hoy' ? 'No tenés turnos hoy.' : vista === 'semana' ? 'No tenés turnos esta semana.' : 'No tenés solicitudes por confirmar.'}
         </p>
       ) : vista === 'hoy' ? (
-        <TodayView turnos={turnos.data ?? []} actionsFor={actionsFor} />
+        <TodayView turnos={turnos.data ?? []} actionsFor={actionsFor} fichaActionFor={fichaActionFor} />
       ) : (
         [...byDay].map(([fecha, delDia]) => (
           <div key={fecha} className="flex flex-col gap-3">
             <h3 className="font-inter text-sm font-semibold uppercase tracking-widest text-capilar-grey">{formatFechaLarga(fecha)}</h3>
             {delDia.map((turno) => (
-              <TurnoCard key={turno.id} turno={turno} actions={actionsFor(turno)} />
+              <TurnoCard key={turno.id} turno={turno} actions={actionsFor(turno)} detalleAction={fichaActionFor(turno)} />
             ))}
           </div>
         ))
@@ -355,6 +390,13 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           <p className="mt-2 font-semibold text-black">
             {pending.turno.cliente.nombre} {pending.turno.cliente.apellido} · {formatFechaLarga(pending.turno.fecha)}, {pending.turno.horaInicio}
           </p>
+          {pending.type === 'completar' && (
+            <p className="mt-2">
+              {sinFicha(pending.turno)
+                ? 'Ojo: todavía no cargaste la ficha técnica y, una vez completado, ya no se puede cargar.'
+                : 'La ficha técnica se cierra y la clienta ve tus indicaciones y las fotos en su historial.'}
+            </p>
+          )}
         </ConfirmDialog>
       )}
 
@@ -378,6 +420,17 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           />
         )}
       </Modal>
+
+      {ficha && (
+        <FichaModal
+          token={token}
+          legajo={legajo}
+          turno={ficha.turno}
+          detalle={ficha.detalle}
+          onClose={() => setFicha(null)}
+          onFichaChange={(fichaId) => setFichaId(ficha.turno.id, ficha.detalle.id, fichaId)}
+        />
+      )}
     </div>
   );
 };
@@ -385,10 +438,11 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
 interface TodayViewProps {
   turnos: Turno[];
   actionsFor: (turno: Turno) => ReactNode;
+  fichaActionFor: (turno: Turno) => (detalle: TurnoDetalle) => ReactNode;
 }
 
 // Turnos de hoy: arriba un resumen con cuántos hay de cada grupo y debajo cada grupo por hora
-const TodayView = ({ turnos, actionsFor }: TodayViewProps) => {
+const TodayView = ({ turnos, actionsFor, fichaActionFor }: TodayViewProps) => {
   const grupos = gruposHoy
     .map((grupo) => ({ ...grupo, turnos: turnos.filter(grupo.incluye) }))
     .filter((grupo) => grupo.turnos.length > 0);
@@ -415,7 +469,7 @@ const TodayView = ({ turnos, actionsFor }: TodayViewProps) => {
             {grupo.titulo}
           </h3>
           {grupo.turnos.map((turno) => (
-            <TurnoCard key={turno.id} turno={turno} actions={actionsFor(turno)} />
+            <TurnoCard key={turno.id} turno={turno} actions={actionsFor(turno)} detalleAction={fichaActionFor(turno)} />
           ))}
         </div>
       ))}

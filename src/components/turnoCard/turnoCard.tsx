@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { formatPrice } from '../../api/services';
 import { fromIsoDate } from '../../api/turnos';
-import type { EstadoTurno, Turno } from '../../api/turnos';
+import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
 
 // Texto y colores de cada estado. El cliente lee el estado desde su lado ("Esperando confirmación")
 const estados: Record<EstadoTurno, { label: string; clienteLabel: string; classes: string }> = {
@@ -35,11 +35,13 @@ interface TurnoCardProps {
   actions?: ReactNode;
   // Aviso debajo del turno (ej. por qué no se puede cancelar)
   note?: ReactNode;
+  // Acción junto a cada servicio (ej. la ficha técnica)
+  detalleAction?: (detalle: TurnoDetalle) => ReactNode;
 }
 
 // Turno con fecha, horario, servicios con su profesional, estado y acciones.
 // Para el salón muestra también el cliente con su teléfono y sus alergias.
-export const TurnoCard = ({ turno, paraCliente = false, actions, note }: TurnoCardProps) => {
+export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction }: TurnoCardProps) => {
   const date = fromIsoDate(turno.fecha);
   const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO' || turno.estado === 'AUSENTE';
   const total = turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioBase), 0);
@@ -97,6 +99,7 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note }: TurnoCa
             <li key={detalle.id}>
               <span className="text-black">{detalle.servicio}</span>
               {turno.detalles.length > 1 && ` (${detalle.horaInicio} – ${detalle.horaFin})`} · con {detalle.profesional}
+              {detalleAction?.(detalle)}
             </li>
           ))}
         </ul>
