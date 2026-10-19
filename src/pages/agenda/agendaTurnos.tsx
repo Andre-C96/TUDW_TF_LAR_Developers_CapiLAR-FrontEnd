@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getUpcomingWorkDatesRequest } from '../../api/professionals';
@@ -34,7 +35,22 @@ import { useFetch } from '../../customHooks/fetch/useFetch';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
-type Vista = 'semana' | 'pendientes';
+type Vista = 'hoy' | 'semana' | 'pendientes';
+
+// Cada cuánto se actualiza la vista Hoy (también al volver a la pestaña)
+const REFRESCO_HOY_MS = 60_000;
+
+// Grupos de la vista Hoy, como en el mail de agenda diaria: primero los que avisaron que vienen
+const gruposHoy: { titulo: string; dot: string; incluye: (turno: Turno) => boolean }[] = [
+  { titulo: 'Asistencia confirmada', dot: 'bg-green-600', incluye: (t) => t.estado === 'CONFIRMADO' && !!t.asistenciaConfirmadaEn },
+  { titulo: 'Sin confirmar asistencia', dot: 'bg-capilar-peach', incluye: (t) => t.estado === 'CONFIRMADO' && !t.asistenciaConfirmadaEn },
+  { titulo: 'Por resolver', dot: 'bg-amber-400', incluye: (t) => t.estado === 'PENDIENTE' || t.estado === 'REPROGRAMADO' },
+  {
+    titulo: 'Completados, ausentes y cancelados',
+    dot: 'bg-gray-400',
+    incluye: (t) => ['COMPLETADO', 'AUSENTE', 'CANCELADO', 'RECHAZADO'].includes(t.estado),
+  },
+];
 
 // Acción que necesita confirmación (con motivo) o elegir un horario nuevo
 type Pending = { type: 'rechazar' | 'cancelar' | 'completar' | 'ausente' | 'reprogramar'; turno: Turno };
@@ -55,18 +71,46 @@ const getPendingRequest = async (token: string, legajo: number) => {
   return parts.flat().filter((turno) => turno.estado === 'PENDIENTE');
 };
 
-// Pestaña Turnos de la agenda: la semana día por día, o las solicitudes que esperan respuesta.
+// Pestaña Turnos de la agenda: hoy agrupado por asistencia (se actualiza solo), la semana día por día,
+// o las solicitudes que esperan respuesta.
 // Pendiente (servicios que requieren aprobación): confirmar o rechazar. Confirmado: cancelar o, desde que empieza, completar;
 // desde la hora de fin, marcar ausente. Los activos se pueden reprogramar.
 export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
-  const [vista, setVista] = useState<Vista>('semana');
+  const [vista, setVista] = useState<Vista>('hoy');
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const desde = toIsoDate(monday);
   const hasta = toIsoDate(addDays(monday, 6));
+  const hoy = toIsoDate(new Date());
 
-  const turnos = useFetch(vista === 'semana' ? `agenda-${desde}-${hasta}` : 'pendientes', () =>
-    vista === 'semana' ? getAgendaRequest(token, legajo, desde, hasta) : getPendingRequest(token, legajo),
-  );
+  const keys: Record<Vista, string> = { hoy: `hoy-${hoy}`, semana: `agenda-${desde}-${hasta}`, pendientes: 'pendientes' };
+  const turnos = useFetch(keys[vista], () => {
+    if (vista === 'hoy') return getAgendaRequest(token, legajo, hoy, hoy);
+    if (vista === 'semana') return getAgendaRequest(token, legajo, desde, hasta);
+    return getPendingRequest(token, legajo);
+  });
+
+  // Vista Hoy: se actualiza sola (cada minuto y al volver a la pestaña) sin mostrar el loader
+  const refreshHoy = useEffectEvent(async () => {
+    try {
+      const fresh = await getAgendaRequest(token, legajo, hoy, hoy);
+      turnos.setData(() => fresh);
+    } catch {
+      // Sin conexión: se reintenta en el próximo refresco
+    }
+  });
+
+  useEffect(() => {
+    if (vista !== 'hoy') return;
+    const interval = setInterval(refreshHoy, REFRESCO_HOY_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshHoy();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [vista]);
 
   const [pending, setPending] = useState<Pending | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -214,11 +258,12 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Semana o solicitudes por confirmar */}
+      {/* Hoy, semana o solicitudes por confirmar */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div role="tablist" aria-label="Ver" className="flex gap-2">
           {(
             [
+              ['hoy', 'Hoy'],
               ['semana', 'Semana'],
               ['pendientes', 'Por confirmar'],
             ] as const
@@ -237,6 +282,10 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
             </button>
           ))}
         </div>
+
+        {vista === 'hoy' && (
+          <span className="font-inter text-sm font-semibold text-black first-letter:uppercase">{formatFechaLarga(hoy)}</span>
+        )}
 
         {vista === 'semana' && (
           <div className="flex items-center gap-2">
@@ -262,7 +311,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
               onClick={() => setMonday(startOfWeek(new Date()))}
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet"
             >
-              Hoy
+              Esta semana
             </button>
           </div>
         )}
@@ -276,8 +325,10 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
         <Loader label="Cargando turnos..." className="py-12" />
       ) : byDay.size === 0 ? (
         <p className="py-8 text-center font-inter text-sm text-capilar-grey">
-          {vista === 'semana' ? 'No tenés turnos esta semana.' : 'No tenés solicitudes por confirmar.'}
+          {vista === 'hoy' ? 'No tenés turnos hoy.' : vista === 'semana' ? 'No tenés turnos esta semana.' : 'No tenés solicitudes por confirmar.'}
         </p>
+      ) : vista === 'hoy' ? (
+        <TodayView turnos={turnos.data ?? []} actionsFor={actionsFor} />
       ) : (
         [...byDay].map(([fecha, delDia]) => (
           <div key={fecha} className="flex flex-col gap-3">
@@ -327,6 +378,47 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           />
         )}
       </Modal>
+    </div>
+  );
+};
+
+interface TodayViewProps {
+  turnos: Turno[];
+  actionsFor: (turno: Turno) => ReactNode;
+}
+
+// Turnos de hoy: arriba un resumen con cuántos hay de cada grupo y debajo cada grupo por hora
+const TodayView = ({ turnos, actionsFor }: TodayViewProps) => {
+  const grupos = gruposHoy
+    .map((grupo) => ({ ...grupo, turnos: turnos.filter(grupo.incluye) }))
+    .filter((grupo) => grupo.turnos.length > 0);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <ul aria-label="Resumen de hoy" className="flex flex-wrap gap-2">
+        {grupos.map((grupo) => (
+          <li
+            key={grupo.titulo}
+            className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 font-inter text-xs text-black shadow-sm"
+          >
+            <span aria-hidden="true" className={`h-2 w-2 rounded-full ${grupo.dot}`} />
+            {grupo.titulo}
+            <span className="font-semibold">{grupo.turnos.length}</span>
+          </li>
+        ))}
+      </ul>
+
+      {grupos.map((grupo) => (
+        <div key={grupo.titulo} className="flex flex-col gap-3">
+          <h3 className="flex items-center gap-2 font-inter text-sm font-semibold uppercase tracking-widest text-capilar-grey">
+            <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${grupo.dot}`} />
+            {grupo.titulo}
+          </h3>
+          {grupo.turnos.map((turno) => (
+            <TurnoCard key={turno.id} turno={turno} actions={actionsFor(turno)} />
+          ))}
+        </div>
+      ))}
     </div>
   );
 };
