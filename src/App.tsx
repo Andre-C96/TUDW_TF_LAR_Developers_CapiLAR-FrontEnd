@@ -6,6 +6,8 @@ import { ProtectedRoute } from './components/protectedRoute/protectedRoute'
 import { AdminServices } from './pages/adminServices/adminServices'
 import { Agenda } from './pages/agenda/agenda'
 import { Booking } from './pages/booking/booking'
+import { ClientProfile } from './pages/clientProfile/clientProfile'
+import { Clients } from './pages/clients/clients'
 import { History } from './pages/history/history'
 import { Home } from './pages/home/home'
 import { MyTurnos } from './pages/myTurnos/myTurnos'
@@ -40,6 +42,8 @@ function App() {
 
           <Route element={<ProtectedRoute roles={['PROFESIONAL']} />}>
             <Route path="/panel/agenda" element={<Agenda />} />
+            <Route path="/panel/clientes" element={<Clients />} />
+            <Route path="/panel/clientes/:id" element={<ClientProfile />} />
             <Route path="/panel/perfil" element={<Profile />} />
           </Route>
 

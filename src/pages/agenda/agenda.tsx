@@ -24,6 +24,8 @@ export const Agenda = () => {
   const tabParam = searchParams.get('tab');
   const tab: TabId = tabs.some((t) => t.id === tabParam) ? (tabParam as TabId) : 'turnos';
   const legajo = user?.profesional?.legajo;
+  // ?tab=nuevo&cliente=: Nuevo turno con el cliente ya elegido (botón de su página en Clientes)
+  const clienteId = Number(searchParams.get('cliente')) || undefined;
 
   const goTo = (id: TabId) => setSearchParams(id === 'turnos' ? {} : { tab: id }, { replace: true });
 
@@ -65,7 +67,9 @@ export const Agenda = () => {
 
           <div role="tabpanel">
             {tab === 'turnos' && <AgendaTurnos token={token} legajo={legajo} />}
-            {tab === 'nuevo' && <NewTurno token={token} legajo={legajo} onCreated={() => goTo('turnos')} />}
+            {tab === 'nuevo' && (
+              <NewTurno key={clienteId} token={token} legajo={legajo} clienteId={clienteId} onCreated={() => goTo('turnos')} />
+            )}
             {tab === 'horarios' && <Schedule token={token} legajo={legajo} />}
           </div>
         </>

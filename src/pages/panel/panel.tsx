@@ -30,6 +30,20 @@ const workspaces: Workspace[] = [
     ),
   },
   {
+    title: 'Clientes',
+    text: 'Buscá clientes y mirá su perfil e historial.',
+    to: '/panel/clientes',
+    roles: ['PROFESIONAL'],
+    icon: (
+      <GradientIcon id="icon-clientes">
+        <circle cx="10" cy="8" r="4" />
+        <path d="M3 21c0-4 3.1-7 7-7 1.4 0 2.7.4 3.8 1" />
+        <circle cx="17.5" cy="17.5" r="3" />
+        <path d="m19.7 19.7 2.3 2.3" />
+      </GradientIcon>
+    ),
+  },
+  {
     title: 'Perfil',
     text: 'Tus datos personales y de contacto.',
     to: '/panel/perfil',

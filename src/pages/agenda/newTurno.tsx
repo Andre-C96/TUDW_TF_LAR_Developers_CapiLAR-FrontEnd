@@ -7,7 +7,7 @@ import { getProfessionalServicesRequest, getUpcomingWorkDatesRequest } from '../
 import { formatDuration, formatPrice } from '../../api/services';
 import { createTurnoRequest, formatFechaLarga } from '../../api/turnos';
 import type { Usuario } from '../../api/auth';
-import { searchClientsRequest } from '../../api/users';
+import { getClientRequest, searchClientsRequest } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
 import { Loader } from '../../components/loader/loader';
@@ -30,16 +30,21 @@ const BoxTitle = ({ children }: { children: ReactNode }) => (
 interface NewTurnoProps {
   token: string;
   legajo: number;
+  // Cliente ya elegido (ej. desde su página en Clientes)
+  clienteId?: number;
   // Después de guardar (ej. volver a la pestaña Turnos)
   onCreated: () => void;
 }
 
 // Pestaña Nuevo turno: el profesional le carga un turno a un cliente (por teléfono o en el salón).
 // Como lo carga el salón, el turno nace CONFIRMADO.
-export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
+export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps) => {
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
-  const [cliente, setCliente] = useState<Usuario | null>(null);
+  // undefined: todavía no eligió otro, se usa el que vino de Clientes (si vino)
+  const [elegido, setElegido] = useState<Usuario | null | undefined>(undefined);
+  const preset = useFetch(clienteId ? `cliente-${clienteId}` : null, () => getClientRequest(token, clienteId!));
+  const cliente = elegido !== undefined ? elegido : preset.data;
   const [servicioId, setServicioId] = useState<number | null>(null);
   const [slot, setSlot] = useState<Slot>({ fecha: '', hora: '' });
   const [isSaving, setIsSaving] = useState(false);
@@ -61,7 +66,7 @@ export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
 
   const reset = () => {
     setSearch('');
-    setCliente(null);
+    setElegido(null);
     setServicioId(null);
     setSlot({ fecha: '', hora: '' });
   };
@@ -96,7 +101,9 @@ export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
     <div className="flex flex-col gap-6">
       <div className={boxClasses}>
         <BoxTitle>Cliente</BoxTitle>
-        {cliente ? (
+        {elegido === undefined && preset.isLoading ? (
+          <Loader size="sm" className="items-start! py-2" />
+        ) : cliente ? (
           <div className="flex items-center justify-between gap-4 rounded-lg bg-capilar-violet/10 px-4 py-3 font-inter text-sm">
             <span>
               <span className="font-semibold text-black">
@@ -106,7 +113,7 @@ export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
             </span>
             <button
               type="button"
-              onClick={() => setCliente(null)}
+              onClick={() => setElegido(null)}
               className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:text-capilar-violet"
             >
               Cambiar
@@ -131,7 +138,7 @@ export const NewTurno = ({ token, legajo, onCreated }: NewTurnoProps) => {
                   <li key={c.id}>
                     <button
                       type="button"
-                      onClick={() => setCliente(c)}
+                      onClick={() => setElegido(c)}
                       className="flex w-full flex-col items-start px-4 py-3 text-left font-inter text-sm hover:bg-capilar-violet/5"
                     >
                       <span className="font-semibold text-black">
