@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
 import { Layout } from './layouts/layout/layout'
 import { LinkLayout } from './layouts/linkLayout/linkLayout'
 import { PanelLayout } from './layouts/panelLayout/panelLayout'
@@ -61,6 +61,9 @@ function App() {
         <Route path="/turno/confirmar" element={<TurnoLink key="confirmar" accion="confirmar" />} />
         <Route path="/turno/cancelar" element={<TurnoLink key="cancelar" accion="cancelar" />} />
       </Route>
+
+      {/* Los mails del back al profesional (turnos nuevos, series) llevan a /agenda */}
+      <Route path="/agenda" element={<Navigate to="/panel/agenda" replace />} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

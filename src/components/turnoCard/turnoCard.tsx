@@ -37,11 +37,21 @@ interface TurnoCardProps {
   note?: ReactNode;
   // Acción junto a cada servicio (ej. la ficha técnica)
   detalleAction?: (detalle: TurnoDetalle) => ReactNode;
+  // Etiqueta junto al estado (ej. si es parte de una serie)
+  badge?: ReactNode;
 }
+
+// Etiqueta de los turnos que son parte de una serie: "↻ Cada 15 días"
+export const SerieBadge = ({ children }: { children: ReactNode }) => (
+  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 font-inter text-xs font-semibold text-capilar-violet">
+    <span aria-hidden="true">↻</span>
+    {children}
+  </span>
+);
 
 // Turno con fecha, horario, servicios con su profesional, estado y acciones.
 // Para el salón muestra también el cliente con su teléfono y sus alergias.
-export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction }: TurnoCardProps) => {
+export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge }: TurnoCardProps) => {
   const date = fromIsoDate(turno.fecha);
   const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO' || turno.estado === 'AUSENTE';
   const total = turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioBase), 0);
@@ -65,6 +75,7 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
             {turno.horaInicio} – {turno.horaFin}
           </span>
           <TurnoStatus estado={turno.estado} paraCliente={paraCliente} />
+          {badge}
           {turno.estado === 'CONFIRMADO' && turno.asistenciaConfirmadaEn && (
             <span className="inline-flex shrink-0 items-center gap-1 font-inter text-xs font-semibold text-green-700">
               ✓ Asistencia confirmada
