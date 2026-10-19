@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchBlob } from './client';
+import { ApiError, apiFetch, apiFetchBlob } from './client';
 import type { Rol, Usuario } from './auth';
 import { addDays, toIsoDate } from './turnos';
 
@@ -125,9 +125,16 @@ export const getUserPhotoRequest = (token: string, id: number) => apiFetchBlob(`
 export const deactivateMeRequest = (token: string) =>
   apiFetch<{ message: string }>('/users/me', { method: 'DELETE', token });
 
-// Clientes activos para cargarles un turno desde la agenda (PROFESIONAL). Busca en nombre, apellido y email
+// Clientes activos, por apellido y nombre (PROFESIONAL). Busca en nombre, apellido, email y teléfono; sin search, todos
 export const searchClientsRequest = (token: string, search: string) => {
   const params = new URLSearchParams();
   if (search) params.set('search', search);
   return apiFetch<Usuario[]>(`/users/clientes?${params}`, { token });
+};
+
+// Un cliente activo (PROFESIONAL). El back todavía no tiene GET por id (pedido en PWA-242): se busca en la lista
+export const getClientRequest = async (token: string, id: number) => {
+  const cliente = (await searchClientsRequest(token, '')).find((c) => c.id === id);
+  if (!cliente) throw new ApiError('No encontramos ese cliente: puede que se haya dado de baja.', 404);
+  return cliente;
 };
