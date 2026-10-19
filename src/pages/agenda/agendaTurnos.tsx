@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
+import { puedeCargarFicha } from '../../api/fichas';
 import { getUpcomingWorkDatesRequest } from '../../api/professionals';
 import {
   MAX_DIAS_AGENDA,
@@ -227,10 +228,11 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
     }
   };
 
-  // Ficha técnica de cada servicio: verla si existe (cualquier profesional) o cargarla (el suyo, con el turno confirmado)
+  // Ficha técnica de cada servicio: verla si existe (cualquier profesional) o cargarla (el suyo, confirmado y desde que
+  // empieza ese servicio). La vista Hoy se refresca cada minuto, así que el botón aparece solo a la hora del turno
   const fichaActionFor = (turno: Turno) => (detalle: TurnoDetalle) => {
     const tiene = !!detalle.fichaId;
-    if (!tiene && !(detalle.legajo === legajo && turno.estado === 'CONFIRMADO')) return null;
+    if (!tiene && !(detalle.legajo === legajo && puedeCargarFicha(turno, detalle))) return null;
     return (
       <button
         type="button"

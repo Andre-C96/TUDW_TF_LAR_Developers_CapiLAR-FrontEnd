@@ -1,4 +1,6 @@
 import { apiFetch, apiFetchBlob } from './client';
+import { minutosHastaInicio } from './turnos';
+import type { Turno, TurnoDetalle } from './turnos';
 
 // Ficha técnica (F08): la carga el profesional de cada servicio del turno mientras está CONFIRMADO
 // y se cierra cuando el turno se completa (ya no se edita). La clienta ve solo las cerradas.
@@ -121,6 +123,11 @@ export interface FichaData {
   indicacionesCliente: string | null;
   formulas: FormulaData[];
 }
+
+// La ficha se carga durante el servicio: con el turno CONFIRMADO y desde la hora en que empieza ese servicio
+// (no antes). El back todavía solo pide CONFIRMADO: la regla de la hora está pedida en PWA-243
+export const puedeCargarFicha = (turno: Turno, detalle: TurnoDetalle) =>
+  turno.estado === 'CONFIRMADO' && minutosHastaInicio({ fecha: turno.fecha, horaInicio: detalle.horaInicio }) <= 0;
 
 // Endpoints. Todos los del salón son solo para PROFESIONAL; editar, solo el de ese servicio.
 

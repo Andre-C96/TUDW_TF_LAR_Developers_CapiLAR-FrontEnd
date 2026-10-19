@@ -7,6 +7,7 @@ import {
   deleteFichaRequest,
   getClientFichasRequest,
   getFichaRequest,
+  puedeCargarFicha,
   updateFichaRequest,
   uploadFichaPhotoRequest,
 } from '../../api/fichas';
@@ -61,7 +62,7 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const esSuyo = detalle.legajo === legajo;
-  const editable = esSuyo && (ficha ? !ficha.cerradaEn : turno.estado === 'CONFIRMADO');
+  const editable = esSuyo && (ficha ? !ficha.cerradaEn : puedeCargarFicha(turno, detalle));
 
   const close = () => {
     if (!saving) onClose();

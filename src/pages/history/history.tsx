@@ -39,8 +39,9 @@ export const History = () => {
         </p>
       ) : (
         <div className="flex flex-col gap-4">
-          {fichas.data?.map((ficha, index) => (
-            <FichaTecnica key={ficha.id} token={token} ficha={ficha} defaultAbierta={index === 0} />
+          {/* Todas cerradas: cada una se despliega al tocarla */}
+          {fichas.data?.map((ficha) => (
+            <FichaTecnica key={ficha.id} token={token} ficha={ficha} />
           ))}
         </div>
       )}
