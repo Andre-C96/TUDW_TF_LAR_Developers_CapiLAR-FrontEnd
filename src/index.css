@@ -65,3 +65,28 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Barra de scroll finita, gris claro y sin flechitas (className="scrollbar-soft", ej. dentro del Modal) */
+.scrollbar-soft::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-soft::-webkit-scrollbar-button {
+  display: none;
+}
+.scrollbar-soft::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-soft::-webkit-scrollbar-thumb {
+  background: var(--color-gray-200);
+  border-radius: 9999px;
+}
+.scrollbar-soft::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-300);
+}
+/* Firefox no tiene los ::-webkit-scrollbar: usa las propiedades estándar */
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-soft {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-200) transparent;
+  }
+}

@@ -11,7 +11,8 @@ interface CarouselProps<T> {
   label: string;
   // Encabezado opcional (ej. el título de la sección): va centrado, con los circulitos de página a su derecha
   title?: ReactNode;
-  // Ancho de cada elemento y separación entre ellos, en px
+  // Ancho mínimo de cada elemento y separación entre ellos, en px. Si hay más elementos de los que entran,
+  // se estiran para llenar todo el ancho (las flechas quedan contra el borde del contenedor)
   itemWidth?: number;
   gap?: number;
 }
@@ -66,26 +67,28 @@ export const Carousel = <T,>({
 }: CarouselProps<T>) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLUListElement>(null);
-  const [perPage, setPerPage] = useState(1);
+  // Ancho disponible (se recalcula al cambiar el tamaño de la ventana)
+  const [containerWidth, setContainerWidth] = useState(0);
   const [page, setPage] = useState(0);
 
-  // Cuántos elementos completos entran en el ancho disponible (se recalcula al cambiar el tamaño de la ventana)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new ResizeObserver(([entry]) => {
-      setPerPage(Math.max(1, Math.floor((entry.contentRect.width + gap) / (itemWidth + gap))));
-    });
+    const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
     observer.observe(container);
     return () => observer.disconnect();
-  }, [itemWidth, gap]);
+  }, []);
 
+  // Cuántos elementos completos entran con el ancho mínimo
+  const perPage = Math.max(1, Math.floor((containerWidth + gap) / (itemWidth + gap)));
   const visible = Math.min(perPage, items.length);
+  // Con más elementos de los que entran, se reparten todo el ancho; con menos, quedan centrados con el mínimo
+  const width = items.length >= perPage && containerWidth > 0 ? Math.floor((containerWidth - (perPage - 1) * gap) / perPage) : itemWidth;
   const pages = Math.ceil(items.length / perPage);
   const currentPage = Math.min(page, pages - 1);
   // El carrusel mide justo lo que ocupan los elementos visibles: ninguno queda cortado
-  const trackWidth = visible * itemWidth + (visible - 1) * gap;
-  const pageWidth = perPage * (itemWidth + gap);
+  const trackWidth = visible * width + (visible - 1) * gap;
+  const pageWidth = perPage * (width + gap);
 
   const handleScroll = () => {
     const track = trackRef.current;
@@ -160,7 +163,7 @@ export const Carousel = <T,>({
                 key={getKey(item)}
                 // Solo el primero de cada página es punto de frenado, así se avanza de a una página
                 className={`flex shrink-0 *:flex-1 ${index % perPage === 0 ? 'snap-start' : ''}`}
-                style={{ width: itemWidth }}
+                style={{ width }}
               >
                 {renderItem(item)}
               </li>

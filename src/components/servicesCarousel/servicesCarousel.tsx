@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { formatDuration, formatPrice, getServicesRequest } from '../../api/services';
+import { getServicesRequest } from '../../api/services';
 import type { Servicio } from '../../api/services';
 import { Alert } from '../alert/alert';
-import { Button } from '../button/button';
-import { Card } from '../card/card';
 import { Carousel } from '../carousel/carousel';
 import { Loader } from '../loader/loader';
+import { ServiceCard } from '../serviceCard/serviceCard';
 import { Title } from '../title/title';
 
 interface ServicesCarouselProps {
@@ -18,7 +17,7 @@ interface ServicesCarouselProps {
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
-// Carrusel con los servicios activos del salón: nombre, duración, precio y botón Reservar (el listado es público)
+// Carrusel con los servicios activos del salón (ServiceCard), con su botón Reservar (el listado es público)
 export const ServicesCarousel = ({ title, onReserve }: ServicesCarouselProps) => {
   const [services, setServices] = useState<Servicio[] | null>(null);
   const [error, setError] = useState('');
@@ -75,52 +74,8 @@ export const ServicesCarousel = ({ title, onReserve }: ServicesCarouselProps) =>
       getKey={(servicio) => servicio.id}
       label={title}
       title={heading}
-      renderItem={(servicio) => (
-        <Card
-          // El nombre siempre ocupa el lugar de 2 líneas (centrado; si es más largo, termina en "…"),
-          // así la duración y el precio quedan a la misma altura en todas las cards
-          title={
-            <span className="flex h-[2lh] items-center justify-center" title={servicio.tipo}>
-              <span className="line-clamp-2">{servicio.tipo}</span>
-            </span>
-          }
-          className="bg-white! px-6! py-10!"
-        >
-          <div className="flex flex-col items-center gap-3">
-            <span className="flex items-center gap-1.5">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                className="h-4 w-4"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 7v5l3 2" />
-              </svg>
-              {formatDuration(servicio.tiempoDuracion)}
-            </span>
-            {/* Precio base: el final depende del largo y del estado del cabello */}
-            <span className="flex flex-col items-center">
-              <span className="text-xs uppercase tracking-widest text-capilar-grey">Desde</span>
-              <span className="bg-capilar-gradient bg-clip-text text-2xl font-semibold text-transparent">
-                {formatPrice(servicio.precio)}
-              </span>
-            </span>
-            {onReserve && (
-              <Button
-                onClick={() => onReserve(servicio)}
-                aria-label={`Reservar ${servicio.tipo}`}
-                className="mt-2 text-sm text-white! font-semibold! uppercase tracking-wider"
-              >
-                Reservar
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
+      itemWidth={320}
+      renderItem={(servicio) => <ServiceCard servicio={servicio} onReserve={onReserve} />}
     />
   );
 };
