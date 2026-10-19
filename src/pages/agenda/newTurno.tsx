@@ -109,7 +109,9 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
               <span className="font-semibold text-black">
                 {cliente.nombre} {cliente.apellido}
               </span>
-              <span className="text-capilar-grey"> · {cliente.email}</span>
+              <span className="text-capilar-grey">
+                {cliente.telefono && ` · ${cliente.telefono}`} · {cliente.email}
+              </span>
             </span>
             <button
               type="button"
@@ -121,9 +123,9 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
           </div>
         ) : (
           <>
-            <SearchBox value={search} onChange={setSearch} label="Buscar cliente" placeholder="Buscar por nombre, apellido o correo" />
+            <SearchBox value={search} onChange={setSearch} label="Buscar cliente" placeholder="Buscar por nombre, apellido, correo o teléfono" />
             {debounced.length < 2 ? (
-              <p className="font-inter text-sm text-capilar-grey">Escribí al menos 2 letras para buscar.</p>
+              <p className="font-inter text-sm text-capilar-grey">Escribí al menos 2 letras o números para buscar.</p>
             ) : clients.error ? (
               <Alert variant="error" title="No se pudieron buscar clientes">
                 {clients.error}
@@ -145,8 +147,8 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
                         {c.nombre} {c.apellido}
                       </span>
                       <span className="text-capilar-grey">
+                        {c.telefono && `${c.telefono} · `}
                         {c.email}
-                        {c.telefono && ` · ${c.telefono}`}
                       </span>
                     </button>
                   </li>

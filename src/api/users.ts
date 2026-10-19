@@ -128,7 +128,9 @@ export const deactivateMeRequest = (token: string) =>
 // Clientes activos, por apellido y nombre (PROFESIONAL). Busca en nombre, apellido, email y teléfono; sin search, todos
 export const searchClientsRequest = (token: string, search: string) => {
   const params = new URLSearchParams();
-  if (search) params.set('search', search);
+  // El back guarda el teléfono solo con dígitos: "299 412-3456" o "(299) 412" se buscan sin espacios, guiones ni paréntesis
+  const query = /^[\d\s()+-]+$/.test(search) ? search.replace(/\D/g, '') : search;
+  if (query) params.set('search', query);
   return apiFetch<Usuario[]>(`/users/clientes?${params}`, { token });
 };
 
