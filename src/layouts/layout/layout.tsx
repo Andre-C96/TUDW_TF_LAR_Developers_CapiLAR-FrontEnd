@@ -18,6 +18,7 @@ export interface LayoutContext {
 const clientMenu: UserMenuItem[] = [
   { label: 'Reservar turno', to: '/reservar' },
   { label: 'Mis turnos', to: '/mis-turnos' },
+  { label: 'Probá un color', to: '/probar-color' },
   { label: 'Historial', to: '/historial' },
   { label: 'Mi perfil', to: '/mi-perfil' },
 ];
