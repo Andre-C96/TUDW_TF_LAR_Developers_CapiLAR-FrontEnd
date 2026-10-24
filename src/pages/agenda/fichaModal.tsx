@@ -6,12 +6,13 @@ import {
   deleteFichaPhotoRequest,
   deleteFichaRequest,
   getClientFichasRequest,
+  getDiagnosticoRequest,
   getFichaRequest,
   puedeCargarFicha,
   updateFichaRequest,
   uploadFichaPhotoRequest,
 } from '../../api/fichas';
-import type { Ficha, FichaData, FotoFicha, MomentoFoto } from '../../api/fichas';
+import type { Ficha, FichaData, FotoFicha, MomentoFoto, SugerenciaDiagnostico } from '../../api/fichas';
 import { formatFechaLarga } from '../../api/turnos';
 import type { Turno, TurnoDetalle } from '../../api/turnos';
 import { validateFoto } from '../../api/users';
@@ -28,6 +29,12 @@ const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : unexpectedError);
 
 type Pestania = 'ficha' | 'fotos' | 'historial';
+
+// Los 5 campos del diagnóstico que trajo la IA; los que no pudo ver quedan como están guardados
+const camposSugeridos = ({ porosidad, elasticidad, porcentajeCanas, tipoDePelo, volumenDePelo }: SugerenciaDiagnostico) =>
+  Object.fromEntries(
+    Object.entries({ porosidad, elasticidad, porcentajeCanas, tipoDePelo, volumenDePelo }).filter(([, valor]) => valor !== undefined),
+  ) as Partial<Ficha>;
 
 interface FichaModalProps {
   token: string;
@@ -61,8 +68,15 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
   const [formError, setFormError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Sugerencia de la IA (TP3 · API 3): precarga el formulario sin guardar. Cada cambio de `version`
+  // reinicia el FichaForm, que toma los valores iniciales de la ficha que recibe
+  const [sugerencia, setSugerencia] = useState<SugerenciaDiagnostico | null>(null);
+  const [sugiriendo, setSugiriendo] = useState(false);
+  const [version, setVersion] = useState(0);
+
   const esSuyo = detalle.legajo === legajo;
   const editable = esSuyo && (ficha ? !ficha.cerradaEn : puedeCargarFicha(turno, detalle));
+  const tieneFotoAntes = !!ficha?.fotos.some((foto) => foto.tipo === 'ANTES');
 
   const close = () => {
     if (!saving) onClose();
@@ -74,6 +88,8 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
     try {
       if (ficha) {
         setLocal(await updateFichaRequest(token, ficha.id, data));
+        // Lo sugerido ya quedó guardado (o corregido por la profesional)
+        setSugerencia(null);
         toast.success('Ficha guardada');
       } else {
         const nueva = await createFichaRequest(token, turno.id, detalle.id, data);
@@ -102,6 +118,26 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
     } finally {
       setSaving(false);
     }
+  };
+
+  // La IA analiza la última foto de ANTES; el back no guarda nada
+  const sugerir = async () => {
+    if (!ficha) return;
+    setSugiriendo(true);
+    try {
+      setSugerencia(await getDiagnosticoRequest(token, ficha.id));
+      setVersion((v) => v + 1);
+    } catch (err) {
+      toast.error('No se pudo pedir la sugerencia', { description: errorMessage(err) });
+    } finally {
+      setSugiriendo(false);
+    }
+  };
+
+  // Vuelve el formulario a los valores guardados
+  const descartarSugerencia = () => {
+    setSugerencia(null);
+    setVersion((v) => v + 1);
   };
 
   // Fotos: cada cambio devuelve la ficha actualizada
@@ -231,15 +267,57 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
             </div>
           </div>
         ) : editable ? (
-          <FichaForm
-            key={ficha?.id ?? 'nueva'}
-            ficha={ficha}
-            onSubmit={save}
-            onCancel={close}
-            onDelete={ficha ? () => setConfirmDelete(true) : undefined}
-            isLoading={saving}
-            error={formError}
-          />
+          <div className="flex flex-col gap-4">
+            {ficha &&
+              (sugerencia ? (
+                <Alert
+                  variant="info"
+                  title={
+                    <span className="flex flex-wrap items-center gap-2">
+                      Sugerencia de IA: revisala antes de guardar.
+                      {sugerencia.simulado && (
+                        <span className="rounded-md bg-white px-2 py-0.5 text-xs font-medium">Modo prueba</span>
+                      )}
+                    </span>
+                  }
+                >
+                  {sugerencia.observaciones && <p>{sugerencia.observaciones}</p>}
+                  <button
+                    type="button"
+                    onClick={descartarSugerencia}
+                    disabled={saving}
+                    className="mt-2 font-medium underline underline-offset-2 hover:opacity-80 disabled:opacity-60"
+                  >
+                    Descartar sugerencia
+                  </button>
+                </Alert>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    variant="secundario"
+                    onClick={sugerir}
+                    disabled={!tieneFotoAntes || sugiriendo || saving}
+                    className={`text-sm ${tieneFotoAntes ? '' : 'opacity-50'}`}
+                  >
+                    {sugiriendo ? 'Analizando la foto...' : '✨ Sugerir con IA'}
+                  </Button>
+                  <p className="font-inter text-xs text-capilar-grey">
+                    {tieneFotoAntes
+                      ? 'Precarga el diagnóstico con la última foto de antes. Lo revisás y lo guardás vos.'
+                      : 'Subí una foto de antes en la pestaña Fotos.'}
+                  </p>
+                </div>
+              ))}
+            <FichaForm
+              key={`${ficha?.id ?? 'nueva'}-${version}`}
+              ficha={ficha && sugerencia ? { ...ficha, ...camposSugeridos(sugerencia) } : ficha}
+              onSubmit={save}
+              onCancel={close}
+              onDelete={ficha ? () => setConfirmDelete(true) : undefined}
+              isLoading={saving || sugiriendo}
+              error={formError}
+            />
+          </div>
         ) : ficha ? (
           <div className="flex flex-col gap-6">
             <p className="rounded-md bg-gray-50 px-3 py-2 font-inter text-xs text-capilar-grey">
