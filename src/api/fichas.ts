@@ -124,6 +124,20 @@ export interface FichaData {
   formulas: FormulaData[];
 }
 
+// Sugerencia de la IA (Gemini) para el diagnóstico, a partir de la última foto de ANTES (TP3 · API 3).
+// Trae solo lo que la IA pudo ver; nada se guarda hasta que la profesional toca Guardar
+export interface SugerenciaDiagnostico {
+  porosidad?: NivelCapilar;
+  elasticidad?: NivelCapilar;
+  porcentajeCanas?: number;
+  tipoDePelo?: TipoDePelo;
+  volumenDePelo?: VolumenDePelo;
+  // Una frase sobre daño o procesos químicos: se muestra en el aviso, no se precarga
+  observaciones?: string;
+  // true: respuesta fija del back (GEMINI_MODO=simulado), sin llamar a Gemini
+  simulado: boolean;
+}
+
 // La ficha se carga durante el servicio: con el turno CONFIRMADO y desde la hora en que empieza ese servicio
 // (no antes). El back todavía solo pide CONFIRMADO: la regla de la hora está pedida en PWA-243
 export const puedeCargarFicha = (turno: Turno, detalle: TurnoDetalle) =>
@@ -143,6 +157,10 @@ export const updateFichaRequest = (token: string, id: number, data: FichaData) =
 
 export const deleteFichaRequest = (token: string, id: number) =>
   apiFetch<{ message: string }>(`/fichas/${id}`, { method: 'DELETE', token });
+
+// El profesional de ese servicio, con la ficha abierta y al menos una foto de ANTES. No guarda nada
+export const getDiagnosticoRequest = (token: string, fichaId: number) =>
+  apiFetch<SugerenciaDiagnostico>(`/fichas/${fichaId}/diagnostico`, { method: 'POST', token });
 
 // Historial de una clienta, de la más nueva a la más vieja (cualquier profesional)
 export const getClientFichasRequest = (token: string, clienteId: number) =>
