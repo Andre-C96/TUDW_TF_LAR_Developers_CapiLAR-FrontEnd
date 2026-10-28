@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { Rol, Usuario } from '../../api/auth';
 import { ApiError } from '../../api/client';
@@ -105,7 +106,10 @@ const confirmTexts = (action: PendingAction): { title: string; question: ReactNo
 export const Users = () => {
   const { user: me, token } = useAuth();
   const [search, setSearch] = useState('');
-  const [rolFilter, setRolFilter] = useState<Rol | ''>('');
+  // El filtro de rol va en la URL (?rol=) para poder elegirlo desde el menú lateral
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rolFilter: Rol | '' = filters.find((f) => f.rol === searchParams.get('rol'))?.rol ?? '';
+  const setRolFilter = (rol: Rol | '') => setSearchParams(rol ? { rol } : {}, { replace: true });
   const [users, setUsers] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
