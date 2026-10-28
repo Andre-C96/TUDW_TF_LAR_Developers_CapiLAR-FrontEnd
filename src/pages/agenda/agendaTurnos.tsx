@@ -13,7 +13,6 @@ import {
   cancelTurnoRequest,
   completeTurnoRequest,
   formatFechaLarga,
-  formatWeek,
   getAgendaRequest,
   markAbsentRequest,
   minutosHastaInicio,
@@ -26,20 +25,60 @@ import {
 import type { Turno, TurnoDetalle } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
+import { Collapsible, CountBadge } from '../../components/collapsible/collapsible';
 import { ConfirmDialog } from '../../components/confirmDialog/confirmDialog';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
+import { SearchBox } from '../../components/searchBox/searchBox';
 import { SlotPicker } from '../../components/slotPicker/slotPicker';
 import type { Slot } from '../../components/slotPicker/slotPicker';
 import { Title } from '../../components/title/title';
-import { SerieBadge, TurnoAction, TurnoCard } from '../../components/turnoCard/turnoCard';
+import { SerieBadge, TurnoAction, TurnoCard, TurnoList } from '../../components/turnoCard/turnoCard';
+import { WeekNav } from '../../components/weekNav/weekNav';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { FichaModal } from './fichaModal';
 import { SerieModal } from './serieModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
-type Vista = 'hoy' | 'semana' | 'pendientes';
+// Filtro de la agenda (Hoy por defecto)
+type Filtro = 'hoy' | 'semana' | 'pendientes';
+const FILTROS: [Filtro, string][] = [
+  ['hoy', 'Hoy'],
+  ['semana', 'Semana'],
+  ['pendientes', 'Por confirmar'],
+];
+
+// Lo que se está mostrando: el filtro o los resultados de la búsqueda
+type Vista = Filtro | 'busqueda';
+
+// La búsqueda mira los turnos de los últimos 30 días y los próximos 60 (el máximo para reservar)
+const BUSQUEDA_DIAS_ATRAS = 30;
+
+// Cancelados y rechazados se cuentan aparte (en gris) en cada día
+const esCancelado = (turno: Turno) => turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO';
+
+// Sin mayúsculas ni tildes, para comparar lo que se busca
+const normalizar = (texto: string) =>
+  texto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+
+// Busca por cliente, servicio o fecha ("octubre", "martes 28")
+const coincide = (turno: Turno, busqueda: string) => {
+  const texto = normalizar(
+    [
+      turno.cliente.nombre,
+      turno.cliente.apellido,
+      ...turno.detalles.map((detalle) => detalle.servicio),
+      formatFechaLarga(turno.fecha),
+    ].join(' '),
+  );
+  return normalizar(busqueda)
+    .split(/\s+/)
+    .every((palabra) => texto.includes(palabra));
+};
 
 // Cada cuánto se actualiza la vista Hoy (también al volver a la pestaña)
 const REFRESCO_HOY_MS = 60_000;
@@ -64,32 +103,47 @@ interface AgendaTurnosProps {
   legajo: number;
 }
 
-// Solicitudes pendientes de acá a 60 días (el máximo para reservar). La agenda se pide de a 31 días: dos tramos.
-const getPendingRequest = async (token: string, legajo: number) => {
+// Turnos entre dos días a partir de hoy (desde puede ser negativo). La agenda se pide de a 31 días: por tramos.
+const getRangeRequest = async (token: string, legajo: number, desdeDias: number, hastaDias: number) => {
   const today = new Date();
-  const ranges = [0, MAX_DIAS_AGENDA].map((offset) => [
-    toIsoDate(addDays(today, offset)),
-    toIsoDate(addDays(today, Math.min(offset + MAX_DIAS_AGENDA - 1, MAX_DIAS_ANTICIPACION))),
-  ]);
+  const ranges: [string, string][] = [];
+  for (let offset = desdeDias; offset <= hastaDias; offset += MAX_DIAS_AGENDA) {
+    ranges.push([toIsoDate(addDays(today, offset)), toIsoDate(addDays(today, Math.min(offset + MAX_DIAS_AGENDA - 1, hastaDias)))]);
+  }
   const parts = await Promise.all(ranges.map(([desde, hasta]) => getAgendaRequest(token, legajo, desde, hasta)));
-  return parts.flat().filter((turno) => turno.estado === 'PENDIENTE');
+  return parts.flat();
 };
 
-// Pestaña Turnos de la agenda: hoy agrupado por asistencia (se actualiza solo), la semana día por día,
-// o las solicitudes que esperan respuesta.
+// Solicitudes pendientes de acá a 60 días (el máximo para reservar)
+const getPendingRequest = async (token: string, legajo: number) =>
+  (await getRangeRequest(token, legajo, 0, MAX_DIAS_ANTICIPACION)).filter((turno) => turno.estado === 'PENDIENTE');
+
+// Pestaña Turnos de la agenda. Arriba, el filtro (Hoy, Semana, Por confirmar), el buscador y el paso de semanas.
+// Hoy se agrupa por asistencia (se actualiza solo); la semana, las solicitudes y la búsqueda, en un desplegable por día
+// con la cantidad de turnos (y de cancelados en gris).
 // Pendiente (servicios que requieren aprobación): confirmar o rechazar. Confirmado: cancelar o, desde que empieza, completar;
 // desde la hora de fin, marcar ausente. Los activos se pueden reprogramar.
 export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
-  const [vista, setVista] = useState<Vista>('hoy');
+  const [filtro, setFiltro] = useState<Filtro>('hoy');
+  const [busqueda, setBusqueda] = useState('');
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const desde = toIsoDate(monday);
   const hasta = toIsoDate(addDays(monday, 6));
   const hoy = toIsoDate(new Date());
 
-  const keys: Record<Vista, string> = { hoy: `hoy-${hoy}`, semana: `agenda-${desde}-${hasta}`, pendientes: 'pendientes' };
+  const buscando = busqueda.trim() !== '';
+  const vista: Vista = buscando ? 'busqueda' : filtro;
+
+  const keys: Record<Vista, string> = {
+    hoy: `hoy-${hoy}`,
+    semana: `agenda-${desde}-${hasta}`,
+    pendientes: 'pendientes',
+    busqueda: `busqueda-${hoy}`,
+  };
   const turnos = useFetch(keys[vista], () => {
     if (vista === 'hoy') return getAgendaRequest(token, legajo, hoy, hoy);
     if (vista === 'semana') return getAgendaRequest(token, legajo, desde, hasta);
+    if (vista === 'busqueda') return getRangeRequest(token, legajo, -BUSQUEDA_DIAS_ATRAS, MAX_DIAS_ANTICIPACION);
     return getPendingRequest(token, legajo);
   });
 
@@ -277,9 +331,19 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   // Servicios propios sin ficha: al completar el turno ya no se puede cargar
   const sinFicha = (turno: Turno) => turno.detalles.some((d) => d.legajo === legajo && !d.fichaId);
 
+  // La búsqueda mira siempre todo el rango, sin importar el filtro (para poder buscar por mes)
+  const visibles = (turnos.data ?? []).filter((turno) => vista !== 'busqueda' || coincide(turno, busqueda));
+
   // Turnos agrupados por día, en el orden en que llegan (fecha y hora)
   const byDay = new Map<string, Turno[]>();
-  for (const turno of turnos.data ?? []) byDay.set(turno.fecha, [...(byDay.get(turno.fecha) ?? []), turno]);
+  for (const turno of visibles) byDay.set(turno.fecha, [...(byDay.get(turno.fecha) ?? []), turno]);
+
+  const vacio: Record<Vista, string> = {
+    hoy: 'No tenés turnos hoy.',
+    semana: 'No tenés turnos esta semana.',
+    pendientes: 'No tenés solicitudes por confirmar.',
+    busqueda: `No encontramos turnos para "${busqueda.trim()}".`,
+  };
 
   const dialogTexts = {
     rechazar: {
@@ -311,62 +375,60 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Hoy, semana o solicitudes por confirmar */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div role="tablist" aria-label="Ver" className="flex gap-2">
-          {(
-            [
-              ['hoy', 'Hoy'],
-              ['semana', 'Semana'],
-              ['pendientes', 'Por confirmar'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={vista === value}
-              onClick={() => setVista(value)}
-              className={`rounded-full px-4 py-2 font-inter text-sm font-medium transition-colors ${
-                vista === value ? 'bg-capilar-peach/75 text-black' : 'bg-white text-capilar-grey hover:text-capilar-violet'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+      {/* Filtro, buscador y paso de semanas en un mismo recuadro */}
+      <div className="flex flex-col gap-3 rounded-[6px] border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <label className="flex shrink-0 items-center gap-3">
+            <span className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey">Filtro</span>
+            <span className="relative">
+              <select
+                value={filtro}
+                onChange={(event) => setFiltro(event.target.value as Filtro)}
+                className="cursor-pointer appearance-none rounded-[6px] border border-gray-300 bg-white py-2 pr-10 pl-4 font-inter text-sm font-semibold text-black outline-none transition-colors focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20"
+              >
+                {FILTROS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {/* Flecha propia (la del navegador queda pegada al borde y no se puede correr) */}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 right-3.5 h-3.5 w-3.5 -translate-y-1/2 text-capilar-grey"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </span>
+          </label>
+
+          {/* Al lado del filtro: el paso de semanas o la fecha de hoy */}
+          {vista === 'semana' && <WeekNav monday={monday} onChange={setMonday} className="self-start lg:self-auto" />}
+          {vista === 'hoy' && (
+            <span className="shrink-0 font-inter text-sm font-semibold text-black first-letter:uppercase">{formatFechaLarga(hoy)}</span>
+          )}
+
+          <SearchBox
+            value={busqueda}
+            onChange={setBusqueda}
+            label="Buscar turnos"
+            placeholder="Buscar por cliente, servicio o mes"
+            compact
+            className="lg:ml-auto lg:max-w-sm"
+          />
         </div>
 
-        {vista === 'hoy' && (
-          <span className="font-inter text-sm font-semibold text-black first-letter:uppercase">{formatFechaLarga(hoy)}</span>
-        )}
-
-        {vista === 'semana' && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMonday((prev) => addDays(prev, -7))}
-              aria-label="Semana anterior"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-lg text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet"
-            >
-              ‹
-            </button>
-            <span className="min-w-48 text-center font-inter text-sm font-semibold text-black">{formatWeek(monday)}</span>
-            <button
-              type="button"
-              onClick={() => setMonday((prev) => addDays(prev, 7))}
-              aria-label="Semana siguiente"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-lg text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet"
-            >
-              ›
-            </button>
-            <button
-              type="button"
-              onClick={() => setMonday(startOfWeek(new Date()))}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet"
-            >
-              Esta semana
-            </button>
-          </div>
+        {buscando && (
+          <p className="font-inter text-xs text-capilar-grey">
+            Buscando en todos los turnos de los últimos {BUSQUEDA_DIAS_ATRAS} días y los próximos {MAX_DIAS_ANTICIPACION}, sin importar
+            el filtro.
+          </p>
         )}
       </div>
 
@@ -377,26 +439,52 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
       ) : turnos.isLoading ? (
         <Loader label="Cargando turnos..." className="py-12" />
       ) : byDay.size === 0 ? (
-        <p className="py-8 text-center font-inter text-sm text-capilar-grey">
-          {vista === 'hoy' ? 'No tenés turnos hoy.' : vista === 'semana' ? 'No tenés turnos esta semana.' : 'No tenés solicitudes por confirmar.'}
-        </p>
+        <p className="py-8 text-center font-inter text-sm text-capilar-grey">{vacio[vista]}</p>
       ) : vista === 'hoy' ? (
-        <TodayView turnos={turnos.data ?? []} actionsFor={actionsFor} fichaActionFor={fichaActionFor} badgeFor={badgeFor} />
+        <TodayView turnos={visibles} actionsFor={actionsFor} fichaActionFor={fichaActionFor} badgeFor={badgeFor} />
       ) : (
-        [...byDay].map(([fecha, delDia]) => (
-          <div key={fecha} className="flex flex-col gap-3">
-            <h3 className="font-inter text-sm font-semibold uppercase tracking-widest text-capilar-grey">{formatFechaLarga(fecha)}</h3>
-            {delDia.map((turno) => (
-              <TurnoCard
-                key={turno.id}
-                turno={turno}
-                actions={actionsFor(turno)}
-                detalleAction={fichaActionFor(turno)}
-                badge={badgeFor(turno)}
-              />
-            ))}
-          </div>
-        ))
+        <div className="flex flex-col gap-3">
+          {[...byDay].map(([fecha, delDia]) => {
+            const cancelados = delDia.filter(esCancelado).length;
+            return (
+              <Collapsible
+                // Se vuelve a armar al cambiar de vista: arranca abierto hoy o, al buscar, todos
+                key={`${vista}-${fecha}`}
+                variant="grupo"
+                as="h3"
+                defaultOpen={fecha === hoy || vista === 'busqueda'}
+                title={fecha === hoy ? `${formatFechaLarga(fecha)} · hoy` : formatFechaLarga(fecha)}
+                aside={
+                  <span className="flex items-center gap-1.5">
+                    <CountBadge color="violeta">
+                      {delDia.length - cancelados}
+                      <span className="sr-only"> turnos</span>
+                    </CountBadge>
+                    {cancelados > 0 && (
+                      <CountBadge>
+                        {cancelados}
+                        <span className="sr-only"> cancelados</span>
+                      </CountBadge>
+                    )}
+                  </span>
+                }
+              >
+                <TurnoList>
+                  {delDia.map((turno) => (
+                    <TurnoCard
+                      key={turno.id}
+                      turno={turno}
+                      enLista
+                      actions={actionsFor(turno)}
+                      detalleAction={fichaActionFor(turno)}
+                      badge={badgeFor(turno)}
+                    />
+                  ))}
+                </TurnoList>
+              </Collapsible>
+            );
+          })}
+        </div>
       )}
 
       {texts && pending && (
@@ -512,15 +600,18 @@ const TodayView = ({ turnos, actionsFor, fichaActionFor, badgeFor }: TodayViewPr
             <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${grupo.dot}`} />
             {grupo.titulo}
           </h3>
-          {grupo.turnos.map((turno) => (
-            <TurnoCard
-              key={turno.id}
-              turno={turno}
-              actions={actionsFor(turno)}
-              detalleAction={fichaActionFor(turno)}
-              badge={badgeFor(turno)}
-            />
-          ))}
+          <TurnoList>
+            {grupo.turnos.map((turno) => (
+              <TurnoCard
+                key={turno.id}
+                turno={turno}
+                enLista
+                actions={actionsFor(turno)}
+                detalleAction={fichaActionFor(turno)}
+                badge={badgeFor(turno)}
+              />
+            ))}
+          </TurnoList>
         </div>
       ))}
     </div>

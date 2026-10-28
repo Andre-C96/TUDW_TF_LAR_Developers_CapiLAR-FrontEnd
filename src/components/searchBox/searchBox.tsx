@@ -9,6 +9,8 @@ interface SearchBoxProps extends Omit<ComponentProps<'input'>, 'value' | 'onChan
   onSearch?: (value: string) => void;
   // Texto para lectores de pantalla (no se ve en pantalla)
   label?: string;
+  // Más fino, para barras con otros controles
+  compact?: boolean;
 }
 
 // Buscador controlado con ícono de lupa y ✕ para limpiar el texto
@@ -17,6 +19,7 @@ export const SearchBox = ({
   onChange,
   onSearch,
   label = 'Buscar',
+  compact = false,
   placeholder = 'Buscar...',
   id,
   className = '',
@@ -56,7 +59,7 @@ export const SearchBox = ({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        className="w-full rounded-[6px] border border-gray-300 py-3 pl-11 pr-10 font-inter text-sm text-black placeholder:text-gray-400 outline-none transition-colors focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20 [&::-webkit-search-cancel-button]:appearance-none"
+        className={`w-full rounded-[6px] border border-gray-300 ${compact ? 'py-2' : 'py-3'} pl-11 pr-10 font-inter text-sm text-black placeholder:text-gray-400 outline-none transition-colors focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20 [&::-webkit-search-cancel-button]:appearance-none`}
         {...props}
       />
       {/* Franja izquierda con degradado de marca (como la Ficha Técnica); va encima del borde */}

@@ -18,6 +18,7 @@ import { Button } from '../../components/button/button';
 import { List, ListItem } from '../../components/list/list';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
+import { IconButton } from '../../components/iconButton/iconButton';
 import { SearchBox } from '../../components/searchBox/searchBox';
 import { ServiceForm } from '../../components/serviceForm/serviceForm';
 import { Title } from '../../components/title/title';
@@ -41,9 +42,9 @@ const normalize = (text: string) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
 
-// Botón chico de las filas (Editar / Eliminar / Dar de alta)
+// Botón chico de las filas con texto (Dar de alta); editar y eliminar van con IconButton
 const rowButtonClasses =
-  'rounded-lg border border-gray-300 bg-white px-3 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors';
+  'rounded-[6px] border border-gray-300 bg-white px-3 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors';
 
 // Textos del modal de confirmación (baja y alta)
 const confirmTexts = (action: { type: 'baja' | 'alta'; servicio: Servicio }): { title: string; question: ReactNode; detail: string; confirm: string } => {
@@ -245,22 +246,8 @@ export const AdminServices = () => {
                       </button>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          onClick={() => setPending({ type: 'editar', servicio })}
-                          aria-label={`Editar ${servicio.tipo}`}
-                          className={`${rowButtonClasses} hover:border-capilar-violet hover:text-capilar-violet`}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPending({ type: 'baja', servicio })}
-                          aria-label={`Eliminar ${servicio.tipo}`}
-                          className={`${rowButtonClasses} hover:border-red-500 hover:text-red-500`}
-                        >
-                          Eliminar
-                        </button>
+                        <IconButton icon="editar" onClick={() => setPending({ type: 'editar', servicio })} aria-label={`Editar ${servicio.tipo}`} />
+                        <IconButton icon="eliminar" onClick={() => setPending({ type: 'baja', servicio })} aria-label={`Eliminar ${servicio.tipo}`} />
                       </>
                     )}
                   </>

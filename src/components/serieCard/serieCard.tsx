@@ -5,10 +5,11 @@ import type { EstadoSerie, Serie, TurnoDeSerie } from '../../api/series';
 import { formatFechaCorta, fromIsoDate, toIsoDate } from '../../api/turnos';
 import { TurnoStatus } from '../turnoCard/turnoCard';
 
+// Estado de la serie: solo el texto en negrita con su color (como el de los turnos)
 const estados: Record<EstadoSerie, { label: string; classes: string }> = {
-  ACTIVA: { label: 'Activa', classes: 'bg-green-50 text-green-800 border-green-300' },
-  SUSPENDIDA: { label: 'Suspendida', classes: 'bg-amber-50 text-amber-800 border-amber-300' },
-  BAJA: { label: 'Dada de baja', classes: 'bg-gray-100 text-gray-700 border-gray-300' },
+  ACTIVA: { label: 'Activa', classes: 'text-green-700' },
+  SUSPENDIDA: { label: 'Suspendida', classes: 'text-amber-700' },
+  BAJA: { label: 'Dada de baja', classes: 'text-capilar-grey' },
 };
 
 // "3 de noviembre"
@@ -35,13 +36,13 @@ export const SerieCard = ({ serie, paraCliente = false, actions, fechaAction }: 
 
   return (
     <article
-      className={`flex flex-col gap-4 rounded-[6px] border border-gray-200 bg-white p-5 shadow-md ${serie.estado === 'BAJA' ? 'opacity-70' : ''}`}
+      className={`flex flex-col gap-3 rounded-[6px] border border-gray-200 bg-white px-4 py-3 shadow-sm ${serie.estado === 'BAJA' ? 'opacity-70' : ''}`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1 font-inter">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-lg font-semibold text-black">{serie.servicio}</span>
-            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${estado.classes}`}>{estado.label}</span>
+            <span className={`text-xs font-bold ${estado.classes}`}>{estado.label}</span>
           </div>
           <span className="text-sm text-capilar-grey">
             {paraCliente ? `Con ${serie.profesional}` : `${serie.cliente.nombre} ${serie.cliente.apellido}`} ·{' '}
