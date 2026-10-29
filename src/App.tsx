@@ -8,6 +8,7 @@ import { Agenda } from './pages/agenda/agenda'
 import { Booking } from './pages/booking/booking'
 import { ClientProfile } from './pages/clientProfile/clientProfile'
 import { Clients } from './pages/clients/clients'
+import { ColorPreview } from './pages/colorPreview/colorPreview'
 import { History } from './pages/history/history'
 import { Home } from './pages/home/home'
 import { MyTurnos } from './pages/myTurnos/myTurnos'
@@ -30,6 +31,7 @@ function App() {
         <Route element={<ProtectedRoute roles={['CLIENTE']} />}>
           <Route path="/reservar" element={<Booking />} />
           <Route path="/mis-turnos" element={<MyTurnos />} />
+          <Route path="/probar-color" element={<ColorPreview />} />
           <Route path="/historial" element={<History />} />
           <Route path="/mi-perfil" element={<Profile />} />
         </Route>
