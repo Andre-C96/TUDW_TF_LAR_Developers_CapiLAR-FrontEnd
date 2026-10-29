@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
@@ -20,6 +21,7 @@ import type { Serie } from '../../api/series';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
+import { Collapsible, CountBadge } from '../../components/collapsible/collapsible';
 import { ConfirmDialog } from '../../components/confirmDialog/confirmDialog';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
@@ -27,15 +29,23 @@ import { SerieCard } from '../../components/serieCard/serieCard';
 import { SlotPicker } from '../../components/slotPicker/slotPicker';
 import type { Slot } from '../../components/slotPicker/slotPicker';
 import { Title } from '../../components/title/title';
-import { SerieBadge, TurnoAction, TurnoCard } from '../../components/turnoCard/turnoCard';
+import { SerieBadge, TurnoAction, TurnoCard, TurnoList } from '../../components/turnoCard/turnoCard';
 import { useAuth } from '../../context/auth/useAuth';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
-// Todos los turnos del cliente con su estado: primero los próximos (del más cercano en adelante), para cancelarlos
-// o aceptar un cambio de horario, y después los anteriores (del más nuevo al más viejo). Los cancelados y rechazados,
-// al final y ocultos detrás de "Ver cancelados".
+// Título de sección que no se pliega, con el mismo peso que los desplegables (Collapsible)
+const SectionTitle = ({ children, count }: { children: ReactNode; count: number }) => (
+  <h2 className="flex items-center gap-3 border-b border-gray-200 pb-3">
+    <span className="font-inter text-xl font-semibold text-black md:text-2xl">{children}</span>
+    <CountBadge color="violeta">{count}</CountBadge>
+  </h2>
+);
+
+// Todos los turnos del cliente con su estado: primero los próximos en lista (del más cercano en adelante), para
+// cancelarlos o aceptar un cambio de horario; después los anteriores (del más nuevo al más viejo) y los cancelados
+// y rechazados, cada uno en un desplegable cerrado.
 // La asistencia se confirma solo desde el link opcional del recordatorio (la card muestra si ya avisó).
 // (/historial queda para las fichas técnicas)
 export const MyTurnos = () => {
@@ -49,7 +59,6 @@ export const MyTurnos = () => {
   // Series que armó su profesional (solo para ver) y la fecha ocupada en la que elige otro horario
   const series = useFetch(token ? 'mis-series' : null, () => getSeriesRequest(token!));
   const [eligiendo, setEligiendo] = useState<{ serie: Serie; fecha: string } | null>(null);
-  const [verCancelados, setVerCancelados] = useState(false);
 
   if (!token) return null;
 
@@ -173,28 +182,31 @@ export const MyTurnos = () => {
         <p className="py-8 text-center font-inter text-sm text-capilar-grey">Todavía no tenés turnos. ¡Reservá el tuyo!</p>
       ) : (
         <>
-          <div className="flex flex-col gap-4">
-            <h2 className="font-inter text-sm font-semibold uppercase tracking-widest text-capilar-grey">Próximos</h2>
+          <section className="flex flex-col gap-4">
+            <SectionTitle count={upcoming.length}>Próximos</SectionTitle>
             {upcoming.length === 0 ? (
               <p className="font-inter text-sm text-capilar-grey">No tenés turnos próximos.</p>
             ) : (
-              upcoming.map((turno) => (
-                <TurnoCard
-                  key={turno.id}
-                  turno={turno}
-                  paraCliente
-                  actions={actionsFor(turno)}
-                  note={noteFor(turno)}
-                  badge={badgeFor(turno)}
-                />
-              ))
+              <TurnoList>
+                {upcoming.map((turno) => (
+                  <TurnoCard
+                    key={turno.id}
+                    turno={turno}
+                    paraCliente
+                    enLista
+                    actions={actionsFor(turno)}
+                    note={noteFor(turno)}
+                    badge={badgeFor(turno)}
+                  />
+                ))}
+              </TurnoList>
             )}
-          </div>
+          </section>
 
           {seriesVigentes.length > 0 && (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <h2 className="font-inter text-sm font-semibold uppercase tracking-widest text-capilar-grey">Turnos que se repiten</h2>
+            <section className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <SectionTitle count={seriesVigentes.length}>Turnos que se repiten</SectionTitle>
                 <p className="font-inter text-sm text-capilar-grey">
                   Los arma tu profesional. Si una fecha estaba ocupada a tu horario, podés elegir otro horario de ese día.
                 </p>
@@ -202,33 +214,27 @@ export const MyTurnos = () => {
               {seriesVigentes.map((serie) => (
                 <SerieCard key={serie.id} serie={serie} paraCliente fechaAction={fechaActionFor(serie)} />
               ))}
-            </div>
+            </section>
           )}
 
           {past.length > 0 && (
-            <div className="flex flex-col gap-4">
-              <h2 className="font-inter text-sm font-semibold uppercase tracking-widest text-capilar-grey">Anteriores</h2>
-              {past.map((turno) => (
-                <TurnoCard key={turno.id} turno={turno} paraCliente badge={badgeFor(turno)} />
-              ))}
-            </div>
+            <Collapsible title="Anteriores" aside={<CountBadge>{past.length}</CountBadge>}>
+              <TurnoList>
+                {past.map((turno) => (
+                  <TurnoCard key={turno.id} turno={turno} paraCliente enLista badge={badgeFor(turno)} />
+                ))}
+              </TurnoList>
+            </Collapsible>
           )}
 
           {cancelados.length > 0 && (
-            <div className="flex flex-col gap-4">
-              <button
-                type="button"
-                onClick={() => setVerCancelados(!verCancelados)}
-                aria-expanded={verCancelados}
-                className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:text-capilar-violet"
-              >
-                {verCancelados ? 'Ocultar cancelados' : `Ver cancelados (${cancelados.length})`}
-              </button>
-              {verCancelados &&
-                cancelados.map((turno) => (
-                  <TurnoCard key={turno.id} turno={turno} paraCliente badge={badgeFor(turno)} note={noteFor(turno)} />
+            <Collapsible title="Cancelados" aside={<CountBadge>{cancelados.length}</CountBadge>}>
+              <TurnoList>
+                {cancelados.map((turno) => (
+                  <TurnoCard key={turno.id} turno={turno} paraCliente enLista badge={badgeFor(turno)} note={noteFor(turno)} />
                 ))}
-            </div>
+              </TurnoList>
+            </Collapsible>
           )}
         </>
       )}

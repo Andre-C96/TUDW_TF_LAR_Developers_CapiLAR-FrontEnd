@@ -15,7 +15,6 @@ import {
   MAX_DIAS_ANTICIPACION,
   addDays,
   formatFechaCorta,
-  formatWeek,
   fromIsoDate,
   startOfWeek,
   toIsoDate,
@@ -26,6 +25,7 @@ import { MultiDatePicker } from '../../components/datePicker/datePicker';
 import { FormField } from '../../components/form/form';
 import { Loader } from '../../components/loader/loader';
 import { Title } from '../../components/title/title';
+import { WeekNav } from '../../components/weekNav/weekNav';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
@@ -34,8 +34,6 @@ const boxClasses = 'flex flex-col gap-6 rounded-[6px] border border-gray-200 bg-
 const labelClasses = 'font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey';
 const smallButtonClasses =
   'rounded-md border border-gray-300 bg-white px-2.5 py-1 font-inter text-[11px] font-semibold uppercase tracking-wider text-capilar-grey transition-colors hover:border-capilar-violet hover:text-capilar-violet disabled:cursor-not-allowed disabled:opacity-50';
-const arrowClasses =
-  'flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-lg text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet';
 
 // Chip con ✕ para quitar un horario. Sin onRemove se muestra sin la ✕ (ej. un día que ya pasó)
 const RemovableChip = ({
@@ -240,26 +238,13 @@ export const Schedule = ({ token, legajo }: ScheduleProps) => {
           </div>
         </form>
 
-        {/* Semana: flechas, "Hoy", copiar a la siguiente y los horarios de cada día */}
+        {/* Semana: paso de semanas (el centro vuelve a esta), copiar a la siguiente y los horarios de cada día */}
         <div className="flex flex-col gap-4">
           <div className="flex flex-col items-start gap-2">
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setMonday((prev) => addDays(prev, -7))} aria-label="Semana anterior" className={arrowClasses}>
-                ‹
-              </button>
-              <span className="min-w-48 text-center font-inter text-sm font-semibold text-black">{formatWeek(monday)}</span>
-              <button type="button" onClick={() => setMonday((prev) => addDays(prev, 7))} aria-label="Semana siguiente" className={arrowClasses}>
-                ›
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setMonday(startOfWeek(new Date()))} className={smallButtonClasses}>
-                Hoy
-              </button>
-              <button type="button" onClick={copyToNextWeek} disabled={!hasHours || isCopying} className={smallButtonClasses}>
-                {isCopying ? 'Copiando...' : 'Copiar a la semana siguiente'}
-              </button>
-            </div>
+            <WeekNav monday={monday} onChange={setMonday} />
+            <button type="button" onClick={copyToNextWeek} disabled={!hasHours || isCopying} className={smallButtonClasses}>
+              {isCopying ? 'Copiando...' : 'Copiar a la semana siguiente'}
+            </button>
           </div>
 
           {hours.error ? (

@@ -1,27 +1,25 @@
+import { useId } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { formatPrice } from '../../api/services';
 import { fromIsoDate } from '../../api/turnos';
 import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
 
-// Texto y colores de cada estado. El cliente lee el estado desde su lado ("Esperando confirmación")
+// Texto y color de cada estado. El cliente lee el estado desde su lado ("Esperando confirmación")
 const estados: Record<EstadoTurno, { label: string; clienteLabel: string; classes: string }> = {
-  PENDIENTE: { label: 'Por confirmar', clienteLabel: 'Esperando confirmación', classes: 'bg-amber-50 text-amber-800 border-amber-300' },
-  CONFIRMADO: { label: 'Confirmado', clienteLabel: 'Confirmado', classes: 'bg-green-50 text-green-800 border-green-300' },
-  REPROGRAMADO: {
-    label: 'Esperando al cliente',
-    clienteLabel: 'Nuevo horario propuesto',
-    classes: 'bg-purple-50 text-capilar-violet border-capilar-violet/40',
-  },
-  COMPLETADO: { label: 'Completado', clienteLabel: 'Completado', classes: 'bg-gray-100 text-gray-700 border-gray-300' },
-  RECHAZADO: { label: 'Rechazado', clienteLabel: 'No confirmado', classes: 'bg-red-50 text-red-700 border-red-300' },
-  CANCELADO: { label: 'Cancelado', clienteLabel: 'Cancelado', classes: 'bg-red-50 text-red-700 border-red-300' },
-  AUSENTE: { label: 'Ausente', clienteLabel: 'No asististe', classes: 'bg-orange-50 text-orange-800 border-orange-300' },
+  PENDIENTE: { label: 'Por confirmar', clienteLabel: 'Esperando confirmación', classes: 'text-amber-700' },
+  CONFIRMADO: { label: 'Confirmado', clienteLabel: 'Confirmado', classes: 'text-green-700' },
+  REPROGRAMADO: { label: 'Esperando al cliente', clienteLabel: 'Nuevo horario propuesto', classes: 'text-capilar-violet' },
+  COMPLETADO: { label: 'Completado', clienteLabel: 'Completado', classes: 'text-capilar-grey' },
+  RECHAZADO: { label: 'Rechazado', clienteLabel: 'No confirmado', classes: 'text-red-600' },
+  CANCELADO: { label: 'Cancelado', clienteLabel: 'Cancelado', classes: 'text-red-600' },
+  AUSENTE: { label: 'Ausente', clienteLabel: 'No asististe', classes: 'text-orange-700' },
 };
 
+// Estado del turno: solo el texto en negrita con su color (sin pastilla, para no cargar la card)
 export const TurnoStatus = ({ estado, paraCliente = false }: { estado: EstadoTurno; paraCliente?: boolean }) => {
   const { label, clienteLabel, classes } = estados[estado];
   return (
-    <span className={`inline-flex shrink-0 rounded-full border px-3 py-1 font-inter text-xs font-semibold ${classes}`}>
+    <span className={`shrink-0 font-inter text-xs font-bold ${classes}`}>
       {paraCliente ? clienteLabel : label}
     </span>
   );
@@ -39,7 +37,14 @@ interface TurnoCardProps {
   detalleAction?: (detalle: TurnoDetalle) => ReactNode;
   // Etiqueta junto al estado (ej. si es parte de una serie)
   badge?: ReactNode;
+  // Como fila de una TurnoList (sin borde ni sombra propios)
+  enLista?: boolean;
 }
+
+// Turnos en modo listado: un solo recuadro con una fila por turno
+export const TurnoList = ({ children }: { children: ReactNode }) => (
+  <div className="divide-y divide-gray-200 overflow-hidden rounded-[6px] border border-gray-200 bg-white shadow-sm">{children}</div>
+);
 
 // Etiqueta de los turnos que son parte de una serie: "↻ Cada 15 días"
 export const SerieBadge = ({ children }: { children: ReactNode }) => (
@@ -49,29 +54,53 @@ export const SerieBadge = ({ children }: { children: ReactNode }) => (
   </span>
 );
 
+// Hoja de calendario de línea (sin argollas) con el degradado de marca: el mes en la franja de arriba,
+// y el día de la semana y el número adentro, en negro
+export const CalendarDate = ({ fecha }: { fecha: string }) => {
+  const gradientId = useId();
+  const date = fromIsoDate(fecha);
+  return (
+    <div className="relative h-16 w-14 shrink-0 font-inter">
+      <svg viewBox="0 0 56 64" fill="none" aria-hidden="true" className="absolute inset-0 h-full w-full">
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="56" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="var(--color-capilar-violet)" />
+            <stop offset="1" stopColor="var(--color-capilar-peach)" />
+          </linearGradient>
+        </defs>
+        <g stroke={`url(#${gradientId})`} strokeWidth={2} strokeLinecap="round">
+          <rect x="2" y="2" width="52" height="60" rx="6" />
+          <path d="M2 17h52" />
+        </g>
+      </svg>
+      <span className="absolute inset-x-0 top-[6px] text-center text-[9px] leading-none font-semibold uppercase text-capilar-grey">
+        {date.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}
+      </span>
+      <span className="absolute inset-x-0 top-[22px] flex flex-col items-center text-black">
+        <span className="text-[10px] leading-tight uppercase">{date.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')}</span>
+        <span className="text-xl leading-none font-semibold">{date.getDate()}</span>
+      </span>
+    </div>
+  );
+};
+
 // Turno con fecha, horario, servicios con su profesional, estado y acciones.
 // Para el salón muestra también el cliente con su teléfono y sus alergias.
-export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge }: TurnoCardProps) => {
-  const date = fromIsoDate(turno.fecha);
+export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge, enLista = false }: TurnoCardProps) => {
   const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO' || turno.estado === 'AUSENTE';
   const total = turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioBase), 0);
 
   return (
     <article
-      className={`flex flex-col gap-4 rounded-[6px] border border-gray-200 bg-white p-5 shadow-md sm:flex-row sm:items-start ${
-        isClosed ? 'opacity-70' : ''
-      }`}
+      className={`flex flex-col gap-3 bg-white px-4 py-3 sm:flex-row sm:items-center ${
+        enLista ? '' : 'rounded-[6px] border border-gray-200 shadow-sm'
+      } ${isClosed ? 'opacity-70' : ''}`}
     >
-      {/* Fecha: día grande, mes y día de la semana */}
-      <div className="flex w-20 shrink-0 flex-col items-center rounded-[6px] bg-capilar-gradient px-3 py-2 text-white">
-        <span className="font-inter text-xs uppercase">{date.toLocaleDateString('es-AR', { weekday: 'short' })}</span>
-        <span className="font-inter text-3xl leading-tight font-semibold">{date.getDate()}</span>
-        <span className="font-inter text-xs uppercase">{date.toLocaleDateString('es-AR', { month: 'short' })}</span>
-      </div>
+      <CalendarDate fecha={turno.fecha} />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="font-inter text-lg font-semibold text-black">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-inter text-base font-semibold text-black">
             {turno.horaInicio} – {turno.horaFin}
           </span>
           <TurnoStatus estado={turno.estado} paraCliente={paraCliente} />
@@ -84,7 +113,7 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
         </div>
 
         {!paraCliente && (
-          <div className="flex flex-col gap-1 font-inter text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-inter text-sm">
             <span className="font-semibold text-black">
               {turno.cliente.nombre} {turno.cliente.apellido}
               <span className="font-normal text-capilar-grey"> · {turno.cliente.telefono}</span>
@@ -105,7 +134,7 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
           </div>
         )}
 
-        <ul className="flex flex-col gap-1 font-inter text-sm text-capilar-grey">
+        <ul className="flex flex-col gap-0.5 font-inter text-sm text-capilar-grey">
           {turno.detalles.map((detalle) => (
             <li key={detalle.id}>
               <span className="text-black">{detalle.servicio}</span>
@@ -126,14 +155,17 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
         {note && <div className="font-inter text-xs text-capilar-grey">{note}</div>}
       </div>
 
-      {actions && <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:items-stretch">{actions}</div>}
+      {/* Acciones en una fila (se pasan a otra línea solo si no entran) */}
+      {actions && <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end lg:flex-nowrap">{actions}</div>}
     </article>
   );
 };
 
 // Botón chico de las acciones de un turno
 const actionVariants = {
-  positiva: 'border-capilar-violet bg-capilar-violet text-white hover:bg-capilar-violet/85',
+  // Borde degradado con relleno blanco (lila al pasar el mouse): resalta sin pesar tanto como un violeta lleno
+  positiva:
+    'border-transparent text-capilar-violet [background:linear-gradient(white,white)_padding-box,var(--background-image-capilar-gradient)_border-box] hover:[background:linear-gradient(var(--color-purple-50),var(--color-purple-50))_padding-box,var(--background-image-capilar-gradient)_border-box]',
   neutra: 'border-gray-300 bg-white text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet',
   peligro: 'border-gray-300 bg-white text-capilar-grey hover:border-red-500 hover:text-red-500',
 };
@@ -142,10 +174,13 @@ interface TurnoActionProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof actionVariants;
 }
 
-export const TurnoAction = ({ variant = 'neutra', className = '', ...props }: TurnoActionProps) => (
+export const TurnoAction = ({ variant = 'neutra', className = '', children, ...props }: TurnoActionProps) => (
   <button
     type="button"
-    className={`rounded-lg border px-3 py-2 font-inter text-xs font-semibold uppercase tracking-widest whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${actionVariants[variant]} ${className}`}
+    className={`rounded-[6px] border px-2.5 py-1 font-inter text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${actionVariants[variant]} ${className}`}
     {...props}
-  />
+  >
+    {/* La positiva lleva también la letra con el degradado (el fondo del botón ya lo usa el borde) */}
+    {variant === 'positiva' ? <span className="bg-capilar-gradient bg-clip-text text-transparent">{children}</span> : children}
+  </button>
 );

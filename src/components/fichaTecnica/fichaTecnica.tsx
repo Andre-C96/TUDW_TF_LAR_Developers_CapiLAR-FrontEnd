@@ -4,8 +4,7 @@ import { FOTOS_POR_MOMENTO, NIVELES, TIPOS_DE_PELO, UNIDADES, VOLUMENES_DE_PELO 
 import type { Ficha, FichaCliente, FotoFicha, Insumo, MomentoFoto } from '../../api/fichas';
 import { fromIsoDate } from '../../api/turnos';
 import { FOTO_TIPOS } from '../../api/users';
-import { FichaFoto } from '../fichaFoto/fichaFoto';
-import { Modal } from '../modal/modal';
+import { FichaFoto, FichaFotoVisor } from '../fichaFoto/fichaFoto';
 
 const labelClass = 'font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey';
 
@@ -104,9 +103,11 @@ interface FichaGaleriaProps {
   busy?: boolean;
 }
 
-// Fotos de antes y después; al tocar una se ve grande
+// Fotos de antes y después; al tocar una se ve grande y se puede pasar a las demás (primero las de antes)
 export const FichaGaleria = ({ token, fichaId, fotos, onAdd, onRemove, busy = false }: FichaGaleriaProps) => {
-  const [abierta, setAbierta] = useState<string | null>(null);
+  // Posición en `recorrido` de la foto abierta
+  const [abierta, setAbierta] = useState<number | null>(null);
+  const recorrido = MOMENTOS.flatMap(({ tipo }) => fotos.filter((foto) => foto.tipo === tipo));
 
   const elegir = (tipo: MomentoFoto) => (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -137,7 +138,7 @@ export const FichaGaleria = ({ token, fichaId, fotos, onAdd, onRemove, busy = fa
                     fichaId={fichaId}
                     fotoId={foto.id}
                     label={`foto de ${titulo.toLowerCase()} ${index + 1}`}
-                    onOpen={setAbierta}
+                    onOpen={() => setAbierta(recorrido.indexOf(foto))}
                     onRemove={onRemove && (() => onRemove(foto))}
                     disabled={busy}
                   />
@@ -164,9 +165,7 @@ export const FichaGaleria = ({ token, fichaId, fotos, onAdd, onRemove, busy = fa
         );
       })}
 
-      <Modal isOpen={abierta !== null} onClose={() => setAbierta(null)} ariaLabel="Foto de la ficha técnica" className="max-w-2xl">
-        {abierta && <img src={abierta} alt="" className="mt-4 max-h-[70vh] w-full rounded-[6px] object-contain" />}
-      </Modal>
+      <FichaFotoVisor token={token} fichaId={fichaId} fotos={recorrido} index={abierta} onChange={setAbierta} />
     </div>
   );
 };

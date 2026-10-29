@@ -15,6 +15,7 @@ import { Button } from '../../components/button/button';
 import { List, ListItem } from '../../components/list/list';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
+import { IconButton } from '../../components/iconButton/iconButton';
 import { SearchBox } from '../../components/searchBox/searchBox';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
@@ -22,8 +23,8 @@ import { useAuth } from '../../context/auth/useAuth';
 const roles: Rol[] = ['CLIENTE', 'PROFESIONAL', 'ADMIN'];
 
 // Filtros del listado ('' = todos)
-const filters: { label: string; rol: Rol | '' }[] = [
-  { label: 'Todos', rol: '' },
+// Sin ninguno elegido se ven todos
+const filters: { label: string; rol: Rol }[] = [
   { label: 'Clientes', rol: 'CLIENTE' },
   { label: 'Profesionales', rol: 'PROFESIONAL' },
   { label: 'Admins', rol: 'ADMIN' },
@@ -41,25 +42,9 @@ const fullName = (user: Usuario) => `${user.nombre} ${user.apellido}`;
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('es-AR');
 
-// Botón chico de las filas (Eliminar / Dar de alta)
+// Botón chico de las filas con texto (Dar de alta); eliminar va con IconButton
 const rowButtonClasses =
-  'rounded-lg border border-gray-300 bg-white px-3 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors';
-
-// Tacho de basura (Eliminar), con el color del texto
-const TrashIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    className="h-5 w-5"
-  >
-    <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
-  </svg>
-);
+  'rounded-[6px] border border-gray-300 bg-white px-3 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors';
 
 // Círculo con las iniciales del usuario (gris si está dado de baja)
 const Avatar = ({ user }: { user: Usuario }) => (
@@ -213,33 +198,63 @@ export const Users = () => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      {/* Filtros por rol y buscador en un mismo recuadro (como la agenda) */}
+      <div className="flex flex-col gap-3 rounded-[6px] border border-gray-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+        <div role="group" aria-label="Filtrar por rol" className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey">Filtros</span>
+          {filters.map((filter) => {
+            // El elegido se quita con la ✕ (vuelven a verse todos)
+            const isActive = rolFilter === filter.rol;
+            return (
+              <span
+                key={filter.label}
+                className={`inline-flex items-center rounded-[6px] border font-inter text-sm transition-colors ${
+                  isActive
+                    ? 'border-capilar-violet bg-purple-50 font-semibold text-capilar-violet'
+                    : 'border-gray-300 bg-white font-medium text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setRolFilter(filter.rol)}
+                  aria-pressed={isActive}
+                  className={`py-1.5 pl-3 ${isActive ? 'pr-1.5' : 'pr-3'}`}
+                >
+                  {filter.label}
+                </button>
+                {isActive && (
+                  <button
+                    type="button"
+                    onClick={() => setRolFilter('')}
+                    aria-label={`Quitar el filtro ${filter.label}`}
+                    title="Quitar filtro"
+                    className="group mr-1.5 flex h-5 w-5 items-center justify-center text-capilar-violet"
+                  >
+                    {/* Cruz fina que se pone en negrita al pasar el mouse (el carácter ✕ no cambia de grosor) */}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 stroke-2 transition-[stroke-width] group-hover:stroke-[4]"
+                    >
+                      <path d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                  </button>
+                )}
+              </span>
+            );
+          })}
+        </div>
         <SearchBox
           value={search}
           onChange={setSearch}
           label="Buscar usuarios"
           placeholder="Buscar por nombre, apellido o correo"
+          compact
+          className="lg:ml-auto lg:max-w-sm"
         />
-        <div role="group" aria-label="Filtrar por rol" className="flex flex-wrap gap-2">
-          {filters.map((filter) => {
-            const isActive = rolFilter === filter.rol;
-            return (
-              <button
-                key={filter.label}
-                type="button"
-                onClick={() => setRolFilter(filter.rol)}
-                aria-pressed={isActive}
-                className={`rounded-full px-4 py-1.5 font-inter text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'border border-transparent bg-capilar-peach/75 text-white shadow-md'
-                    : 'border border-gray-300 bg-white text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
-                }`}
-              >
-                {filter.label}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {error ? (
@@ -292,7 +307,7 @@ export const Users = () => {
                           value={user.rol}
                           onChange={(event) => setPending({ type: 'rol', user, rol: event.target.value as Rol })}
                           aria-label={`Rol de ${fullName(user)}`}
-                          className="cursor-pointer appearance-none rounded-lg border border-gray-300 bg-white py-2 pr-9 pl-3 font-inter text-xs font-semibold tracking-widest text-black outline-none transition-colors focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20"
+                          className="cursor-pointer appearance-none rounded-[6px] border border-gray-300 bg-white py-2 pr-9 pl-3 font-inter text-xs font-semibold tracking-widest text-black outline-none transition-colors focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20"
                         >
                           {roles.map((rol) => (
                             <option key={rol} value={rol}>
@@ -314,15 +329,7 @@ export const Users = () => {
                           <path d="M6 9l6 6 6-6" />
                         </svg>
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setPending({ type: 'baja', user })}
-                        aria-label={`Eliminar a ${fullName(user)}`}
-                        title="Eliminar"
-                        className="rounded-lg p-2 text-capilar-grey transition-colors hover:bg-red-50 hover:text-red-500"
-                      >
-                        <TrashIcon />
-                      </button>
+                      <IconButton icon="eliminar" onClick={() => setPending({ type: 'baja', user })} aria-label={`Eliminar a ${fullName(user)}`} />
                     </>
                   )
                 }
