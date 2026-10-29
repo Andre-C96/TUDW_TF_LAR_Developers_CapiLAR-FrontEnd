@@ -21,6 +21,10 @@ export const PanelLayout = () => {
         }}
       />
 
+      {/* Franja blanca detrás del header hasta donde queda el menú lateral (top-24): lo que sube al hacer scroll
+          desaparece en esa línea en vez de verse detrás del header */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-40 h-24 bg-white" />
+
       {/* Menú lateral fijo (se queda quieto al bajar, hasta el footer) y el contenido al lado */}
       <div className="flex flex-1">
         <SideMenu />
