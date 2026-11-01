@@ -18,7 +18,7 @@
   --font-inter: "Inter", sans-serif;
 }
 
-/* Calendario (react-day-picker) con los colores de marca: día elegido con el degradado */
+/* Calendario (react-day-picker) con los colores de marca: día elegido con un aro degradado */
 .rdp-root {
   --rdp-accent-color: var(--color-capilar-violet);
   --rdp-accent-background-color: color-mix(in srgb, var(--color-capilar-violet) 12%, white);
@@ -28,11 +28,28 @@
   font-size: 0.875rem;
 }
 
+/* Día elegido: en negrita, sin agrandar (la librería pone font-size: large) y con un aro degradado sin relleno */
+.rdp-root .rdp-selected {
+  font-size: inherit;
+}
 .rdp-root .rdp-selected .rdp-day_button {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(white, white) padding-box,
+    var(--background-image-capilar-gradient) border-box;
+  color: black;
+  font-weight: 700;
+}
+
+/* Rango (RangeDatePicker, className="rdp-range"): aro solo en "desde" y "hasta"; los del medio, en negrita violeta
+   y sin la franja de fondo */
+.rdp-root.rdp-range :is(.rdp-range_start, .rdp-range_middle, .rdp-range_end) {
+  background: none;
+}
+.rdp-root.rdp-range .rdp-range_middle .rdp-day_button {
   border: none;
-  background-image: var(--background-image-capilar-gradient);
-  color: white;
-  font-weight: 600;
+  background: none;
+  color: var(--color-capilar-violet);
 }
 
 /* Días con horarios disponibles (prop enabledDates): en negrita y ciruela */

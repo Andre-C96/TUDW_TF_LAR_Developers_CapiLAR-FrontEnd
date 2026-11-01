@@ -191,6 +191,12 @@ export const clientePuedeCancelar = (turno: Turno) => {
 // Mismo criterio que el back: CONFIRMADO y desde su hora de fin
 export const puedeMarcarAusente = (turno: Turno) => turno.estado === 'CONFIRMADO' && yaTermino(turno);
 
+// Primer día del mes de `date`
+export const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+// Primer día de N meses antes o después (`first` es el primero de un mes)
+export const addMonths = (first: Date, months: number) => new Date(first.getFullYear(), first.getMonth() + months, 1);
+
 // Lunes de la semana de `date`
 export const startOfWeek = (date: Date) => {
   const monday = new Date(date);

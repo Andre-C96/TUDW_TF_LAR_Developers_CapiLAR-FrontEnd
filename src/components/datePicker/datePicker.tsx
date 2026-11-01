@@ -67,6 +67,39 @@ interface MultiDatePickerProps extends BaseProps {
   maxSelected?: number;
 }
 
+// Rango de fechas ("YYYY-MM-DD"); hasta vacío mientras se elige
+export interface DateRange {
+  desde: string;
+  hasta: string;
+}
+
+interface RangeDatePickerProps extends BaseProps {
+  value: DateRange;
+  onChange: (range: DateRange) => void;
+  numberOfMonths?: number;
+}
+
+// Mismo calendario, para elegir un rango: el primer toque marca "desde" y el segundo "hasta"
+// (si ya había un rango completo, el próximo toque empieza uno nuevo)
+export const RangeDatePicker = ({ value, onChange, numberOfMonths = 1, className = '', ...rest }: RangeDatePickerProps) => (
+  <DayPicker
+    mode="range"
+    locale={es}
+    selected={value.desde ? { from: fromIsoDate(value.desde), to: value.hasta ? fromIsoDate(value.hasta) : undefined } : undefined}
+    onSelect={(range, day) => {
+      if (!value.desde || value.hasta) onChange({ desde: toIsoDate(day), hasta: '' });
+      else if (range?.from && range.to) onChange({ desde: toIsoDate(range.from), hasta: toIsoDate(range.to) });
+    }}
+    disabled={disabledDays(rest)}
+    startMonth={rest.min}
+    endMonth={rest.max}
+    defaultMonth={value.desde ? fromIsoDate(value.desde) : undefined}
+    numberOfMonths={numberOfMonths}
+    // Estilo propio del rango (ver .rdp-range en index.css)
+    className={`rdp-range ${className}`}
+  />
+);
+
 // Mismo calendario, para marcar varias fechas (tocar una fecha marcada la desmarca)
 export const MultiDatePicker = ({ value, onChange, maxSelected, className = '', ...rest }: MultiDatePickerProps) => (
   <DayPicker

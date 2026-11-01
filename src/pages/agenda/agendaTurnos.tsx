@@ -10,22 +10,26 @@ import {
   MAX_DIAS_ANTICIPACION,
   acceptTurnoRequest,
   addDays,
+  addMonths,
   cancelTurnoRequest,
   completeTurnoRequest,
   formatFechaLarga,
+  fromIsoDate,
   getAgendaRequest,
   markAbsentRequest,
   minutosHastaInicio,
   puedeMarcarAusente,
   rejectTurnoRequest,
   rescheduleTurnoRequest,
+  startOfMonth,
   startOfWeek,
   toIsoDate,
 } from '../../api/turnos';
-import type { Turno, TurnoDetalle } from '../../api/turnos';
+import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
 import { Collapsible, CountBadge } from '../../components/collapsible/collapsible';
+import type { DateRange } from '../../components/datePicker/datePicker';
 import { ConfirmDialog } from '../../components/confirmDialog/confirmDialog';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
@@ -34,26 +38,50 @@ import { SlotPicker } from '../../components/slotPicker/slotPicker';
 import type { Slot } from '../../components/slotPicker/slotPicker';
 import { Title } from '../../components/title/title';
 import { SerieBadge, TurnoAction, TurnoCard, TurnoList } from '../../components/turnoCard/turnoCard';
-import { WeekNav } from '../../components/weekNav/weekNav';
+import { MonthNav, WeekNav } from '../../components/weekNav/weekNav';
 import { useFetch } from '../../customHooks/fetch/useFetch';
+import { FilterSelect, RangoField } from './agendaFiltros';
 import { FichaModal } from './fichaModal';
 import { SerieModal } from './serieModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
-// Filtro de la agenda (Hoy por defecto)
-type Filtro = 'hoy' | 'semana' | 'pendientes';
-const FILTROS: [Filtro, string][] = [
+// Filtro por fecha (Hoy por defecto)
+type FiltroFecha = 'hoy' | 'semana' | 'mes' | 'rango';
+const FILTROS_FECHA: [FiltroFecha, string][] = [
   ['hoy', 'Hoy'],
   ['semana', 'Semana'],
-  ['pendientes', 'Por confirmar'],
+  ['mes', 'Mes'],
+  ['rango', 'Rango'],
 ];
 
-// Lo que se está mostrando: el filtro o los resultados de la búsqueda
-type Vista = Filtro | 'busqueda';
+// Filtro por estado (Todos por defecto)
+type FiltroEstado = 'todos' | 'confirmados' | 'porConfirmar' | 'cancelados' | 'completados' | 'ausentes';
+const FILTROS_ESTADO: [FiltroEstado, string][] = [
+  ['todos', 'Todos'],
+  ['confirmados', 'Confirmados'],
+  ['porConfirmar', 'Por confirmar'],
+  ['cancelados', 'Cancelados'],
+  ['completados', 'Completados'],
+  ['ausentes', 'Ausentes'],
+];
+const ESTADOS: Record<Exclude<FiltroEstado, 'todos'>, EstadoTurno[]> = {
+  confirmados: ['CONFIRMADO'],
+  // Pendientes de aprobar y reprogramados que el cliente todavía no aceptó
+  porConfirmar: ['PENDIENTE', 'REPROGRAMADO'],
+  cancelados: ['CANCELADO', 'RECHAZADO'],
+  completados: ['COMPLETADO'],
+  ausentes: ['AUSENTE'],
+};
+
+// Lo que se está mostrando: el filtro de fecha o los resultados de la búsqueda
+type Vista = FiltroFecha | 'busqueda';
 
 // La búsqueda mira los turnos de los últimos 30 días y los próximos 60 (el máximo para reservar)
 const BUSQUEDA_DIAS_ATRAS = 30;
+
+// Más nuevo arriba: días de la fecha más lejana a la más vieja (dentro del día, por hora)
+const porFechaDesc = (a: Turno, b: Turno) => b.fecha.localeCompare(a.fecha) || a.horaInicio.localeCompare(b.horaInicio);
 
 // Cancelados y rechazados se cuentan aparte (en gris) en cada día
 const esCancelado = (turno: Turno) => turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO';
@@ -103,49 +131,57 @@ interface AgendaTurnosProps {
   legajo: number;
 }
 
-// Turnos entre dos días a partir de hoy (desde puede ser negativo). La agenda se pide de a 31 días: por tramos.
-const getRangeRequest = async (token: string, legajo: number, desdeDias: number, hastaDias: number) => {
-  const today = new Date();
+// Turnos entre dos fechas ("YYYY-MM-DD"). La agenda se pide de a 31 días: por tramos.
+const getRangeRequest = async (token: string, legajo: number, desde: string, hasta: string) => {
   const ranges: [string, string][] = [];
-  for (let offset = desdeDias; offset <= hastaDias; offset += MAX_DIAS_AGENDA) {
-    ranges.push([toIsoDate(addDays(today, offset)), toIsoDate(addDays(today, Math.min(offset + MAX_DIAS_AGENDA - 1, hastaDias)))]);
+  for (let inicio = fromIsoDate(desde); toIsoDate(inicio) <= hasta; inicio = addDays(inicio, MAX_DIAS_AGENDA)) {
+    const fin = toIsoDate(addDays(inicio, MAX_DIAS_AGENDA - 1));
+    ranges.push([toIsoDate(inicio), fin < hasta ? fin : hasta]);
   }
-  const parts = await Promise.all(ranges.map(([desde, hasta]) => getAgendaRequest(token, legajo, desde, hasta)));
+  const parts = await Promise.all(ranges.map(([d, h]) => getAgendaRequest(token, legajo, d, h)));
   return parts.flat();
 };
 
-// Solicitudes pendientes de acá a 60 días (el máximo para reservar)
-const getPendingRequest = async (token: string, legajo: number) =>
-  (await getRangeRequest(token, legajo, 0, MAX_DIAS_ANTICIPACION)).filter((turno) => turno.estado === 'PENDIENTE');
-
-// Pestaña Turnos de la agenda. Arriba, el filtro (Hoy, Semana, Por confirmar), el buscador y el paso de semanas.
-// Hoy se agrupa por asistencia (se actualiza solo); la semana, las solicitudes y la búsqueda, en un desplegable por día
-// con la cantidad de turnos (y de cancelados en gris).
+// Pestaña Turnos de la agenda. Arriba, el buscador y los filtros por fecha (Hoy, Semana, Mes, Rango, con el paso de
+// semanas o meses o el calendario del rango) y por estado.
+// Hoy se agrupa por asistencia (se actualiza solo); el resto y la búsqueda, en un desplegable por día (del más nuevo
+// al más viejo) con la cantidad de turnos (y de cancelados en gris).
 // Pendiente (servicios que requieren aprobación): confirmar o rechazar. Confirmado: cancelar o, desde que empieza, completar;
 // desde la hora de fin, marcar ausente. Los activos se pueden reprogramar.
 export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
-  const [filtro, setFiltro] = useState<Filtro>('hoy');
+  const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('hoy');
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todos');
   const [busqueda, setBusqueda] = useState('');
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
-  const desde = toIsoDate(monday);
-  const hasta = toIsoDate(addDays(monday, 6));
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [rango, setRango] = useState<DateRange>({ desde: '', hasta: '' });
   const hoy = toIsoDate(new Date());
 
-  const buscando = busqueda.trim() !== '';
-  const vista: Vista = buscando ? 'busqueda' : filtro;
-
-  const keys: Record<Vista, string> = {
-    hoy: `hoy-${hoy}`,
-    semana: `agenda-${desde}-${hasta}`,
-    pendientes: 'pendientes',
-    busqueda: `busqueda-${hoy}`,
+  // Hay algo distinto de lo que se ve al entrar (Hoy y Todos); el buscador se limpia con su propia ✕
+  const conFiltros = filtroFecha !== 'hoy' || filtroEstado !== 'todos';
+  const limpiarFiltros = () => {
+    setFiltroFecha('hoy');
+    setFiltroEstado('todos');
+    setMonday(startOfWeek(new Date()));
+    setMonth(startOfMonth(new Date()));
+    setRango({ desde: '', hasta: '' });
   };
-  const turnos = useFetch(keys[vista], () => {
-    if (vista === 'hoy') return getAgendaRequest(token, legajo, hoy, hoy);
-    if (vista === 'semana') return getAgendaRequest(token, legajo, desde, hasta);
-    if (vista === 'busqueda') return getRangeRequest(token, legajo, -BUSQUEDA_DIAS_ATRAS, MAX_DIAS_ANTICIPACION);
-    return getPendingRequest(token, legajo);
-  });
+
+  const buscando = busqueda.trim() !== '';
+  const vista: Vista = buscando ? 'busqueda' : filtroFecha;
+
+  // Fechas que se piden según la vista (el rango, recién con las dos fechas elegidas)
+  const periodos: Record<Vista, [string, string] | null> = {
+    hoy: [hoy, hoy],
+    semana: [toIsoDate(monday), toIsoDate(addDays(monday, 6))],
+    mes: [toIsoDate(month), toIsoDate(addDays(addMonths(month, 1), -1))],
+    rango: rango.hasta ? [rango.desde, rango.hasta] : null,
+    busqueda: [toIsoDate(addDays(new Date(), -BUSQUEDA_DIAS_ATRAS)), toIsoDate(addDays(new Date(), MAX_DIAS_ANTICIPACION))],
+  };
+  const periodo = periodos[vista];
+  const turnos = useFetch(periodo && `agenda-${periodo[0]}-${periodo[1]}`, () =>
+    periodo ? getRangeRequest(token, legajo, ...periodo) : Promise.resolve([]),
+  );
 
   // Vista Hoy: se actualiza sola (cada minuto y al volver a la pestaña) sin mostrar el loader
   const refreshHoy = useEffectEvent(async () => {
@@ -331,18 +367,23 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   // Servicios propios sin ficha: al completar el turno ya no se puede cargar
   const sinFicha = (turno: Turno) => turno.detalles.some((d) => d.legajo === legajo && !d.fichaId);
 
-  // La búsqueda mira siempre todo el rango, sin importar el filtro (para poder buscar por mes)
-  const visibles = (turnos.data ?? []).filter((turno) => vista !== 'busqueda' || coincide(turno, busqueda));
+  // La búsqueda mira siempre todo su rango, sin importar el filtro de fecha; el de estado se aplica igual
+  const visibles = (turnos.data ?? [])
+    .filter((turno) => vista !== 'busqueda' || coincide(turno, busqueda))
+    .filter((turno) => filtroEstado === 'todos' || ESTADOS[filtroEstado].includes(turno.estado))
+    .sort(porFechaDesc);
 
-  // Turnos agrupados por día, en el orden en que llegan (fecha y hora)
+  // Turnos agrupados por día, en el orden de visibles
   const byDay = new Map<string, Turno[]>();
   for (const turno of visibles) byDay.set(turno.fecha, [...(byDay.get(turno.fecha) ?? []), turno]);
 
+  const conEstado = filtroEstado === 'todos' ? '' : ` ${FILTROS_ESTADO.find(([value]) => value === filtroEstado)?.[1].toLowerCase()}`;
   const vacio: Record<Vista, string> = {
-    hoy: 'No tenés turnos hoy.',
-    semana: 'No tenés turnos esta semana.',
-    pendientes: 'No tenés solicitudes por confirmar.',
-    busqueda: `No encontramos turnos para "${busqueda.trim()}".`,
+    hoy: `No tenés turnos${conEstado} hoy.`,
+    semana: `No tenés turnos${conEstado} esa semana.`,
+    mes: `No tenés turnos${conEstado} ese mes.`,
+    rango: rango.hasta ? `No tenés turnos${conEstado} entre esas fechas.` : 'Elegí desde y hasta qué día ver los turnos.',
+    busqueda: `No encontramos turnos${conEstado} para "${busqueda.trim()}".`,
   };
 
   const dialogTexts = {
@@ -374,62 +415,63 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   const texts = pending && pending.type !== 'reprogramar' ? dialogTexts[pending.type] : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Filtro, buscador y paso de semanas en un mismo recuadro */}
-      <div className="flex flex-col gap-3 rounded-[6px] border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <label className="flex shrink-0 items-center gap-3">
-            <span className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey">Filtro</span>
-            <span className="relative">
-              <select
-                value={filtro}
-                onChange={(event) => setFiltro(event.target.value as Filtro)}
-                className="cursor-pointer appearance-none rounded-[6px] border border-gray-300 bg-white py-2 pr-10 pl-4 font-inter text-sm font-semibold text-black outline-none transition-colors focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20"
-              >
-                {FILTROS.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {/* Flecha propia (la del navegador queda pegada al borde y no se puede correr) */}
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 right-3.5 h-3.5 w-3.5 -translate-y-1/2 text-capilar-grey"
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </span>
-          </label>
+    // Alto mínimo: con pocos turnos, el calendario del rango entra sin pasar por encima del footer
+    <div className="flex min-h-[32rem] flex-col gap-6">
+      {/* Buscador arriba a la derecha y, debajo, el recuadro de filtros */}
+      <div className="flex flex-col gap-3">
+        <SearchBox
+          value={busqueda}
+          onChange={setBusqueda}
+          label="Buscar turnos"
+          placeholder="Buscar por cliente, servicio o mes"
+          compact
+          className="lg:max-w-sm lg:self-end"
+        />
 
-          {/* Al lado del filtro: el paso de semanas o la fecha de hoy */}
-          {vista === 'semana' && <WeekNav monday={monday} onChange={setMonday} className="self-start lg:self-auto" />}
-          {vista === 'hoy' && (
-            <span className="shrink-0 font-inter text-sm font-semibold text-black first-letter:uppercase">{formatFechaLarga(hoy)}</span>
+        <div className="flex flex-col gap-2.5 rounded-[6px] border border-gray-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey">Filtros</span>
+            <FilterSelect label="Fecha" value={filtroFecha} options={FILTROS_FECHA} onChange={setFiltroFecha} />
+
+            {/* Al lado de la fecha: la fecha de hoy, el paso de semanas o meses, o el rango (la búsqueda no los usa) */}
+            {!buscando && filtroFecha === 'hoy' && (
+              <span className="shrink-0 font-inter text-sm font-semibold text-black first-letter:uppercase">{formatFechaLarga(hoy)}</span>
+            )}
+            {!buscando && filtroFecha === 'semana' && <WeekNav monday={monday} onChange={setMonday} />}
+            {!buscando && filtroFecha === 'mes' && <MonthNav month={month} onChange={setMonth} />}
+            {!buscando && filtroFecha === 'rango' && <RangoField value={rango} onChange={setRango} />}
+
+            <FilterSelect label="Estado" value={filtroEstado} options={FILTROS_ESTADO} onChange={setFiltroEstado} />
+
+            {conFiltros && (
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                className="group ml-auto flex shrink-0 items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet transition-transform hover:scale-105"
+              >
+                {/* Cruz fina que se pone en negrita al pasar el mouse, como en los filtros de Usuarios */}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                  className="h-2.5 w-2.5 stroke-2 transition-[stroke-width] group-hover:stroke-[4]"
+                >
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+
+          {buscando && (
+            <p className="font-inter text-xs text-capilar-grey">
+              Buscando en todos los turnos de los últimos {BUSQUEDA_DIAS_ATRAS} días y los próximos {MAX_DIAS_ANTICIPACION}, sin importar
+              la fecha elegida.
+            </p>
           )}
-
-          <SearchBox
-            value={busqueda}
-            onChange={setBusqueda}
-            label="Buscar turnos"
-            placeholder="Buscar por cliente, servicio o mes"
-            compact
-            className="lg:ml-auto lg:max-w-sm"
-          />
         </div>
-
-        {buscando && (
-          <p className="font-inter text-xs text-capilar-grey">
-            Buscando en todos los turnos de los últimos {BUSQUEDA_DIAS_ATRAS} días y los próximos {MAX_DIAS_ANTICIPACION}, sin importar
-            el filtro.
-          </p>
-        )}
       </div>
 
       {turnos.error ? (

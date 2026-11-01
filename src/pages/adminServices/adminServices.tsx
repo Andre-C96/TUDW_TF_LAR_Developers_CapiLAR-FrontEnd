@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import {
@@ -73,7 +74,15 @@ export const AdminServices = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [pending, setPending] = useState<PendingAction | null>(null);
+  // El formulario de alta va en la URL (?nuevo=1) para poder abrirlo desde el menú lateral
+  const [searchParams, setSearchParams] = useSearchParams();
+  const creando = searchParams.get('nuevo') === '1';
+  const [accion, setAccion] = useState<PendingAction | null>(null);
+  const pending: PendingAction | null = accion ?? (creando ? { type: 'crear' } : null);
+  const setPending = (next: PendingAction | null) => {
+    setAccion(next);
+    if (next === null && creando) setSearchParams({}, { replace: true });
+  };
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
@@ -197,7 +206,7 @@ export const AdminServices = () => {
             <p className="font-inter text-capilar-grey">Cargá los servicios del salón con su duración y precio.</p>
           </div>
           <Button
-            onClick={() => setPending({ type: 'crear' })}
+            onClick={() => setSearchParams({ nuevo: '1' })}
             className="shrink-0 self-start px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider md:self-auto"
           >
             Nuevo servicio
