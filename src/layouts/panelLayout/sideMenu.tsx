@@ -60,9 +60,13 @@ export const SideMenu = () => {
 
               {section.subsections && (
                 <ul className="mt-1 mb-2 ml-[1.375rem] hidden flex-col border-l border-gray-200 lg:flex">
-                  {section.subsections.map((sub) => {
+                  {section.subsections
+                    .filter((sub) => !sub.roles || hasRole(...sub.roles))
+                    .map((sub) => {
                     const [key, value] = sub.param;
-                    const elegida = pathname === section.to && params.get(key) === value;
+                    // La opción sin parámetro no se marca si está elegida otra de la sección
+                    const otraElegida = section.subsections!.some(({ param: [k, v] }) => v !== null && params.get(k) === v);
+                    const elegida = pathname === section.to && params.get(key) === value && (value !== null || !otraElegida);
                     return (
                       <li key={sub.label}>
                         <Link
