@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import type { AlergiaDeCliente } from './alergias';
 import type { ArticuloSinStock } from './articulos';
 
 // PENDIENTE: lo pidió el cliente y espera al profesional. REPROGRAMADO: el salón propuso otro horario y espera al cliente.
@@ -39,6 +40,7 @@ export interface Turno {
     nombre: string;
     apellido: string;
     telefono: string;
+    alergias: AlergiaDeCliente[];
     alergia: string | null;
     // null: todavía no verificó su correo (la agenda lo marca)
     emailVerificadoEn: string | null;

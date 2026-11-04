@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import type { AlergiaDeCliente } from '../../api/alergias';
 import { validatePassword } from '../../api/auth';
 import {
   ALERGIA_MAX,
@@ -11,22 +12,28 @@ import {
   validateFechaNacimiento,
   validateTelefono,
 } from '../../api/users';
+import { AlergiasField } from '../alergiasField/alergiasField';
 import { Button } from '../button/button';
 import { Form, FormField } from '../form/form';
 import { Title } from '../title/title';
 
-// Mismos nombres que Usuario del BE. Fecha de nacimiento ("YYYY-MM-DD") y alergia son opcionales
+// Mismos nombres que Usuario del BE. Fecha de nacimiento ("YYYY-MM-DD") y alergias son opcionales
 export interface RegisterData {
   nombre: string;
   apellido: string;
   email: string;
   telefono: string;
   fechaNacimiento?: string;
+  // Las de la lista
+  alergiaIds?: number[];
+  // "Otra": lo que no está en la lista
   alergia?: string;
   contrasena: string;
 }
 
 interface RegisterFormProps {
+  // La lista de alergias para elegir (si no se pudo cargar, queda solo "Otra")
+  alergias: AlergiaDeCliente[];
   onSubmit: (data: RegisterData) => void;
   // Mientras se espera la respuesta
   isLoading?: boolean;
@@ -92,8 +99,9 @@ const validate = (values: FormValues): FieldErrors => {
 const linkClasses = 'font-semibold text-capilar-violet hover:underline';
 
 // Contenido del registro de cuenta 
-export const RegisterForm = ({ onSubmit, isLoading = false, error, onLoginClick }: RegisterFormProps) => {
+export const RegisterForm = ({ alergias, onSubmit, isLoading = false, error, onLoginClick }: RegisterFormProps) => {
   const [values, setValues] = useState<FormValues>(initialValues);
+  const [alergiaIds, setAlergiaIds] = useState<number[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // Devuelve las props value/onChange/error de un campo (inputs más bajos que en el login, el registro tiene más campos)
@@ -119,6 +127,7 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error, onLoginClick 
       telefono: values.telefono,
       // Los opcionales vacíos no se mandan
       fechaNacimiento: values.fechaNacimiento || undefined,
+      alergiaIds: alergiaIds.length > 0 ? alergiaIds : undefined,
       alergia: values.alergia.trim() || undefined,
       contrasena: values.contrasena,
     });
@@ -166,12 +175,14 @@ export const RegisterForm = ({ onSubmit, isLoading = false, error, onLoginClick 
             {...bind('fechaNacimiento')}
           />
         </div>
-        <FormField
-          label="Alergias"
-          placeholder="Ej.: amoníaco, tinturas con PPD"
-          maxLength={ALERGIA_MAX}
-          hint="Opcional. Nos ayuda a cuidarte en cada servicio."
-          {...bind('alergia')}
+        <AlergiasField
+          opciones={alergias}
+          elegidas={alergiaIds}
+          onElegidasChange={setAlergiaIds}
+          otra={values.alergia}
+          onOtraChange={(alergia) => setValues((prev) => ({ ...prev, alergia }))}
+          otraError={fieldErrors.alergia}
+          inputClassName="py-2!"
         />
         <FormField label="Contraseña" type="password" autoComplete="new-password" {...bind('contrasena')} />
         <FormField
