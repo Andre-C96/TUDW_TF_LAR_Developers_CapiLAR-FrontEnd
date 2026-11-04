@@ -1,9 +1,10 @@
 import { apiFetch, apiFetchBlob } from './client';
 import { minutosHastaInicio } from './turnos';
 import type { Turno, TurnoDetalle } from './turnos';
+import type { ArticuloSinStock } from './articulos';
 
-// Ficha técnica (F08): la carga el profesional de cada servicio del turno mientras está CONFIRMADO
-// y se cierra cuando el turno se completa (ya no se edita). La clienta ve solo las cerradas.
+// Ficha técnica (F08): la carga el profesional de cada servicio del turno mientras está CONFIRMADO y se cierra
+// cuando el turno se completa. Después la puede seguir editando desde el historial. La clienta ve solo las cerradas.
 
 export type NivelCapilar = 'BAJA' | 'MEDIA' | 'ALTA';
 export type TipoDePelo = 'LISO' | 'ONDULADO' | 'RIZADO' | 'AFRO';
@@ -35,6 +36,10 @@ export interface Insumo {
   // Decimal como texto ("30.00")
   cantidad: string | null;
   unidad: UnidadInsumo | null;
+  // Artículo del stock; null en los insumos viejos cargados como texto (esos no descuentan)
+  articuloId: number | null;
+  // Costo de lo usado: se calcula al completar el turno (hasta ahí, null)
+  costoSubtotal: string | null;
 }
 
 // Una mezcla aplicada, en el orden en que se aplicó
@@ -69,7 +74,7 @@ export interface Ficha {
   indicacionesCliente: string | null;
   creadaEn: string;
   actualizadaEn: string;
-  // Fecha en que se completó el turno: desde ahí no se edita
+  // Fecha en que se completó el turno: desde ahí descuenta stock y solo se edita desde el historial
   cerradaEn: string | null;
   formulas: Formula[];
   fotos: FotoFicha[];
@@ -96,13 +101,12 @@ export interface FichaCliente {
   fotos: FotoFicha[];
 }
 
-export interface InsumoData {
-  producto: string;
-  marca: string | null;
-  tono: string | null;
-  cantidad: number | null;
-  unidad: UnidadInsumo | null;
-}
+// Del stock: alcanza con el artículo y la cantidad (en su unidad); el resto lo completa el back.
+// Como texto: solo para conservar los que ya estaban. Al editar hay que reenviar el articuloId que vino:
+// sin él, el back lo toma como texto y deja de descontarlo
+export type InsumoData =
+  | { articuloId: number; cantidad: number }
+  | { producto: string; marca: string | null; tono: string | null; cantidad: number | null; unidad: UnidadInsumo | null };
 
 export interface FormulaData {
   descripcion: string | null;
@@ -125,7 +129,7 @@ export interface FichaData {
 }
 
 // La ficha se carga durante el servicio: con el turno CONFIRMADO y desde la hora en que empieza ese servicio
-// (no antes). El back todavía solo pide CONFIRMADO: la regla de la hora está pedida en PWA-243
+// (no antes)
 export const puedeCargarFicha = (turno: Turno, detalle: TurnoDetalle) =>
   turno.estado === 'CONFIRMADO' && minutosHastaInicio({ fecha: turno.fecha, horaInicio: detalle.horaInicio }) <= 0;
 
@@ -137,10 +141,12 @@ export const createFichaRequest = (token: string, turnoId: number, turnoDetalleI
 
 export const getFichaRequest = (token: string, id: number) => apiFetch<Ficha>(`/fichas/${id}`, { token });
 
-// Solo mientras está abierta
-export const updateFichaRequest = (token: string, id: number, data: FichaData) =>
-  apiFetch<Ficha>(`/fichas/${id}`, { method: 'PATCH', body: data, token });
+// También cerrada. Con las fórmulas, en una cerrada se corrige el stock con la diferencia y sinStock trae los artículos
+// que quedaron por debajo de 0. Ver datosParaGuardar en fichaCambios.ts
+export const updateFichaRequest = (token: string, id: number, data: Partial<FichaData>) =>
+  apiFetch<Ficha & { sinStock?: ArticuloSinStock[] }>(`/fichas/${id}`, { method: 'PATCH', body: data, token });
 
+// Solo mientras está abierta
 export const deleteFichaRequest = (token: string, id: number) =>
   apiFetch<{ message: string }>(`/fichas/${id}`, { method: 'DELETE', token });
 
@@ -151,7 +157,7 @@ export const getClientFichasRequest = (token: string, clienteId: number) =>
 // CLIENTE: sus fichas cerradas, de la más nueva a la más vieja
 export const getMyFichasRequest = (token: string) => apiFetch<FichaCliente[]>('/fichas/mias', { token });
 
-// Hasta 5 de antes y 5 de después, mientras la ficha está abierta (JPG, PNG o WEBP de hasta 2 MB). Devuelve la ficha
+// Hasta 5 de antes y 5 de después, también con la ficha cerrada (JPG, PNG o WEBP de hasta 2 MB). Devuelve la ficha
 export const uploadFichaPhotoRequest = (token: string, id: number, tipo: MomentoFoto, file: File) => {
   const body = new FormData();
   body.append('tipo', tipo);

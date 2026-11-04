@@ -41,6 +41,7 @@ import { SerieBadge, TurnoAction, TurnoCard, TurnoList } from '../../components/
 import { MonthNav, WeekNav } from '../../components/weekNav/weekNav';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { FilterSelect, RangoField } from './agendaFiltros';
+import { avisarSinStock } from './fichaAvisos';
 import { FichaModal } from './fichaModal';
 import { SerieModal } from './serieModal';
 
@@ -257,7 +258,16 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
       return run(turno, () => cancelTurnoRequest(token, turno.id, motivo), 'Turno cancelado', 'Le avisamos al cliente por mail.');
     }
     if (pending.type === 'completar') {
-      return run(turno, () => completeTurnoRequest(token, turno.id), 'Turno completado', 'Ya figura en el historial del cliente.');
+      return run(
+        turno,
+        async () => {
+          const { sinStock, ...completado } = await completeTurnoRequest(token, turno.id);
+          avisarSinStock(sinStock);
+          return completado;
+        },
+        'Turno completado',
+        'Ya figura en el historial del cliente.',
+      );
     }
     if (pending.type === 'ausente') {
       return run(turno, () => markAbsentRequest(token, turno.id), 'Marcado como ausente', 'Queda registrado que el cliente no vino.');

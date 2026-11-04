@@ -38,7 +38,7 @@ export const History = () => {
           Todavía no tenés fichas. Cuando tu profesional complete la ficha de un servicio, la vas a ver acá.
         </p>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           {/* Todas cerradas: cada una se despliega al tocarla */}
           {fichas.data?.map((ficha) => (
             <FichaTecnica key={ficha.id} token={token} ficha={ficha} />

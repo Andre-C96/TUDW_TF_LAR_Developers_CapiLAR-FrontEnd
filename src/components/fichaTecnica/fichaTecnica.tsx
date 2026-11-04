@@ -2,6 +2,8 @@ import { useId, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import { FOTOS_POR_MOMENTO, NIVELES, TIPOS_DE_PELO, UNIDADES, VOLUMENES_DE_PELO } from '../../api/fichas';
 import type { Ficha, FichaCliente, FotoFicha, Insumo, MomentoFoto } from '../../api/fichas';
+import { formatPrice } from '../../api/services';
+import { parseTratamientos } from '../../api/tratamientos';
 import { fromIsoDate } from '../../api/turnos';
 import { FOTO_TIPOS } from '../../api/users';
 import { FichaFoto, FichaFotoVisor } from '../fichaFoto/fichaFoto';
@@ -26,18 +28,60 @@ const Texto = ({ titulo, texto, vacio }: { titulo: string; texto: string | null;
   </div>
 );
 
-// "Koleston 7.1 · 30 g"
+// "Koleston 7.1 · 30 g · $ 4.250" (el costo está desde que se completa el turno)
 const formatInsumo = (insumo: Insumo) =>
   [
     [insumo.producto, insumo.marca, insumo.tono].filter(Boolean).join(' '),
     insumo.cantidad && `${Number(insumo.cantidad)}${insumo.unidad ? ` ${UNIDADES[insumo.unidad]}` : ''}`,
+    insumo.costoSubtotal && formatPrice(insumo.costoSubtotal),
   ]
     .filter(Boolean)
     .join(' · ');
 
+// Las filas como tabla chica y, debajo, lo que no tiene ese formato (las fichas viejas se ven como estaban)
+const TratamientosPreviosDatos = ({ texto }: { texto: string | null }) => {
+  const { filas, notas } = parseTratamientos(texto);
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className={labelClass}>Tratamientos previos</h4>
+      {filas.length > 0 && (
+        <div className="overflow-x-auto rounded-[6px] border border-gray-200 bg-white">
+          <table className="w-full text-left font-inter text-sm">
+            <thead className="border-b border-gray-200 text-xs text-capilar-grey">
+              <tr>
+                <th scope="col" className="px-3 py-2 font-semibold">Tratamiento</th>
+                <th scope="col" className="px-3 py-2 font-semibold">Frecuencia</th>
+                <th scope="col" className="px-3 py-2 font-semibold">Última vez</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-black">
+              {filas.map((fila, index) => (
+                <tr key={index}>
+                  <td className="px-3 py-2">{fila.tratamiento}</td>
+                  <td className="px-3 py-2">{fila.frecuencia || '—'}</td>
+                  <td className="px-3 py-2">{fila.ultimaVez || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {notas && <p className="font-inter text-sm whitespace-pre-line text-black">{notas}</p>}
+      {filas.length === 0 && !notas && <p className="font-inter text-sm text-capilar-grey">Sin datos.</p>}
+    </div>
+  );
+};
+
+// Completar el turno también actualiza la fecha: un minuto de margen para no contarlo como edición
+const editadaDespues = ({ cerradaEn, actualizadaEn }: Ficha) =>
+  cerradaEn !== null && new Date(actualizadaEn).getTime() - new Date(cerradaEn).getTime() > 60_000;
+
 // Diagnóstico, fórmulas e indicaciones de una ficha completa (para el salón)
 export const FichaDatos = ({ ficha }: { ficha: Ficha }) => (
   <div className="flex flex-col gap-8">
+    {editadaDespues(ficha) && (
+      <p className="font-inter text-xs text-capilar-grey">Editada el {new Date(ficha.actualizadaEn).toLocaleDateString('es-AR')}, después de completar el turno.</p>
+    )}
     <dl className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-3">
       <Dato label="Porosidad">{ficha.porosidad && NIVELES[ficha.porosidad]}</Dato>
       <Dato label="Elasticidad">{ficha.elasticidad && NIVELES[ficha.elasticidad]}</Dato>
@@ -46,7 +90,7 @@ export const FichaDatos = ({ ficha }: { ficha: Ficha }) => (
       <Dato label="Volumen">{ficha.volumenDePelo && VOLUMENES_DE_PELO[ficha.volumenDePelo]}</Dato>
     </dl>
 
-    <Texto titulo="Tratamientos previos" texto={ficha.tratamientosPrevios} vacio="Sin datos." />
+    <TratamientosPreviosDatos texto={ficha.tratamientosPrevios} />
 
     <div className="flex flex-col gap-3">
       <h4 className={labelClass}>Fórmulas</h4>
@@ -176,11 +220,13 @@ interface FichaTecnicaProps {
   ficha: Ficha | FichaCliente;
   // Si arranca desplegada (por defecto cerrada: solo se ve fecha y servicio)
   defaultAbierta?: boolean;
+  // Si viene, suma "Editar" (el profesional de ese servicio)
+  onEditar?: () => void;
   className?: string;
 }
 
 // Ficha desplegable para los historiales: fecha, servicio y profesional; adentro, los datos y las fotos en pestañas
-export const FichaTecnica = ({ token, ficha, defaultAbierta = false, className = '' }: FichaTecnicaProps) => {
+export const FichaTecnica = ({ token, ficha, defaultAbierta = false, onEditar, className = '' }: FichaTecnicaProps) => {
   const completa = 'formulas' in ficha;
   const pestanias = [
     { id: 'datos', label: completa ? 'Datos' : 'Cuidados' },
@@ -203,20 +249,20 @@ export const FichaTecnica = ({ token, ficha, defaultAbierta = false, className =
   };
 
   return (
-    <section className={`relative overflow-hidden rounded-[6px] border border-gray-200 bg-gray-50 shadow-md ${className}`}>
+    <section className={`relative overflow-hidden rounded-[6px] border border-gray-200 bg-gray-50 shadow-sm ${className}`}>
       {/* Franja izquierda con el degradado de marca (vertical: violeta arriba, durazno abajo) */}
-      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-linear-to-b from-capilar-violet to-capilar-peach" />
+      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-linear-to-b from-capilar-violet to-capilar-peach" />
       <h3>
         <button
           type="button"
           onClick={() => setAbierta(!abierta)}
           aria-expanded={abierta}
           aria-controls={`${baseId}-contenido`}
-          className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-capilar-violet md:px-8"
+          className="flex w-full items-center justify-between gap-4 py-2 pr-3 pl-4 text-left transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-capilar-violet"
         >
-          <span className="flex flex-col">
-            <span className="font-inter text-lg font-semibold text-black">{ficha.servicio}</span>
-            <span className="font-inter text-sm font-normal text-capilar-grey">
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+            <span className="font-inter text-sm font-semibold text-black">{ficha.servicio}</span>
+            <span className="font-inter text-xs font-normal text-capilar-grey">
               {formatFechaFicha(ficha.fecha)} · con {ficha.profesional}
             </span>
           </span>
@@ -228,7 +274,7 @@ export const FichaTecnica = ({ token, ficha, defaultAbierta = false, className =
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`h-6 w-6 shrink-0 text-capilar-grey transition-transform duration-300 ${abierta ? 'rotate-180' : ''}`}
+            className={`h-4 w-4 shrink-0 text-capilar-grey transition-transform duration-300 ${abierta ? 'rotate-180' : ''}`}
           >
             <path d="m6 9 6 6 6-6" />
           </svg>
@@ -241,8 +287,8 @@ export const FichaTecnica = ({ token, ficha, defaultAbierta = false, className =
         className={`grid transition-[grid-template-rows] duration-300 ease-out ${abierta ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
       >
         <div className="overflow-hidden" inert={!abierta}>
-          <div className="px-6 md:px-8">
-            <div role="tablist" aria-label="Secciones de la ficha técnica" className="flex gap-6 border-b border-gray-200">
+          <div className="flex items-end justify-between gap-4 border-b border-gray-200 mx-6 md:mx-8">
+            <div role="tablist" aria-label="Secciones de la ficha técnica" className="flex gap-6">
               {pestanias.map((pestania, index) => {
                 const seleccionada = activa === pestania.id;
                 return (
@@ -269,6 +315,15 @@ export const FichaTecnica = ({ token, ficha, defaultAbierta = false, className =
                 );
               })}
             </div>
+            {onEditar && (
+              <button
+                type="button"
+                onClick={onEditar}
+                className="pb-3 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+              >
+                Editar
+              </button>
+            )}
           </div>
 
           <div role="tabpanel" id={`${baseId}-panel-${activa}`} aria-labelledby={`${baseId}-tab-${activa}`} className="p-6 md:p-8">
