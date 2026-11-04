@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getClientFichasRequest } from '../../api/fichas';
+import type { Ficha } from '../../api/fichas';
 import { getClientRequest } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Avatar } from '../../components/avatar/avatar';
@@ -11,6 +13,7 @@ import { Loader } from '../../components/loader/loader';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
 import { useFetch } from '../../customHooks/fetch/useFetch';
+import { FichaEditModal } from '../agenda/fichaEditModal';
 
 const tabs = [
   { id: 'perfil', label: 'Perfil' },
@@ -30,7 +33,7 @@ const Dato = ({ label, children }: { label: string; children: ReactNode }) => (
 // (de cualquier profesional, de la más nueva a la más vieja). "Nuevo turno" abre la agenda con el cliente elegido.
 // La pestaña va en la URL (?tab=) para que sobreviva a la recarga.
 export const ClientProfile = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const id = Number(useParams().id);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,6 +42,10 @@ export const ClientProfile = () => {
   const cliente = useFetch(token && id ? `cliente-${id}` : null, () => getClientRequest(token!, id));
   // El historial se pide al abrir su pestaña
   const fichas = useFetch(token && id && tab === 'historial' ? `fichas-cliente-${id}` : null, () => getClientFichasRequest(token!, id));
+
+  // Cada profesional edita solo las fichas de sus servicios
+  const [editando, setEditando] = useState<Ficha | null>(null);
+  const legajo = user?.profesional?.legajo;
 
   if (!token) return null;
 
@@ -121,15 +128,24 @@ export const ClientProfile = () => {
             ) : fichas.data?.length === 0 ? (
               <p className="py-8 text-center font-inter text-sm text-capilar-grey">Todavía no tiene fichas técnicas.</p>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
                 {/* Todas cerradas: cada una se despliega al tocarla */}
                 {fichas.data?.map((ficha) => (
-                  <FichaTecnica key={ficha.id} token={token} ficha={ficha} />
+                  <FichaTecnica key={ficha.id} token={token} ficha={ficha} onEditar={ficha.legajo === legajo ? () => setEditando(ficha) : undefined} />
                 ))}
               </div>
             )}
           </div>
         </>
+      )}
+
+      {editando && (
+        <FichaEditModal
+          token={token}
+          ficha={editando}
+          onClose={() => setEditando(null)}
+          onSaved={(actualizada) => fichas.setData((prev) => prev.map((f) => (f.id === actualizada.id ? actualizada : f)))}
+        />
       )}
     </section>
   );

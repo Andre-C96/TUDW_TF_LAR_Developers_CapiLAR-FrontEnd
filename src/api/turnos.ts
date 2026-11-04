@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import type { ArticuloSinStock } from './articulos';
 
 // PENDIENTE: lo pidió el cliente y espera al profesional. REPROGRAMADO: el salón propuso otro horario y espera al cliente.
 // RECHAZADO y CANCELADO liberan el horario. AUSENTE: estaba confirmado y el cliente no vino.
@@ -117,8 +118,9 @@ export const acceptRescheduleRequest = (token: string, id: number) =>
 export const cancelTurnoRequest = (token: string, id: number, motivo?: string) =>
   apiFetch<Turno>(`/turnos/${id}/cancelar`, { method: 'PATCH', body: motivo ? { motivo } : {}, token });
 
+// Descuenta del stock los insumos de sus fichas: sinStock trae los artículos que quedaron por debajo de 0
 export const completeTurnoRequest = (token: string, id: number) =>
-  apiFetch<Turno>(`/turnos/${id}/completar`, { method: 'PATCH', token });
+  apiFetch<Turno & { sinStock: ArticuloSinStock[] }>(`/turnos/${id}/completar`, { method: 'PATCH', token });
 
 // PROFESIONAL: el cliente no vino (turno CONFIRMADO, desde su hora de fin)
 export const markAbsentRequest = (token: string, id: number) =>

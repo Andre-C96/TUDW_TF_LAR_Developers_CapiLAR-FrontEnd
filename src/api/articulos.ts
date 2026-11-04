@@ -151,6 +151,13 @@ export interface MovimientoData {
   numComprobante?: string;
 }
 
+// Artículo que quedó por debajo de 0 al descontar lo que usó una ficha (se descuenta igual)
+export interface ArticuloSinStock {
+  id: number;
+  nombre: string;
+  stock: string;
+}
+
 export interface MovimientoCreado {
   movimiento: Movimiento;
   articulo: Articulo;
