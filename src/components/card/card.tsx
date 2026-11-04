@@ -6,26 +6,28 @@ interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: ReactNode;
   // Contenido libre: texto descriptivo, botones, etc.
   children?: ReactNode;
+  // Más chica, para grillas con varias por línea
+  compact?: boolean;
 }
 
-export const Card = ({ icon, title, children, className = '', ...props }: CardProps) => {
+export const Card = ({ icon, title, children, compact = false, className = '', ...props }: CardProps) => {
   return (
     <div
-      className={`flex flex-col items-center gap-4 p-8 text-center bg-gray-50 border border-gray-200 rounded-[6px] shadow-md ${className}`}
+      className={`flex flex-col items-center text-center ${compact ? 'gap-2 p-4' : 'gap-4 p-8'} bg-gray-50 border border-gray-200 rounded-[6px] shadow-md ${className}`}
       {...props}
     >
       {icon && (
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-sm">
+        <div className={`flex items-center justify-center rounded-full bg-white shadow-sm ${compact ? 'h-11 w-11' : 'h-16 w-16'}`}>
           {icon}
         </div>
       )}
       {title && (
-        <h3 className="font-inter font-semibold text-lg md:text-xl text-black">
+        <h3 className={`font-inter font-semibold text-black ${compact ? 'text-base' : 'text-lg md:text-xl'}`}>
           {title}
         </h3>
       )}
       {children && (
-        <div className="font-inter text-sm text-capilar-grey">
+        <div className={`font-inter text-capilar-grey ${compact ? 'text-xs' : 'text-sm'}`}>
           {children}
         </div>
       )}

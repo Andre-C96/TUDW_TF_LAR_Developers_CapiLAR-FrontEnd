@@ -32,10 +32,10 @@ export const SideMenu = () => {
   const sections = panelSections.filter((section) => hasRole(...section.roles));
 
   return (
-    <aside className="sticky top-24 mt-32 ml-4 hidden max-h-[calc(100dvh-7rem)] shrink-0 self-start md:block">
+    <aside className="sticky top-24 mt-32 mb-5 ml-4 hidden shrink-0 self-start md:block">
       <nav
         aria-label="Menú del panel"
-        className="scrollbar-soft flex max-h-[calc(100dvh-7rem)] w-16 flex-col gap-1 overflow-y-auto rounded-[6px] border border-gray-200 bg-white p-2 shadow-sm lg:w-60 lg:p-3"
+        className="flex w-16 flex-col gap-1 rounded-[6px] border border-gray-200 bg-white p-2 shadow-sm lg:w-60 lg:p-3"
       >
         <Link to="/panel" title="Inicio" aria-current={pathname === '/panel' ? 'page' : undefined} className={itemClass(pathname === '/panel')}>
           <MenuIcon>
