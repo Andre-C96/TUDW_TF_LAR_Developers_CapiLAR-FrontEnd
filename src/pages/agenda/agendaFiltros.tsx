@@ -93,7 +93,7 @@ export const FilterSelect = <T extends string>({ label, value, options, onChange
             role="listbox"
             aria-labelledby={labelId}
             onKeyDown={onListKeyDown}
-            className="absolute top-full left-0 z-30 mt-1 min-w-full overflow-hidden rounded-[6px] border border-gray-200 bg-white py-1 shadow-lg"
+            className="absolute top-full left-0 z-30 mt-1 max-h-72 min-w-full overflow-y-auto rounded-[6px] border border-gray-200 bg-white py-1 shadow-lg"
           >
             {options.map(([option, text]) => {
               const selected = option === value;
