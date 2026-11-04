@@ -91,6 +91,20 @@ export const panelSections: PanelSection[] = [
     subsections: [{ label: 'Cargar servicio', param: ['nuevo', '1'] }],
   },
   {
+    title: 'Alergias',
+    text: 'La lista de alergias que eligen las clientas.',
+    to: '/panel/alergias',
+    roles: ['ADMIN'],
+    icon: (
+      <>
+        <path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6l-8-3Z" />
+        <path d="M12 8v5M12 16.5v.01" />
+      </>
+    ),
+    // Abre el formulario de alta (?nuevo=1)
+    subsections: [{ label: 'Cargar alergia', param: ['nuevo', '1'] }],
+  },
+  {
     title: 'Stock',
     text: 'Artículos, movimientos y envases abiertos.',
     to: '/panel/stock',

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatAlergias } from '../../api/alergias';
 import { Link } from 'react-router-dom';
 import { searchClientsRequest } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
@@ -74,7 +75,7 @@ export const Clients = () => {
                     {c.email}
                   </span>
                 </span>
-                {c.cliente?.alergia && (
+                {formatAlergias(c.cliente) && (
                   <span className="hidden shrink-0 rounded-md bg-amber-50 px-2 py-1 font-inter text-xs text-amber-800 sm:inline">
                     Alergias
                   </span>

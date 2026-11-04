@@ -17,14 +17,23 @@ export const Panel = () => {
         <p className="font-inter text-capilar-grey">Elegí a dónde querés ir.</p>
       </div>
 
-      <div className="flex w-full flex-wrap justify-center gap-8">
+      <div className="flex w-full flex-wrap justify-center gap-4">
         {visible.map((section) => (
           <Link
             key={section.to}
             to={section.to}
-            className="w-full rounded-[6px] transition duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-capilar-violet sm:w-64"
+            className="w-full rounded-[6px] transition duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-capilar-violet sm:w-52"
           >
-            <Card icon={<GradientIcon id={`icon-${section.to.split('/').pop()}`}>{section.icon}</GradientIcon>} title={section.title} className="h-full">
+            <Card
+              compact
+              icon={
+                <GradientIcon id={`icon-${section.to.split('/').pop()}`} className="h-6 w-6">
+                  {section.icon}
+                </GradientIcon>
+              }
+              title={section.title}
+              className="h-full"
+            >
               {section.text}
             </Card>
           </Link>
