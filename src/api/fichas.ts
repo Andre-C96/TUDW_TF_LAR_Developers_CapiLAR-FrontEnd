@@ -23,9 +23,11 @@ export const FICHA_TEXTO_MAX = 1000;
 export const FORMULA_DESCRIPCION_MAX = 500;
 export const FORMULAS_MAX = 10;
 export const INSUMOS_MAX = 20;
-export const OXIDANTE_MAX = 60;
 export const POSE_MAX_MIN = 240;
 export const FOTOS_POR_MOMENTO = 5;
+
+// Dónde se aplica una fórmula. Se guarda como texto en `descripcion`: lo que no esté en la lista va como "Otra"
+export const ZONAS_FORMULA = ['Raíz', 'Medios', 'Puntas', 'Medios y puntas', 'Total', 'Mechas', 'Flequillo'];
 
 // Un producto de la mezcla
 export interface Insumo {
