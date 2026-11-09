@@ -8,11 +8,11 @@ import {
   FORMULA_DESCRIPCION_MAX,
   INSUMOS_MAX,
   NIVELES,
-  OXIDANTE_MAX,
   POSE_MAX_MIN,
   TIPOS_DE_PELO,
   UNIDADES,
   VOLUMENES_DE_PELO,
+  ZONAS_FORMULA,
   costoDeInsumo,
   totalDeProductos,
 } from '../../api/fichas';
@@ -47,7 +47,10 @@ interface InsumoDraft {
 
 interface FormulaDraft {
   key: number;
+  // La zona elegida o, con zonaOtra, lo que se escribió a mano
   descripcion: string;
+  zonaOtra: boolean;
+  // Solo en fichas viejas: se conserva y se reenvía sin cambios (el oxidante ahora es un producto más)
   oxidanteVolumen: string;
   tiempoPoseMin: string;
   insumos: InsumoDraft[];
@@ -56,12 +59,16 @@ interface FormulaDraft {
 // Clave estable para las filas que se agregan y quitan
 let nextKey = 0;
 const newInsumo = (): InsumoDraft => ({ key: nextKey++, busqueda: '', articuloId: null, comoTexto: false, producto: '', marca: '', tono: '', cantidad: '', unidad: '', costoSubtotal: null });
-const newFormula = (): FormulaDraft => ({ key: nextKey++, descripcion: '', oxidanteVolumen: '', tiempoPoseMin: '', insumos: [newInsumo()] });
+const newFormula = (): FormulaDraft => ({ key: nextKey++, descripcion: '', zonaOtra: false, oxidanteVolumen: '', tiempoPoseMin: '', insumos: [newInsumo()] });
+
+// Valor del select para "Otra" (no se guarda: lo que va a la ficha es el texto escrito)
+const ZONA_OTRA = 'otra';
 
 const toDraft = (ficha: Ficha): FormulaDraft[] =>
   ficha.formulas.map((formula) => ({
     key: nextKey++,
     descripcion: formula.descripcion ?? '',
+    zonaOtra: Boolean(formula.descripcion) && !ZONAS_FORMULA.includes(formula.descripcion ?? ''),
     oxidanteVolumen: formula.oxidanteVolumen?.toString() ?? '',
     tiempoPoseMin: formula.tiempoPoseMin?.toString() ?? '',
     insumos: formula.insumos.map((insumo) => ({
@@ -199,7 +206,7 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
   const [observacionesInternas, setObservacionesInternas] = useState(ficha?.observacionesInternas ?? '');
   const [formulas, setFormulas] = useState<FormulaDraft[]>(() => (ficha ? toDraft(ficha) : []));
   const [firmaInicial] = useState(() => firmaDeFormulas(formulas));
-  // Errores por campo: "canas", "f0.oxidante", "f0.i1.producto", etc.
+  // Errores por campo: "canas", "f0.pose", "f0.i1.producto", etc.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Ficha cerrada sin cambios en las fórmulas: vale el costo guardado. Si cambian, el back recalcula todo con el precio de hoy
@@ -256,7 +263,7 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
       observacionesInternas: observacionesInternas.trim() || null,
       formulas: formulas.map((formula, f) => ({
         descripcion: formula.descripcion.trim() || null,
-        oxidanteVolumen: entero(formula.oxidanteVolumen, 1, OXIDANTE_MAX, `f${f}.oxidante`, `Entre 1 y ${OXIDANTE_MAX} vol`),
+        oxidanteVolumen: formula.oxidanteVolumen ? Number(formula.oxidanteVolumen) : null,
         tiempoPoseMin: entero(formula.tiempoPoseMin, 1, POSE_MAX_MIN, `f${f}.pose`, `Entre 1 y ${POSE_MAX_MIN} minutos`),
         // Las filas vacías no se mandan
         insumos: formula.insumos
@@ -373,35 +380,39 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
                 Quitar
               </button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
-              <div className="flex flex-col gap-1">
+            <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+              <div className="flex flex-col gap-2">
                 <label className={labelClass}>
-                  Zona o descripción
+                  Zona
+                  <select
+                    value={formula.zonaOtra ? ZONA_OTRA : formula.descripcion}
+                    onChange={(event) =>
+                      updateFormula(
+                        formula.key,
+                        event.target.value === ZONA_OTRA ? { zonaOtra: true, descripcion: '' } : { zonaOtra: false, descripcion: event.target.value },
+                      )
+                    }
+                    className={`${smallInputClass} mt-1 border-gray-300 bg-white normal-case tracking-normal font-normal`}
+                  >
+                    <option value="">Sin indicar</option>
+                    {ZONAS_FORMULA.map((zona) => (
+                      <option key={zona} value={zona}>
+                        {zona}
+                      </option>
+                    ))}
+                    <option value={ZONA_OTRA}>Otra</option>
+                  </select>
+                </label>
+                {formula.zonaOtra && (
                   <input
                     value={formula.descripcion}
                     onChange={(event) => updateFormula(formula.key, { descripcion: event.target.value })}
                     maxLength={FORMULA_DESCRIPCION_MAX}
-                    placeholder="Ej.: Raíz"
-                    className={`${smallInputClass} mt-1 border-gray-300 normal-case tracking-normal font-normal`}
+                    placeholder="¿Qué zona?"
+                    aria-label={`Otra zona de la fórmula ${f + 1}`}
+                    className={`${smallInputClass} border-gray-300`}
                   />
-                </label>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className={labelClass}>
-                  Oxidante (vol)
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={OXIDANTE_MAX}
-                    value={formula.oxidanteVolumen}
-                    onChange={(event) => updateFormula(formula.key, { oxidanteVolumen: event.target.value })}
-                    placeholder="20"
-                    aria-invalid={fieldErrors[`f${f}.oxidante`] ? true : undefined}
-                    className={`${smallInputClass} mt-1 normal-case tracking-normal font-normal ${fieldErrors[`f${f}.oxidante`] ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                </label>
-                <FieldError message={fieldErrors[`f${f}.oxidante`]} />
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label className={labelClass}>
@@ -421,6 +432,8 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
                 <FieldError message={fieldErrors[`f${f}.pose`]} />
               </div>
             </div>
+
+            {formula.oxidanteVolumen && <p className="font-inter text-sm text-capilar-grey">Oxidante {formula.oxidanteVolumen} vol</p>}
 
             <div className="flex flex-col gap-2">
               <span className={labelClass}>Productos</span>
