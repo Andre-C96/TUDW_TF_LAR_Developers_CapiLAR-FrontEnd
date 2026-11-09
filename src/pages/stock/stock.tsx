@@ -7,6 +7,7 @@ import {
   USOS,
   cambiosDeArticulo,
   createArticuloRequest,
+  createMarcaRequest,
   deactivateArticuloRequest,
   estadoVencimiento,
   formatEnvases,
@@ -14,10 +15,11 @@ import {
   getArticuloByQrRequest,
   getArticulosRequest,
   getMarcasRequest,
+  porMarca,
   reactivateArticuloRequest,
   updateArticuloRequest,
 } from '../../api/articulos';
-import type { Articulo, ArticuloData, TipoProducto, UsoArticulo } from '../../api/articulos';
+import type { Articulo, ArticuloData, MarcaData, TipoProducto, UsoArticulo } from '../../api/articulos';
 import { ApiError } from '../../api/client';
 import { Alert } from '../../components/alert/alert';
 import { ArticuloForm } from '../../components/articuloForm/articuloForm';
@@ -50,7 +52,7 @@ const textoDeBusqueda = (articulo: Articulo) =>
 
 type PendingAction = { type: 'editar' | 'baja' | 'alta'; articulo: Articulo };
 
-// Sección Stock: los artículos con cuánto queda de cada uno. El ADMIN además los carga, edita y da de baja.
+// Sección Stock: los artículos con cuánto queda de cada uno. Se pueden cargar (ej. al recibir un pedido); el ADMIN además los edita y da de baja.
 // Enter en el buscador con un código "ART-..." abre ese artículo: un lector de QR escribe el código y aprieta Enter.
 export const Stock = () => {
   const { token, user } = useAuth();
@@ -63,7 +65,7 @@ export const Stock = () => {
   // "Bajo stock" y el alta van en la URL para poder abrirlos desde el menú lateral
   const [searchParams, setSearchParams] = useSearchParams();
   const soloBajo = searchParams.get('bajo') === '1';
-  const creando = isAdmin && searchParams.get('nuevo') === '1';
+  const creando = searchParams.get('nuevo') === '1';
   const [search, setSearch] = useState('');
   const [tipo, setTipo] = useState<TipoProducto | typeof TODOS>(TODOS);
   const [uso, setUso] = useState<UsoArticulo | typeof TODOS>(TODOS);
@@ -143,6 +145,12 @@ export const Stock = () => {
       toast.success('Artículo creado', { description: `${creado.nombre} ya tiene su QR.` });
     });
 
+  const crearMarca = async (data: MarcaData) => {
+    const nueva = await createMarcaRequest(token!, data);
+    marcas.setData((prev) => [...prev, nueva].sort(porMarca));
+    return nueva;
+  };
+
   const editar = (data: ArticuloData) => {
     if (pending?.type !== 'editar') return;
     const { articulo } = pending;
@@ -194,14 +202,12 @@ export const Stock = () => {
             <Title>Stock</Title>
             <p className="font-inter text-capilar-grey">Lo que hay en el salón, contado en envases.</p>
           </div>
-          {isAdmin && (
-            <Button
-              onClick={() => setSearchParams({ nuevo: '1' })}
-              className="shrink-0 self-start px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider md:self-auto"
-            >
-              Nuevo artículo
-            </Button>
-          )}
+          <Button
+            onClick={() => setSearchParams({ nuevo: '1' })}
+            className="shrink-0 self-start px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider md:self-auto"
+          >
+            Nuevo artículo
+          </Button>
         </div>
       </div>
 
@@ -324,6 +330,7 @@ export const Stock = () => {
             key={editando ? editando.id : 'nuevo'}
             articulo={editando}
             marcas={marcas.data ?? []}
+            onCrearMarca={crearMarca}
             onSubmit={editando ? editar : crear}
             onCancel={closeModal}
             isLoading={isSaving}

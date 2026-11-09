@@ -119,7 +119,7 @@ export const panelSections: PanelSection[] = [
     subsections: [
       { label: 'Artículos', param: ['bajo', null] },
       { label: 'Poco stock', param: ['bajo', '1'] },
-      { label: 'Cargar artículo', param: ['nuevo', '1'], roles: ['ADMIN'] },
+      { label: 'Cargar artículo', param: ['nuevo', '1'] },
     ],
   },
   {

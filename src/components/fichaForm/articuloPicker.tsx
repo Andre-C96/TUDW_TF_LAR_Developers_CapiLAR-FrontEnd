@@ -19,13 +19,15 @@ interface ArticuloPickerProps {
   // Los que se pueden usar en una ficha (activos, de uso salón)
   articulos: Articulo[];
   onSelect: (articulo: Articulo) => void;
+  // Si viene, ofrece crear un artículo con lo que se escribió
+  onCrear?: (nombre: string) => void;
   'aria-label': string;
   invalid?: boolean;
   className?: string;
 }
 
 // Buscador de artículos del stock para un insumo de la ficha: se escribe y se elige de la lista
-export const ArticuloPicker = ({ value, onChange, articulos, onSelect, 'aria-label': ariaLabel, invalid, className = '' }: ArticuloPickerProps) => {
+export const ArticuloPicker = ({ value, onChange, articulos, onSelect, onCrear, 'aria-label': ariaLabel, invalid, className = '' }: ArticuloPickerProps) => {
   const [open, setOpen] = useState(false);
   const [activo, setActivo] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
@@ -39,22 +41,31 @@ export const ArticuloPicker = ({ value, onChange, articulos, onSelect, 'aria-lab
         .slice(0, MAX_RESULTADOS)
     : [];
   const visible = open && query !== '';
+  // "Crear artículo" va siempre al final, también con resultados: puede faltar justo otro tono del mismo producto
+  const opciones = resultados.length + (onCrear ? 1 : 0);
 
   const elegir = (articulo: Articulo) => {
     onSelect(articulo);
     setOpen(false);
   };
 
+  const crear = () => {
+    onCrear?.(value.trim());
+    setOpen(false);
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!visible || resultados.length === 0) return;
+    if (!visible || opciones === 0) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      setActivo((prev) => (prev + (event.key === 'ArrowDown' ? 1 : -1) + resultados.length) % resultados.length);
+      setActivo((prev) => (prev + (event.key === 'ArrowDown' ? 1 : -1) + opciones) % opciones);
     }
-    // Enter elige el artículo en lugar de guardar la ficha
+    // Enter elige la opción en lugar de guardar la ficha
     if (event.key === 'Enter') {
       event.preventDefault();
-      elegir(resultados[Math.min(activo, resultados.length - 1)]);
+      const indice = Math.min(activo, opciones - 1);
+      if (indice < resultados.length) elegir(resultados[indice]);
+      else crear();
     }
   };
 
@@ -108,6 +119,20 @@ export const ArticuloPicker = ({ value, onChange, articulos, onSelect, 'aria-lab
               </span>
             </li>
           ))}
+          {onCrear && (
+            <li
+              role="option"
+              aria-selected={activo === resultados.length}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                crear();
+              }}
+              onMouseEnter={() => setActivo(resultados.length)}
+              className={`cursor-pointer border-t border-gray-100 px-3 py-2 font-inter text-sm font-semibold text-capilar-violet ${activo === resultados.length ? 'bg-purple-50' : ''}`}
+            >
+              + Crear artículo "{value.trim()}"
+            </li>
+          )}
         </ul>
       )}
     </div>
