@@ -13,11 +13,15 @@ import {
   TIPOS_DE_PELO,
   UNIDADES,
   VOLUMENES_DE_PELO,
+  costoDeInsumo,
+  totalDeProductos,
 } from '../../api/fichas';
 import type { Ficha, FichaData, InsumoData, NivelCapilar, TipoDePelo, UnidadInsumo, VolumenDePelo } from '../../api/fichas';
+import { formatPrice } from '../../api/services';
 import { parseTratamientos, serializeTratamientos } from '../../api/tratamientos';
 import { Button } from '../button/button';
 import { Form } from '../form/form';
+import { TotalProductos } from '../totalProductos/totalProductos';
 import { ArticuloPicker } from './articuloPicker';
 import { filaVacia, fromTratamientoDraft, newTratamiento, toTratamientoDraft, validarTratamiento } from './tratamientoDraft';
 import type { TratamientoDraft } from './tratamientoDraft';
@@ -37,6 +41,8 @@ interface InsumoDraft {
   tono: string;
   cantidad: string;
   unidad: UnidadInsumo | '';
+  // Costo guardado al completar el turno
+  costoSubtotal: string | null;
 }
 
 interface FormulaDraft {
@@ -49,7 +55,7 @@ interface FormulaDraft {
 
 // Clave estable para las filas que se agregan y quitan
 let nextKey = 0;
-const newInsumo = (): InsumoDraft => ({ key: nextKey++, busqueda: '', articuloId: null, comoTexto: false, producto: '', marca: '', tono: '', cantidad: '', unidad: '' });
+const newInsumo = (): InsumoDraft => ({ key: nextKey++, busqueda: '', articuloId: null, comoTexto: false, producto: '', marca: '', tono: '', cantidad: '', unidad: '', costoSubtotal: null });
 const newFormula = (): FormulaDraft => ({ key: nextKey++, descripcion: '', oxidanteVolumen: '', tiempoPoseMin: '', insumos: [newInsumo()] });
 
 const toDraft = (ficha: Ficha): FormulaDraft[] =>
@@ -68,8 +74,20 @@ const toDraft = (ficha: Ficha): FormulaDraft[] =>
       tono: insumo.tono ?? '',
       cantidad: insumo.cantidad ? String(Number(insumo.cantidad)) : '',
       unidad: insumo.unidad ?? '',
+      costoSubtotal: insumo.costoSubtotal,
     })),
   }));
+
+// Lo que se manda de las fórmulas, para saber si cambiaron (las filas de producto vacías no cuentan)
+const firmaDeFormulas = (formulas: FormulaDraft[]) =>
+  JSON.stringify(
+    formulas.map(({ descripcion, oxidanteVolumen, tiempoPoseMin, insumos }) => [
+      descripcion.trim(),
+      oxidanteVolumen,
+      tiempoPoseMin,
+      insumos.filter((i) => i.articuloId !== null || i.comoTexto).map((i) => [i.articuloId, i.producto, i.cantidad.trim()]),
+    ]),
+  );
 
 // Hasta 2 decimales, con punto o coma
 const CANTIDAD_REGEX = /^\d+([.,]\d{1,2})?$/;
@@ -81,7 +99,7 @@ const smallInputClass =
   'w-full rounded-lg border px-3 py-2 font-inter text-sm text-black outline-none transition-colors placeholder:text-gray-400 focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20';
 
 // Una opción por chip; tocar la elegida la deselecciona (ningún dato es obligatorio)
-const Opciones = <T extends string>({
+export const Opciones = <T extends string>({
   label,
   opciones,
   value,
@@ -180,8 +198,25 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
   const [indicacionesCliente, setIndicacionesCliente] = useState(ficha?.indicacionesCliente ?? '');
   const [observacionesInternas, setObservacionesInternas] = useState(ficha?.observacionesInternas ?? '');
   const [formulas, setFormulas] = useState<FormulaDraft[]>(() => (ficha ? toDraft(ficha) : []));
+  const [firmaInicial] = useState(() => firmaDeFormulas(formulas));
   // Errores por campo: "canas", "f0.oxidante", "f0.i1.producto", etc.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Ficha cerrada sin cambios en las fórmulas: vale el costo guardado. Si cambian, el back recalcula todo con el precio de hoy
+  const usarCostoGuardado = Boolean(ficha?.cerradaEn) && firmaDeFormulas(formulas) === firmaInicial;
+
+  // Lo que suman los productos ya elegidos, para calcular cuánto cobrar
+  const totalProductos = totalDeProductos(
+    formulas
+      .flatMap((formula) => formula.insumos)
+      .filter((insumo) => insumo.articuloId !== null || insumo.comoTexto)
+      .map((insumo) => ({
+        articuloId: insumo.articuloId,
+        cantidad: insumo.cantidad.replace(',', '.'),
+        costoSubtotal: usarCostoGuardado ? insumo.costoSubtotal : null,
+      })),
+    articulos,
+  );
 
   const updateFormula = (key: number, changes: Partial<FormulaDraft>) =>
     setFormulas((prev) => prev.map((f) => (f.key === key ? { ...f, ...changes } : f)));
@@ -395,6 +430,13 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
                 const errorCantidad = fieldErrors[`f${f}.i${i}.cantidad`];
                 const elegido = insumo.articuloId !== null || insumo.comoTexto;
                 const articulo = articulos.find((a) => a.id === insumo.articuloId);
+                const cantidadUsada = Number(insumo.cantidad.replace(',', '.')) || 0;
+                const costoDeLaFila =
+                  usarCostoGuardado && insumo.costoSubtotal !== null
+                    ? Number(insumo.costoSubtotal)
+                    : articulo && cantidadUsada > 0
+                      ? costoDeInsumo(articulo, cantidadUsada)
+                      : null;
                 return (
                   <div key={insumo.key} className="flex flex-col gap-1">
                     <div className="grid grid-cols-[1fr_5rem_auto] items-center gap-2 sm:grid-cols-[1fr_6rem_2.5rem_auto]">
@@ -408,7 +450,12 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
                             <span className="text-xs text-capilar-grey">
                               {insumo.comoTexto
                                 ? [insumo.marca, 'Cargado como texto: no descuenta stock'].filter(Boolean).join(' · ')
-                                : [insumo.marca, articulo && `Hay ${formatEnvases(articulo.stock)}`, articulo && `1 envase = ${Number(articulo.pesoInicial)} ${UNIDADES[articulo.tipoPeso]}`]
+                                : [
+                                    insumo.marca,
+                                    articulo && `Hay ${formatEnvases(articulo.stock)}`,
+                                    articulo && `1 envase = ${Number(articulo.pesoInicial)} ${UNIDADES[articulo.tipoPeso]}`,
+                                    costoDeLaFila !== null && formatPrice(costoDeLaFila),
+                                  ]
                                     .filter(Boolean)
                                     .join(' · ')}
                             </span>
@@ -469,6 +516,7 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
             </div>
           </fieldset>
         ))}
+        <TotalProductos {...totalProductos} />
       </section>
 
       <section className="flex flex-col gap-5">

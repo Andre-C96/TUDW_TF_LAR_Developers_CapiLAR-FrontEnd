@@ -2,7 +2,7 @@ import { useId } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { formatAlergias } from '../../api/alergias';
 import { formatPrice } from '../../api/services';
-import { fromIsoDate } from '../../api/turnos';
+import { METODOS_PAGO, fromIsoDate } from '../../api/turnos';
 import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
 
 // Texto y color de cada estado. El cliente lee el estado desde su lado ("Esperando confirmación")
@@ -90,6 +90,11 @@ export const CalendarDate = ({ fecha }: { fecha: string }) => {
 export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge, enLista = false }: TurnoCardProps) => {
   const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO' || turno.estado === 'AUSENTE';
   const total = turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioBase), 0);
+  // Lo cobrado: solo en los completados
+  const cobrado =
+    turno.estado === 'COMPLETADO' && turno.detalles.every((detalle) => detalle.precioFinal != null)
+      ? turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioFinal), 0)
+      : null;
 
   return (
     <article
@@ -144,7 +149,18 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
           ))}
         </ul>
 
-        {paraCliente && <span className="font-inter text-sm font-semibold text-black">Desde {formatPrice(total)}</span>}
+        {paraCliente && (
+          <span className="font-inter text-sm font-semibold text-black">
+            {cobrado !== null ? `Total ${formatPrice(cobrado)}` : `Desde ${formatPrice(total)}`}
+          </span>
+        )}
+
+        {!paraCliente && cobrado !== null && (
+          <span className="font-inter text-sm font-semibold text-black">
+            Cobrado {formatPrice(cobrado)}
+            {turno.metodoPago && ` · ${METODOS_PAGO[turno.metodoPago]}`}
+          </span>
+        )}
 
         {turno.motivo && isClosed && (
           <p className="font-inter text-sm text-capilar-grey">

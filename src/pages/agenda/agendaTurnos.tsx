@@ -25,7 +25,7 @@ import {
   startOfWeek,
   toIsoDate,
 } from '../../api/turnos';
-import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
+import type { CompletarTurnoData, EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
 import { Collapsible, CountBadge } from '../../components/collapsible/collapsible';
@@ -41,6 +41,7 @@ import { SerieBadge, TurnoAction, TurnoCard, TurnoList } from '../../components/
 import { MonthNav, WeekNav } from '../../components/weekNav/weekNav';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { FilterSelect, RangoField } from './agendaFiltros';
+import { CompletarTurnoModal } from './completarTurnoModal';
 import { avisarSinStock } from './fichaAvisos';
 import { FichaModal } from './fichaModal';
 import { SerieModal } from './serieModal';
@@ -257,22 +258,22 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
     if (pending.type === 'cancelar') {
       return run(turno, () => cancelTurnoRequest(token, turno.id, motivo), 'Turno cancelado', 'Le avisamos al cliente por mail.');
     }
-    if (pending.type === 'completar') {
-      return run(
-        turno,
-        async () => {
-          const { sinStock, ...completado } = await completeTurnoRequest(token, turno.id);
-          avisarSinStock(sinStock);
-          return completado;
-        },
-        'Turno completado',
-        'Ya figura en el historial del cliente.',
-      );
-    }
     if (pending.type === 'ausente') {
       return run(turno, () => markAbsentRequest(token, turno.id), 'Marcado como ausente', 'Queda registrado que el cliente no vino.');
     }
   };
+
+  const completar = (turno: Turno, data: CompletarTurnoData) =>
+    run(
+      turno,
+      async () => {
+        const { sinStock, ...completado } = await completeTurnoRequest(token, turno.id, data);
+        avisarSinStock(sinStock);
+        return completado;
+      },
+      'Turno completado',
+      'Ya figura en el historial del cliente.',
+    );
 
   const actionsFor = (turno: Turno) => {
     const busy = busyId === turno.id;
@@ -409,12 +410,6 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
       confirm: 'Cancelar turno',
       reason: { label: 'Motivo', required: true, hint: 'Se lo enviamos al cliente en el aviso.', placeholder: 'Ej.: no voy a estar ese día' },
     },
-    completar: {
-      title: 'Completar turno',
-      text: '¿Marcar este turno como realizado?',
-      confirm: 'Completar',
-      reason: undefined,
-    },
     ausente: {
       title: 'Marcar ausente',
       text: '¿El cliente no vino a este turno? Queda registrado como ausente.',
@@ -422,7 +417,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
       reason: undefined,
     },
   };
-  const texts = pending && pending.type !== 'reprogramar' ? dialogTexts[pending.type] : null;
+  const texts = pending && pending.type !== 'reprogramar' && pending.type !== 'completar' ? dialogTexts[pending.type] : null;
 
   return (
     // Alto mínimo: con pocos turnos, el calendario del rango entra sin pasar por encima del footer
@@ -554,14 +549,24 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           <p className="mt-2 font-semibold text-black">
             {pending.turno.cliente.nombre} {pending.turno.cliente.apellido} · {formatFechaLarga(pending.turno.fecha)}, {pending.turno.horaInicio}
           </p>
-          {pending.type === 'completar' && (
-            <p className="mt-2">
-              {sinFicha(pending.turno)
-                ? 'Ojo: todavía no cargaste la ficha técnica y, una vez completado, ya no se puede cargar.'
-                : 'La ficha técnica se cierra y la clienta ve tus indicaciones y las fotos en su historial.'}
-            </p>
-          )}
         </ConfirmDialog>
+      )}
+
+      {pending?.type === 'completar' && (
+        <CompletarTurnoModal
+          token={token}
+          turno={pending.turno}
+          onClose={closePending}
+          onConfirm={(data) => completar(pending.turno, data)}
+          isLoading={busyId !== null}
+          error={actionError}
+        >
+          <p>
+            {sinFicha(pending.turno)
+              ? 'Ojo: todavía no cargaste la ficha técnica y, una vez completado, ya no se puede cargar.'
+              : 'La ficha técnica se cierra y la clienta ve tus indicaciones y las fotos en su historial.'}
+          </p>
+        </CompletarTurnoModal>
       )}
 
       <Modal isOpen={pending?.type === 'reprogramar'} onClose={closePending} ariaLabel="Reprogramar turno" className="max-w-3xl!">
