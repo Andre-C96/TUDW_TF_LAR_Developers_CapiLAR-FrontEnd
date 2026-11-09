@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { formatAlergias } from '../../api/alergias';
 import { formatPrice } from '../../api/services';
 import { fromIsoDate } from '../../api/turnos';
 import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
@@ -116,7 +117,11 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-inter text-sm">
             <span className="font-semibold text-black">
               {turno.cliente.nombre} {turno.cliente.apellido}
-              <span className="font-normal text-capilar-grey"> · {turno.cliente.telefono}</span>
+              <span className="font-normal text-capilar-grey">
+                {' '}
+                · {turno.cliente.telefono}
+                {formatAlergias(turno.cliente) && ` · Alergias: ${formatAlergias(turno.cliente)}`}
+              </span>
             </span>
             {!turno.cliente.emailVerificadoEn && (
               <span
@@ -124,11 +129,6 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
                 className="self-start rounded-md bg-gray-100 px-2 py-1 text-xs text-capilar-grey"
               >
                 Correo sin verificar
-              </span>
-            )}
-            {turno.cliente.alergia && (
-              <span className="self-start rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                Alergias: {turno.cliente.alergia}
               </span>
             )}
           </div>

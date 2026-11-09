@@ -3,6 +3,7 @@ import { Layout } from './layouts/layout/layout'
 import { LinkLayout } from './layouts/linkLayout/linkLayout'
 import { PanelLayout } from './layouts/panelLayout/panelLayout'
 import { ProtectedRoute } from './components/protectedRoute/protectedRoute'
+import { AdminAlergias } from './pages/adminAlergias/adminAlergias'
 import { AdminServices } from './pages/adminServices/adminServices'
 import { Agenda } from './pages/agenda/agenda'
 import { Booking } from './pages/booking/booking'
@@ -57,6 +58,7 @@ function App() {
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>
             <Route path="/panel/usuarios" element={<Users />} />
             <Route path="/panel/servicios" element={<AdminServices />} />
+            <Route path="/panel/alergias" element={<AdminAlergias />} />
             <Route path="/panel/marcas" element={<Marcas />} />
           </Route>
         </Route>

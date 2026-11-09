@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { formatAlergias } from '../../api/alergias';
 import { getClientFichasRequest } from '../../api/fichas';
 import type { Ficha } from '../../api/fichas';
 import { getClientRequest } from '../../api/users';
@@ -71,9 +72,9 @@ export const ClientProfile = () => {
               <Title>
                 {c.nombre} {c.apellido}
               </Title>
-              {c.cliente?.alergia && (
+              {formatAlergias(c.cliente) && (
                 <span className="self-center rounded-md bg-amber-50 px-2 py-1 font-inter text-xs text-amber-800 md:self-start">
-                  Alergias: {c.cliente.alergia}
+                  Alergias: {formatAlergias(c.cliente)}
                 </span>
               )}
             </div>
@@ -117,7 +118,7 @@ export const ClientProfile = () => {
                   )}
                 </Dato>
                 <Dato label="Teléfono">{c.telefono ?? <span className="text-capilar-grey">Sin cargar</span>}</Dato>
-                <Dato label="Alergias">{c.cliente?.alergia ?? <span className="text-capilar-grey">No informó</span>}</Dato>
+                <Dato label="Alergias">{formatAlergias(c.cliente) || <span className="text-capilar-grey">No informó</span>}</Dato>
               </dl>
             ) : fichas.error ? (
               <Alert variant="error" title="No se pudo cargar el historial">

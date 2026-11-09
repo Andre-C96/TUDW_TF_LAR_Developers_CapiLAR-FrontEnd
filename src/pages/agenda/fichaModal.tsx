@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { formatAlergias } from '../../api/alergias';
 import { getArticulosSalonRequest } from '../../api/articulos';
 import { ApiError } from '../../api/client';
 import { datosParaGuardar } from '../../api/fichaCambios';
@@ -162,9 +163,9 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
               </span>{' '}
               · {detalle.servicio} · <span className="first-letter:uppercase">{formatFechaLarga(turno.fecha)}</span>, {detalle.horaInicio}
             </p>
-            {turno.cliente.alergia && (
+            {formatAlergias(turno.cliente) && (
               <span className="self-start rounded-md bg-amber-50 px-2 py-1 font-inter text-xs text-amber-800">
-                Alergias: {turno.cliente.alergia}
+                Alergias: {formatAlergias(turno.cliente)}
               </span>
             )}
           </div>

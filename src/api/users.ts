@@ -77,9 +77,12 @@ export const deactivateUserRequest = (token: string, id: number) =>
 export const reactivateUserRequest = (token: string, id: number) =>
   apiFetch<Usuario>(`/users/${id}/alta`, { method: 'PATCH', token });
 
-// Perfil propio (cualquier rol). Solo se mandan los campos a cambiar; alergia solo para CLIENTE ("" o null la borra)
+// Perfil propio (cualquier rol). Solo se mandan los campos a cambiar; las alergias solo para CLIENTE
 export interface UpdateProfileData {
   telefono?: string;
+  // Las de la lista: reemplaza a las que tenía
+  alergiaIds?: number[];
+  // "Otra" ("" o null la borra)
   alergia?: string | null;
   // "YYYY-MM-DD"; null la borra
   fechaNacimiento?: string | null;
