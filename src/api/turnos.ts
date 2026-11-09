@@ -8,6 +8,16 @@ export type EstadoTurno = 'PENDIENTE' | 'CONFIRMADO' | 'REPROGRAMADO' | 'COMPLET
 
 export type MetodoPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
 
+export const METODOS_PAGO: Record<MetodoPago, string> = {
+  EFECTIVO: 'Efectivo',
+  DEBITO: 'Débito',
+  CREDITO: 'Crédito',
+  TRANSFERENCIA: 'Transferencia',
+};
+
+// Mismo límite que el back
+export const PRECIO_FINAL_MAX = 99_999_999.99;
+
 // Un servicio del turno, con su profesional y su propio horario (se hacen uno después del otro)
 export interface TurnoDetalle {
   id: number;
@@ -19,6 +29,8 @@ export interface TurnoDetalle {
   horaFin: string;
   // Precio al reservar, como texto ("15000.00")
   precioBase: string;
+  // Lo que se cobró, como texto ("18000"); null hasta que se completa el turno
+  precioFinal?: string | null;
   // Ficha técnica de este servicio o null. Solo en los turnos del salón (no viene en /turnos/mios)
   fichaId?: number | null;
 }
@@ -120,9 +132,15 @@ export const acceptRescheduleRequest = (token: string, id: number) =>
 export const cancelTurnoRequest = (token: string, id: number, motivo?: string) =>
   apiFetch<Turno>(`/turnos/${id}/cancelar`, { method: 'PATCH', body: motivo ? { motivo } : {}, token });
 
-// Descuenta del stock los insumos de sus fichas: sinStock trae los artículos que quedaron por debajo de 0
-export const completeTurnoRequest = (token: string, id: number) =>
-  apiFetch<Turno & { sinStock: ArticuloSinStock[] }>(`/turnos/${id}/completar`, { method: 'PATCH', token });
+export interface CompletarTurnoData {
+  detalles: { turnoDetalleId: number; precioFinal: number }[];
+  metodoPago: MetodoPago;
+}
+
+// Guarda lo cobrado (no se puede cambiar después) y descuenta del stock los insumos de sus fichas:
+// sinStock trae los artículos que quedaron por debajo de 0
+export const completeTurnoRequest = (token: string, id: number, data: CompletarTurnoData) =>
+  apiFetch<Turno & { sinStock: ArticuloSinStock[] }>(`/turnos/${id}/completar`, { method: 'PATCH', body: data, token });
 
 // PROFESIONAL: el cliente no vino (turno CONFIRMADO, desde su hora de fin)
 export const markAbsentRequest = (token: string, id: number) =>

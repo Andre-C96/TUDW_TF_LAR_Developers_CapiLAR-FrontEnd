@@ -1,7 +1,7 @@
 import { apiFetch, apiFetchBlob } from './client';
 import { minutosHastaInicio } from './turnos';
 import type { Turno, TurnoDetalle } from './turnos';
-import type { ArticuloSinStock } from './articulos';
+import type { Articulo, ArticuloSinStock } from './articulos';
 
 // Ficha técnica (F08): la carga el profesional de cada servicio del turno mientras está CONFIRMADO y se cierra
 // cuando el turno se completa. Después la puede seguir editando desde el historial. La clienta ve solo las cerradas.
@@ -132,6 +132,36 @@ export interface FichaData {
 // (no antes)
 export const puedeCargarFicha = (turno: Turno, detalle: TurnoDetalle) =>
   turno.estado === 'CONFIRMADO' && minutosHastaInicio({ fecha: turno.fecha, horaInicio: detalle.horaInicio }) <= 0;
+
+// Lo que cuesta lo usado de un artículo: la misma cuenta que hace el back al completar el turno
+export const costoDeInsumo = ({ precioCosto, pesoInicial }: Pick<Articulo, 'precioCosto' | 'pesoInicial'>, cantidad: number) =>
+  Math.round((Number(precioCosto) / Number(pesoInicial)) * cantidad * 100) / 100;
+
+export interface TotalDeProductos {
+  total: number;
+  // Productos que no suman: los cargados como texto no tienen precio
+  sinPrecio: number;
+  // Con el precio de hoy: el costo real se guarda al completar el turno
+  estimado: boolean;
+}
+
+type InsumoConCosto = { articuloId: number | null; cantidad: string | null; costoSubtotal?: string | null };
+
+// Usa el costo guardado y, si todavía no hay, lo calcula con los artículos del stock
+export const totalDeProductos = (insumos: InsumoConCosto[], articulos: Articulo[] = []): TotalDeProductos =>
+  insumos.reduce<TotalDeProductos>(
+    (acumulado, insumo) => {
+      if (insumo.costoSubtotal != null) return { ...acumulado, total: acumulado.total + Number(insumo.costoSubtotal) };
+      const articulo = articulos.find((a) => a.id === insumo.articuloId);
+      if (!articulo) return { ...acumulado, sinPrecio: acumulado.sinPrecio + 1 };
+      return { ...acumulado, total: acumulado.total + costoDeInsumo(articulo, Number(insumo.cantidad) || 0), estimado: true };
+    },
+    { total: 0, sinPrecio: 0, estimado: false },
+  );
+
+export const insumosDeFicha = (ficha: Ficha) => ficha.formulas.flatMap((formula) => formula.insumos);
+
+export const textoSinPrecio = (cantidad: number) => `No incluye ${cantidad} ${cantidad === 1 ? 'producto' : 'productos'} sin precio`;
 
 // Endpoints. Todos los del salón son solo para PROFESIONAL; editar, solo el de ese servicio.
 

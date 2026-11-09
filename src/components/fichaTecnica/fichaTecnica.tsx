@@ -1,12 +1,13 @@
 import { useId, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
-import { FOTOS_POR_MOMENTO, NIVELES, TIPOS_DE_PELO, UNIDADES, VOLUMENES_DE_PELO } from '../../api/fichas';
+import { FOTOS_POR_MOMENTO, NIVELES, TIPOS_DE_PELO, UNIDADES, VOLUMENES_DE_PELO, insumosDeFicha, totalDeProductos } from '../../api/fichas';
 import type { Ficha, FichaCliente, FotoFicha, Insumo, MomentoFoto } from '../../api/fichas';
 import { formatPrice } from '../../api/services';
 import { parseTratamientos } from '../../api/tratamientos';
 import { fromIsoDate } from '../../api/turnos';
 import { FOTO_TIPOS } from '../../api/users';
 import { FichaFoto, FichaFotoVisor } from '../fichaFoto/fichaFoto';
+import { TotalProductos } from '../totalProductos/totalProductos';
 
 const labelClass = 'font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey';
 
@@ -124,6 +125,8 @@ export const FichaDatos = ({ ficha }: { ficha: Ficha }) => (
       ) : (
         <p className="font-inter text-sm text-capilar-grey">Sin fórmulas registradas.</p>
       )}
+      {/* El costo real se guarda al completar el turno */}
+      {ficha.cerradaEn && <TotalProductos {...totalDeProductos(insumosDeFicha(ficha))} />}
     </div>
 
     <Texto titulo="Indicaciones para la clienta" texto={ficha.indicacionesCliente} vacio="Sin indicaciones." />
