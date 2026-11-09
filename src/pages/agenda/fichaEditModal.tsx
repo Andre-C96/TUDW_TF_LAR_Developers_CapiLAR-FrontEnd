@@ -5,6 +5,7 @@ import { ApiError } from '../../api/client';
 import { datosParaGuardar } from '../../api/fichaCambios';
 import { deleteFichaPhotoRequest, updateFichaRequest, uploadFichaPhotoRequest } from '../../api/fichas';
 import type { Ficha, FichaData, FotoFicha, MomentoFoto } from '../../api/fichas';
+import type { Articulo } from '../../api/articulos';
 import { fromIsoDate } from '../../api/turnos';
 import { validateFoto } from '../../api/users';
 import { FichaForm } from '../../components/fichaForm/fichaForm';
@@ -14,6 +15,7 @@ import { Title } from '../../components/title/title';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { avisarSinStock } from './fichaAvisos';
 import { FichaTabs } from './fichaTabs';
+import { NuevoArticuloModal } from './nuevoArticuloModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : unexpectedError);
@@ -33,9 +35,12 @@ export const FichaEditModal = ({ token, ficha: inicial, onClose, onSaved }: Fich
   const articulos = useFetch('articulos-salon', () => getArticulosSalonRequest(token));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  // Artículo que se está creando desde un producto de la fórmula, encima de este modal
+  const [nuevoArticulo, setNuevoArticulo] = useState<{ nombre: string; elegir: (articulo: Articulo) => void } | null>(null);
 
+  // Con el alta abierta encima, Escape solo cierra esa
   const close = () => {
-    if (!saving) onClose();
+    if (!saving && !nuevoArticulo) onClose();
   };
 
   const save = async (data: FichaData) => {
@@ -80,6 +85,7 @@ export const FichaEditModal = ({ token, ficha: inicial, onClose, onSaved }: Fich
   const removePhoto = (foto: FotoFicha) => changePhotos(() => deleteFichaPhotoRequest(token, ficha.id, foto.id), 'No se pudo quitar la foto');
 
   return (
+    <>
     <Modal isOpen onClose={close} ariaLabel="Editar ficha técnica" className="max-w-3xl!">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2 pr-6">
@@ -105,6 +111,7 @@ export const FichaEditModal = ({ token, ficha: inicial, onClose, onSaved }: Fich
             ficha={ficha}
             articulos={articulos.data ?? []}
             articulosError={articulos.error}
+            onCrearArticulo={(nombre, elegir) => setNuevoArticulo({ nombre, elegir })}
             onSubmit={save}
             onCancel={close}
             isLoading={saving}
@@ -113,5 +120,17 @@ export const FichaEditModal = ({ token, ficha: inicial, onClose, onSaved }: Fich
         )}
       </div>
     </Modal>
+
+    {nuevoArticulo && (
+      <NuevoArticuloModal
+        token={token}
+        nombreInicial={nuevoArticulo.nombre}
+        articulos={articulos.data ?? []}
+        onCreado={(articulo) => articulos.setData((prev) => [...prev, articulo])}
+        onElegir={nuevoArticulo.elegir}
+        onClose={() => setNuevoArticulo(null)}
+      />
+    )}
+    </>
   );
 };

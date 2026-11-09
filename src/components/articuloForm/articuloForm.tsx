@@ -1,12 +1,13 @@
 import { useId, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
+import { toast } from 'sonner';
 import {
   ARTICULO_CODIGO_MAX,
   ARTICULO_NOMBRE_MAX,
   ARTICULO_TONALIDAD_MAX,
   DEPOSITOS,
   DOS_DECIMALES,
+  MARCA_TEXTO_MAX,
   PRECIO_MAX,
   STOCK_MAX,
   TIPOS_DE_PRODUCTO,
@@ -16,7 +17,8 @@ import {
   limitarDecimal,
   parseDecimal,
 } from '../../api/articulos';
-import type { Articulo, ArticuloData, Marca, TipoDeposito, TipoProducto, UsoArticulo } from '../../api/articulos';
+import type { Articulo, ArticuloData, Marca, MarcaData, TipoDeposito, TipoProducto, UsoArticulo } from '../../api/articulos';
+import { ApiError } from '../../api/client';
 import { UNIDADES } from '../../api/fichas';
 import type { UnidadInsumo } from '../../api/fichas';
 import { Button } from '../button/button';
@@ -33,6 +35,13 @@ interface ArticuloFormProps {
   isLoading?: boolean;
   // Error devuelto por el backend
   error?: string;
+  // Debajo del error (ej. usar el artículo que ya existe)
+  errorAction?: ReactNode;
+  // Si viene, permite cargar una marca sin salir del formulario. Quien lo usa llama a la API y suma la marca a la lista
+  onCrearMarca?: (data: MarcaData) => Promise<Marca>;
+  // Alta desde la ficha: solo lo necesario para usarlo ya; uso y depósito quedan en Salón y el resto lo completa el ADMIN
+  rapido?: boolean;
+  nombreInicial?: string;
 }
 
 // Mismo aspecto que FormField, con un <select> nativo
@@ -71,6 +80,112 @@ const SelectField = ({
   );
 };
 
+// Select de marcas con la opción de cargar una nueva ahí mismo (el recuadro no es un <form>: ya está dentro de uno)
+const MarcaField = ({
+  marcas,
+  value,
+  onChange,
+  error,
+  onCrearMarca,
+}: {
+  marcas: Marca[];
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  onCrearMarca?: (data: MarcaData) => Promise<Marca>;
+}) => {
+  const [creando, setCreando] = useState(false);
+  const [razonSocial, setRazonSocial] = useState('');
+  const [linea, setLinea] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [errorMarca, setErrorMarca] = useState('');
+
+  const cerrar = () => {
+    setCreando(false);
+    setRazonSocial('');
+    setLinea('');
+    setErrorMarca('');
+  };
+
+  const guardar = async () => {
+    if (!onCrearMarca || guardando) return;
+    if (!razonSocial.trim()) {
+      setErrorMarca('Ingresá el nombre de la marca');
+      return;
+    }
+    setGuardando(true);
+    setErrorMarca('');
+    try {
+      const nueva = await onCrearMarca({ razonSocial: razonSocial.trim(), linea: linea.trim() || null });
+      onChange(String(nueva.id));
+      toast.success('Marca creada', { description: formatMarca(nueva) });
+      cerrar();
+    } catch (err) {
+      setErrorMarca(err instanceof ApiError ? err.message : 'Ocurrió un error inesperado. Probá de nuevo.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Enter guarda la marca en lugar de enviar el formulario del artículo
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    guardar();
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <SelectField label="Marca" value={value} onChange={onChange} error={error}>
+        <option value="">Elegí una marca</option>
+        {marcas.map((marca) => (
+          <option key={marca.id} value={marca.id}>
+            {formatMarca(marca)}
+          </option>
+        ))}
+      </SelectField>
+      {onCrearMarca && !creando && (
+        <button
+          type="button"
+          onClick={() => setCreando(true)}
+          className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+        >
+          + Nueva marca
+        </button>
+      )}
+      {creando && (
+        <div onKeyDown={onKeyDown} className="flex flex-col gap-3 rounded-[6px] border border-gray-200 bg-gray-50 p-3">
+          <FormField label="Marca" value={razonSocial} onChange={(event) => setRazonSocial(event.target.value)} maxLength={MARCA_TEXTO_MAX} placeholder="Ej.: Fidelité" />
+          <FormField label="Línea (opcional)" value={linea} onChange={(event) => setLinea(event.target.value)} maxLength={MARCA_TEXTO_MAX} placeholder="Ej.: Argán" />
+          {errorMarca && (
+            <p role="alert" className="font-inter text-xs text-red-500">
+              {errorMarca}
+            </p>
+          )}
+          <div className="flex justify-end gap-4">
+            <button
+              type="button"
+              onClick={cerrar}
+              disabled={guardando}
+              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:text-black disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={guardar}
+              disabled={guardando}
+              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline disabled:opacity-50"
+            >
+              {guardando ? 'Guardando...' : 'Guardar marca'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const optionsOf = <T extends string>(labels: Record<T, string>) =>
   (Object.keys(labels) as T[]).map((value) => (
     <option key={value} value={value}>
@@ -86,9 +201,20 @@ const validarNumero = (text: string, regex: RegExp, max: number, vacio: string) 
   return undefined;
 };
 
-// Alta y edición de un artículo (ADMIN). El stock inicial solo se carga al crearlo: después cambia con los movimientos
-export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading = false, error }: ArticuloFormProps) => {
-  const [nombre, setNombre] = useState(articulo?.nombre ?? '');
+// Alta (ADMIN y PROFESIONAL) y edición (ADMIN) de un artículo. El stock inicial solo se carga al crearlo: después cambia con los movimientos
+export const ArticuloForm = ({
+  articulo,
+  marcas,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+  error,
+  errorAction,
+  onCrearMarca,
+  rapido = false,
+  nombreInicial = '',
+}: ArticuloFormProps) => {
+  const [nombre, setNombre] = useState(articulo?.nombre ?? nombreInicial);
   const [marcaId, setMarcaId] = useState(articulo ? String(articulo.marcaId) : '');
   const [tipoProducto, setTipoProducto] = useState<TipoProducto>(articulo?.tipoProducto ?? 'TINTURA');
   const [uso, setUso] = useState<UsoArticulo>(articulo?.uso ?? 'SALON');
@@ -98,7 +224,8 @@ export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading =
   const [tipoPeso, setTipoPeso] = useState<UnidadInsumo>(articulo?.tipoPeso ?? 'G');
   const [precioCosto, setPrecioCosto] = useState(articulo?.precioCosto ?? '');
   const [precioVenta, setPrecioVenta] = useState(articulo?.precioVenta ?? '');
-  const [stock, setStock] = useState('0');
+  // Desde la ficha arranca en 1: con 0, al completar el turno el stock quedaría negativo enseguida
+  const [stock, setStock] = useState(rapido ? '1' : '0');
   const [stockMinAlert, setStockMinAlert] = useState(articulo?.stockMinAlert ?? '0');
   const [tipoDeposito, setTipoDeposito] = useState<TipoDeposito>(articulo?.tipoDeposito ?? 'SALON');
   const [fechaVencimiento, setFechaVencimiento] = useState(articulo?.fechaVencimiento ?? '');
@@ -146,7 +273,11 @@ export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading =
       <div className="flex flex-col gap-2 text-center">
         <Title as="h2">{articulo ? 'Editar artículo' : 'Nuevo artículo'}</Title>
         <p className="font-inter text-sm text-capilar-grey">
-          {articulo ? 'El stock no se edita acá: cambia con los movimientos.' : 'El QR se genera solo al crearlo.'}
+          {articulo
+            ? 'El stock no se edita acá: cambia con los movimientos.'
+            : rapido
+              ? 'Queda en el stock y elegido en este producto.'
+              : 'El QR se genera solo al crearlo.'}
         </p>
       </div>
 
@@ -161,27 +292,11 @@ export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading =
         />
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <SelectField label="Marca" value={marcaId} onChange={setMarcaId} error={fieldErrors.marcaId}>
-            <option value="">Elegí una marca</option>
-            {marcas.map((marca) => (
-              <option key={marca.id} value={marca.id}>
-                {formatMarca(marca)}
-              </option>
-            ))}
-          </SelectField>
+          <MarcaField marcas={marcas} value={marcaId} onChange={setMarcaId} error={fieldErrors.marcaId} onCrearMarca={onCrearMarca} />
           <SelectField label="Tipo de producto" value={tipoProducto} onChange={(value) => setTipoProducto(value as TipoProducto)}>
             {optionsOf(TIPOS_DE_PRODUCTO)}
           </SelectField>
         </div>
-        {marcas.length === 0 && (
-          <p className="font-inter text-xs text-capilar-grey">
-            Todavía no hay marcas.{' '}
-            <Link to="/panel/marcas" className="font-semibold text-capilar-violet hover:underline">
-              Cargá la primera
-            </Link>
-            .
-          </p>
-        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField
@@ -191,23 +306,27 @@ export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading =
             maxLength={ARTICULO_TONALIDAD_MAX}
             placeholder="Ej.: 7.1 o 20 vol"
           />
-          <FormField
-            label="Código del proveedor (opcional)"
-            value={codigo}
-            onChange={(event) => setCodigo(event.target.value)}
-            maxLength={ARTICULO_CODIGO_MAX}
-            placeholder="Ej.: 725TS"
-          />
+          {!rapido && (
+            <FormField
+              label="Código del proveedor (opcional)"
+              value={codigo}
+              onChange={(event) => setCodigo(event.target.value)}
+              maxLength={ARTICULO_CODIGO_MAX}
+              placeholder="Ej.: 725TS"
+            />
+          )}
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <SelectField label="Uso" value={uso} onChange={(value) => setUso(value as UsoArticulo)}>
-            {optionsOf(USOS)}
-          </SelectField>
-          <SelectField label="Dónde se guarda" value={tipoDeposito} onChange={(value) => setTipoDeposito(value as TipoDeposito)}>
-            {optionsOf(DEPOSITOS)}
-          </SelectField>
-        </div>
+        {!rapido && (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <SelectField label="Uso" value={uso} onChange={(value) => setUso(value as UsoArticulo)}>
+              {optionsOf(USOS)}
+            </SelectField>
+            <SelectField label="Dónde se guarda" value={tipoDeposito} onChange={(value) => setTipoDeposito(value as TipoDeposito)}>
+              {optionsOf(DEPOSITOS)}
+            </SelectField>
+          </div>
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField
@@ -250,10 +369,10 @@ export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading =
           )}
         </div>
 
-        <div className={`grid gap-5 ${articulo ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+        <div className={`grid gap-5 ${articulo || rapido ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
           {!articulo && (
             <FormField
-              label="Stock inicial"
+              label={rapido ? 'Envases que hay' : 'Stock inicial'}
               inputMode="decimal"
               value={stock}
               onChange={(event) => setStock(limitarDecimal(event.target.value, 3))}
@@ -261,20 +380,24 @@ export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading =
               error={fieldErrors.stock}
             />
           )}
-          <FormField
-            label="Stock mínimo"
-            inputMode="decimal"
-            value={stockMinAlert}
-            onChange={(event) => setStockMinAlert(limitarDecimal(event.target.value, 3))}
-            hint="En envases: avisa al llegar a este número"
-            error={fieldErrors.stockMinAlert}
-          />
-          <FormField
-            label="Vencimiento (opcional)"
-            type="date"
-            value={fechaVencimiento}
-            onChange={(event) => setFechaVencimiento(event.target.value)}
-          />
+          {!rapido && (
+            <>
+              <FormField
+                label="Stock mínimo"
+                inputMode="decimal"
+                value={stockMinAlert}
+                onChange={(event) => setStockMinAlert(limitarDecimal(event.target.value, 3))}
+                hint="En envases: avisa al llegar a este número"
+                error={fieldErrors.stockMinAlert}
+              />
+              <FormField
+                label="Vencimiento (opcional)"
+                type="date"
+                value={fechaVencimiento}
+                onChange={(event) => setFechaVencimiento(event.target.value)}
+              />
+            </>
+          )}
         </div>
 
         {error && (
@@ -282,6 +405,7 @@ export const ArticuloForm = ({ articulo, marcas, onSubmit, onCancel, isLoading =
             {error}
           </p>
         )}
+        {errorAction}
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="grey" onClick={onCancel} disabled={isLoading} className="px-5 py-2 text-xs uppercase">

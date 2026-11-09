@@ -179,6 +179,8 @@ interface FichaFormProps {
   articulos: Articulo[];
   // No se pudieron cargar los artículos
   articulosError?: string;
+  // Si viene, el buscador ofrece crear un artículo; quien lo usa lo crea y llama a `elegir` para dejarlo en ese producto
+  onCrearArticulo?: (nombre: string, elegir: (articulo: Articulo) => void) => void;
   // Recibe los datos ya validados; quien lo usa llama a la API
   onSubmit: (data: FichaData) => void;
   onCancel: () => void;
@@ -191,7 +193,7 @@ interface FichaFormProps {
 
 // Ficha técnica de un servicio: diagnóstico, tratamientos previos, fórmulas con sus productos del stock e indicaciones.
 // Ningún campo es obligatorio: se completa durante el servicio y se puede guardar varias veces, también ya cerrada.
-export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel, onDelete, isLoading = false, error }: FichaFormProps) => {
+export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, onSubmit, onCancel, onDelete, isLoading = false, error }: FichaFormProps) => {
   const [porosidad, setPorosidad] = useState<NivelCapilar | ''>(ficha?.porosidad ?? '');
   const [elasticidad, setElasticidad] = useState<NivelCapilar | ''>(ficha?.elasticidad ?? '');
   const [tipoDePelo, setTipoDePelo] = useState<TipoDePelo | ''>(ficha?.tipoDePelo ?? '');
@@ -230,6 +232,16 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
 
   const updateInsumo = (formula: FormulaDraft, key: number, changes: Partial<InsumoDraft>) =>
     updateFormula(formula.key, { insumos: formula.insumos.map((i) => (i.key === key ? { ...i, ...changes } : i)) });
+
+  const elegirArticulo = (formula: FormulaDraft, key: number, articulo: Articulo) =>
+    updateInsumo(formula, key, {
+      articuloId: articulo.id,
+      busqueda: '',
+      producto: articulo.nombre,
+      marca: formatMarca(articulo.marca),
+      tono: articulo.tonalidad ?? '',
+      unidad: articulo.tipoPeso,
+    });
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -478,16 +490,8 @@ export const FichaForm = ({ ficha, articulos, articulosError, onSubmit, onCancel
                             value={insumo.busqueda}
                             onChange={(busqueda) => updateInsumo(formula, insumo.key, { busqueda })}
                             articulos={articulos}
-                            onSelect={(elegidoDelStock) =>
-                              updateInsumo(formula, insumo.key, {
-                                articuloId: elegidoDelStock.id,
-                                busqueda: '',
-                                producto: elegidoDelStock.nombre,
-                                marca: formatMarca(elegidoDelStock.marca),
-                                tono: elegidoDelStock.tonalidad ?? '',
-                                unidad: elegidoDelStock.tipoPeso,
-                              })
-                            }
+                            onSelect={(elegidoDelStock) => elegirArticulo(formula, insumo.key, elegidoDelStock)}
+                            onCrear={onCrearArticulo && ((nombre) => onCrearArticulo(nombre, (nuevo) => elegirArticulo(formula, insumo.key, nuevo)))}
                             aria-label={`Producto ${i + 1} de la fórmula ${f + 1}`}
                             invalid={Boolean(errorProducto)}
                             className={`${smallInputClass} ${errorProducto ? 'border-red-500' : 'border-gray-300'}`}

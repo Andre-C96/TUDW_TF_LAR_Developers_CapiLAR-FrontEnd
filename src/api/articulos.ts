@@ -180,6 +180,9 @@ export const limitarDecimal = (text: string, decimales: number) => {
 // "Fidelité · Argán" o "Fidelité"
 export const formatMarca = ({ razonSocial, linea }: Marca) => (linea ? `${razonSocial} · ${linea}` : razonSocial);
 
+// Para sumar una marca nueva a la lista, en orden
+export const porMarca = (a: Marca, b: Marca) => formatMarca(a).localeCompare(formatMarca(b), 'es');
+
 // "3,5" (también negativo)
 export const formatCantidad = (cantidad: string | number) =>
   new Intl.NumberFormat('es-AR', { maximumFractionDigits: 3 }).format(Number(cantidad));
@@ -222,7 +225,7 @@ export const cambiosDeArticulo = (data: ArticuloData, actual: Articulo) => {
   return changes;
 };
 
-// Endpoints de artículos. Ver y mover stock: ADMIN y PROFESIONAL. Crear, editar y dar de baja: solo ADMIN.
+// Endpoints de artículos. Ver, crear y mover stock: ADMIN y PROFESIONAL. Editar y dar de baja: solo ADMIN.
 
 // El listado no viene paginado: se filtra en el navegador. incluirBajas: para que el ADMIN los pueda volver a dar de alta
 export const getArticulosRequest = (token: string, incluirBajas = false) =>
@@ -272,7 +275,7 @@ export const updateEnvaseRequest = (token: string, id: number, pesoActual: numbe
 export const finishEnvaseRequest = (token: string, id: number) =>
   apiFetch<{ message: string }>(`/articulos/${id}/envase-en-uso`, { method: 'DELETE', token });
 
-// Marcas: cada una es marca + línea. Ver: ADMIN y PROFESIONAL. El resto: solo ADMIN.
+// Marcas: cada una es marca + línea. Ver y crear: ADMIN y PROFESIONAL. El resto: solo ADMIN.
 
 export const getMarcasRequest = (token: string) => apiFetch<Marca[]>('/marcas', { token });
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { formatAlergias } from '../../api/alergias';
 import { getArticulosSalonRequest } from '../../api/articulos';
+import type { Articulo } from '../../api/articulos';
 import { ApiError } from '../../api/client';
 import { datosParaGuardar } from '../../api/fichaCambios';
 import {
@@ -29,6 +30,7 @@ import { useFetch } from '../../customHooks/fetch/useFetch';
 import { avisarSinStock } from './fichaAvisos';
 import { FichaEditModal } from './fichaEditModal';
 import { FichaTabs } from './fichaTabs';
+import { NuevoArticuloModal } from './nuevoArticuloModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 const errorMessage = (err: unknown) => (err instanceof ApiError ? err.message : unexpectedError);
@@ -68,15 +70,17 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Ficha del historial que se está editando, encima de este modal
   const [editando, setEditando] = useState<Ficha | null>(null);
+  // Artículo que se está creando desde un producto de la fórmula, encima de este modal
+  const [nuevoArticulo, setNuevoArticulo] = useState<{ nombre: string; elegir: (articulo: Articulo) => void } | null>(null);
 
   const esSuyo = detalle.legajo === legajo;
   const editable = esSuyo && (ficha ? true : puedeCargarFicha(turno, detalle));
   // Los productos de las fórmulas se eligen del stock
   const articulos = useFetch(editable ? 'articulos-salon' : null, () => getArticulosSalonRequest(token));
 
-  // Con la edición abierta encima, Escape solo cierra esa
+  // Con otro modal abierto encima, Escape solo cierra ese
   const close = () => {
-    if (!saving && !editando) onClose();
+    if (!saving && !editando && !nuevoArticulo) onClose();
   };
 
   const save = async (data: FichaData) => {
@@ -239,6 +243,7 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
               ficha={ficha}
               articulos={articulos.data ?? []}
               articulosError={articulos.error}
+              onCrearArticulo={(nombre, elegir) => setNuevoArticulo({ nombre, elegir })}
               onSubmit={save}
               onCancel={close}
               onDelete={ficha && !ficha.cerradaEn ? () => setConfirmDelete(true) : undefined}
@@ -261,6 +266,16 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
           ficha={editando}
           onClose={() => setEditando(null)}
           onSaved={(actualizada) => historial.setData((prev) => prev.map((f) => (f.id === actualizada.id ? actualizada : f)))}
+        />
+      )}
+      {nuevoArticulo && (
+        <NuevoArticuloModal
+          token={token}
+          nombreInicial={nuevoArticulo.nombre}
+          articulos={articulos.data ?? []}
+          onCreado={(articulo) => articulos.setData((prev) => [...prev, articulo])}
+          onElegir={nuevoArticulo.elegir}
+          onClose={() => setNuevoArticulo(null)}
         />
       )}
     </>
