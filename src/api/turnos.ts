@@ -45,6 +45,9 @@ export interface Turno {
   // Cuándo el cliente avisó que va (link opcional del recordatorio); null si no avisó
   asistenciaConfirmadaEn: string | null;
   metodoPago: MetodoPago | null;
+  // Serie a la que pertenece y serie que se armó a partir de este turno (una dada de baja no cuenta)
+  serieId?: number | null;
+  serieOrigenId?: number | null;
   // Motivo de la cancelación (lo ven las dos partes) o del rechazo (el cliente no lo recibe)
   motivo?: string | null;
   cliente: {

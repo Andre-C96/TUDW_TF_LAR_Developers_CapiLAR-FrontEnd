@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { puedeCargarFicha } from '../../api/fichas';
 import { getUpcomingWorkDatesRequest } from '../../api/professionals';
-import { FRECUENCIAS, getSeriesRequest, seriesPorTurno, turnoEnSerie } from '../../api/series';
+import { FRECUENCIAS, getSeriesRequest, puedeRepetir, seriesPorId } from '../../api/series';
 import {
   MAX_DIAS_AGENDA,
   MAX_DIAS_ANTICIPACION,
@@ -215,12 +215,12 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   const [ficha, setFicha] = useState<{ turno: Turno; detalle: TurnoDetalle } | null>(null);
   // Turno que se va a repetir (serie)
   const [repetir, setRepetir] = useState<Turno | null>(null);
-  // Los turnos no traen su serie: se cruzan con las series del profesional
+  // De la serie del turno solo hace falta la frecuencia, para la etiqueta
   const series = useFetch('series', () => getSeriesRequest(token));
-  const seriePorTurno = seriesPorTurno(series.data ?? []);
+  const seriePorId = seriesPorId(series.data ?? []);
 
   const badgeFor = (turno: Turno) => {
-    const serie = seriePorTurno.get(turno.id);
+    const serie = turno.serieId ? seriePorId.get(turno.serieId) : undefined;
     return serie ? <SerieBadge>{FRECUENCIAS[serie.frecuencia].label}</SerieBadge> : undefined;
   };
 
@@ -318,8 +318,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
                 Marcar ausente
               </TurnoAction>
             )}
-            {/* Se repite antes de completarlo: la serie sale de un turno confirmado */}
-            {series.data && !turnoEnSerie(series.data, turno.id) && (
+            {puedeRepetir(turno) && (
               <TurnoAction disabled={busy} onClick={() => setRepetir(turno)}>
                 Repetir
               </TurnoAction>
@@ -329,6 +328,13 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
             </TurnoAction>
           </>
         );
+      // También se repite después de hacerlo (ej. al terminar una coloración se agenda el retoque)
+      case 'COMPLETADO':
+        return puedeRepetir(turno) ? (
+          <TurnoAction disabled={busy} onClick={() => setRepetir(turno)}>
+            Repetir
+          </TurnoAction>
+        ) : undefined;
       case 'REPROGRAMADO':
         return (
           <>
