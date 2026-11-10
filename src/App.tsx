@@ -13,6 +13,7 @@ import { ColorPreview } from './pages/colorPreview/colorPreview'
 import { History } from './pages/history/history'
 import { Home } from './pages/home/home'
 import { Marcas } from './pages/marcas/marcas'
+import { Rentabilidad } from './pages/rentabilidad/rentabilidad'
 import { MyTurnos } from './pages/myTurnos/myTurnos'
 import { NotFound } from './pages/notFound/notFound'
 import { Panel } from './pages/panel/panel'
@@ -60,6 +61,7 @@ function App() {
             <Route path="/panel/servicios" element={<AdminServices />} />
             <Route path="/panel/alergias" element={<AdminAlergias />} />
             <Route path="/panel/marcas" element={<Marcas />} />
+            <Route path="/panel/rentabilidad" element={<Rentabilidad />} />
           </Route>
         </Route>
       </Route>

@@ -107,3 +107,28 @@ export const MonthNav = ({ month, onChange, className }: MonthNavProps) => {
     />
   );
 };
+
+interface YearNavProps {
+  year: number;
+  onChange: (year: number) => void;
+  className?: string;
+}
+
+// Paso de años, igual que el de meses
+export const YearNav = ({ year, onChange, className }: YearNavProps) => {
+  const actual = new Date().getFullYear();
+
+  return (
+    <PeriodNav
+      label={year}
+      esActual={year === actual}
+      onPrev={() => onChange(year - 1)}
+      onNext={() => onChange(year + 1)}
+      onActual={() => onChange(actual)}
+      prevLabel="Año anterior"
+      nextLabel="Año siguiente"
+      actualLabel="Volver a este año"
+      className={className}
+    />
+  );
+};

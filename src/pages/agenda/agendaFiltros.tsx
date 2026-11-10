@@ -31,11 +31,14 @@ interface FilterSelectProps<T extends string> {
   value: T;
   options: [T, string][];
   onChange: (value: T) => void;
+  // Más angosto y, si no entra en la fila, se achica cortando el texto con "…" (en el menú se ve completo)
+  compact?: boolean;
 }
 
 // Desplegable con etiqueta chica al lado (ej. "Fecha", "Estado"). Es propio y no un <select>: el menú del navegador
 // no deja redondear las esquinas ni cambiar el color al pasar el mouse. Se maneja con flechas, Enter y Escape.
-export const FilterSelect = <T extends string>({ label, value, options, onChange }: FilterSelectProps<T>) => {
+export const FilterSelect = <T extends string>({ label, value, options, onChange, compact = false }: FilterSelectProps<T>) => {
+  const elegido = options.find(([option]) => option === value)?.[1];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -64,11 +67,11 @@ export const FilterSelect = <T extends string>({ label, value, options, onChange
   };
 
   return (
-    <div ref={ref} className="flex shrink-0 items-center gap-2">
-      <span id={labelId} className="font-inter text-xs text-capilar-grey">
+    <div ref={ref} className={`flex items-center gap-2 ${compact ? 'min-w-0' : 'shrink-0'}`}>
+      <span id={labelId} className="shrink-0 font-inter text-xs text-capilar-grey">
         {label}
       </span>
-      <div className="relative">
+      <div className={`relative ${compact ? 'min-w-0' : ''}`}>
         <button
           type="button"
           aria-haspopup="listbox"
@@ -81,10 +84,11 @@ export const FilterSelect = <T extends string>({ label, value, options, onChange
               setOpen(true);
             }
           }}
-          className={`flex cursor-pointer items-center gap-6 pr-3.5 pl-4 ${controlClass}`}
+          title={compact ? elegido : undefined}
+          className={`flex w-full cursor-pointer items-center ${compact ? 'gap-2 pr-2.5 pl-3' : 'gap-6 pr-3.5 pl-4'} ${controlClass}`}
         >
-          {options.find(([option]) => option === value)?.[1]}
-          <ChevronDown className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+          <span className={compact ? 'min-w-0 truncate' : ''}>{elegido}</span>
+          <ChevronDown className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
 
         {open && (
