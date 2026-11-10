@@ -42,13 +42,13 @@ const Chip = ({ selected, onClick, children }: { selected: boolean; onClick: () 
 interface SerieModalProps {
   token: string;
   legajo: number;
-  // Turno CONFIRMADO del que sale la serie
+  // Turno CONFIRMADO o COMPLETADO del que sale la serie
   turno: Turno;
   onClose: () => void;
   onCreated: (serie: SerieCreada) => void;
 }
 
-// Repetir un servicio de un turno confirmado, a la misma hora, cada tantos días y hasta 60 días adelante.
+// Repetir un servicio de un turno confirmado o completado, a la misma hora, cada tantos días y hasta 60 días adelante.
 // La vista previa se actualiza con cada cambio y dice qué fechas se reservan, cuáles no tienen horario cargado
 // (se reservan igual) y cuáles están ocupadas (el cliente elige otro horario de ese día).
 export const SerieModal = ({ token, legajo, turno, onClose, onCreated }: SerieModalProps) => {

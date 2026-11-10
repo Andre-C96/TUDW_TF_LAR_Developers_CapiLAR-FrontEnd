@@ -16,7 +16,7 @@ import {
   yaTermino,
 } from '../../api/turnos';
 import type { Turno } from '../../api/turnos';
-import { FRECUENCIAS, getSeriesRequest, seriesPorTurno } from '../../api/series';
+import { FRECUENCIAS, getSeriesRequest, seriesPorId } from '../../api/series';
 import type { Serie } from '../../api/series';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
@@ -62,10 +62,10 @@ export const MyTurnos = () => {
 
   if (!token) return null;
 
-  // Los turnos no traen su serie: se cruzan con las series de la clienta
-  const seriePorTurno = seriesPorTurno(series.data ?? []);
+  // De la serie del turno solo hace falta la frecuencia, para la etiqueta
+  const seriePorId = seriesPorId(series.data ?? []);
   const badgeFor = (turno: Turno) => {
-    const serie = seriePorTurno.get(turno.id);
+    const serie = turno.serieId ? seriePorId.get(turno.serieId) : undefined;
     return serie ? <SerieBadge>{FRECUENCIAS[serie.frecuencia].label}</SerieBadge> : undefined;
   };
   // Las dadas de baja ya no le sirven: quedan sus turnos en la lista
