@@ -112,6 +112,9 @@ export const createTurnoRequest = (token: string, data: CreateTurnoData) =>
 // Turnos del cliente logueado, del más nuevo al más viejo
 export const getMyTurnosRequest = (token: string) => apiFetch<Turno[]>('/turnos/mios', { token });
 
+// PROFESIONAL: todos los turnos de una clienta con el salón (cualquier profesional y estado), del más nuevo al más viejo
+export const getClientTurnosRequest = (token: string, clienteId: number) => apiFetch<Turno[]>(`/clientes/${clienteId}/turnos`, { token });
+
 // Turnos de un profesional entre dos fechas (incluidas), ordenados por fecha y hora.
 // Sin legajo el back devuelve todo el salón: para "Mi agenda" se manda el propio
 export const getAgendaRequest = (token: string, legajo: number, desde: string, hasta: string) =>
