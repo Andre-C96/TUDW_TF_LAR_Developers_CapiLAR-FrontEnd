@@ -19,12 +19,16 @@ import { MonthNav, YearNav } from '../../components/weekNav/weekNav';
 import { useAuth } from '../../context/auth/useAuth';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { FilterSelect, RangoField } from '../agenda/agendaFiltros';
-import { FichaTabs } from '../agenda/fichaTabs';
 import { RentabilidadGraficos } from './rentabilidadGraficos';
 import { generarRentabilidadPdf } from './rentabilidadPdf';
 
 type TipoPeriodo = 'mes' | 'anio' | 'rango';
 type Pestania = 'resumen' | 'graficos';
+
+const PESTANIAS: [Pestania, string][] = [
+  ['resumen', 'Resumen'],
+  ['graficos', 'Gráficos'],
+];
 
 const PERIODOS: [TipoPeriodo, string][] = [
   ['mes', 'Mes'],
@@ -284,14 +288,23 @@ export const Rentabilidad = () => {
         )}
       </div>
 
-      <FichaTabs
-        tabs={[
-          ['resumen', 'Resumen'],
-          ['graficos', 'Gráficos'],
-        ]}
-        value={pestania}
-        onChange={(value: Pestania) => setSearchParams(value === 'resumen' ? {} : { tab: value }, { replace: true })}
-      />
+      {/* Pestañas subrayadas, como las del perfil de la clienta y la agenda */}
+      <div role="tablist" aria-label="Secciones de la rentabilidad" className="flex gap-6 border-b border-gray-200">
+        {PESTANIAS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={pestania === id}
+            onClick={() => setSearchParams(id === 'resumen' ? {} : { tab: id }, { replace: true })}
+            className={`-mb-px border-b-2 pb-3 font-inter text-sm font-semibold uppercase tracking-widest transition-colors ${
+              pestania === id ? 'border-capilar-violet text-black' : 'border-transparent text-capilar-grey hover:text-capilar-violet'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {!periodo ? (
         <p className="py-8 text-center font-inter text-sm text-capilar-grey">Elegí desde y hasta qué día ver la rentabilidad.</p>
