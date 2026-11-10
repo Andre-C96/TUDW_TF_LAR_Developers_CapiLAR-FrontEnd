@@ -135,6 +135,18 @@ export const panelSections: PanelSection[] = [
     ),
   },
   {
+    title: 'Rentabilidad',
+    text: 'Lo que dejó cada período después de los productos.',
+    to: '/panel/rentabilidad',
+    roles: ['ADMIN'],
+    icon: <path d="M3 21h18M6 21v-7M12 21V5M18 21v-11" />,
+    // Las pestañas de la sección (?tab=; sin él, Resumen)
+    subsections: [
+      { label: 'Resumen', param: ['tab', null] },
+      { label: 'Gráficos', param: ['tab', 'graficos'] },
+    ],
+  },
+  {
     title: 'Perfil',
     text: 'Tus datos personales y de contacto.',
     to: '/panel/perfil',
