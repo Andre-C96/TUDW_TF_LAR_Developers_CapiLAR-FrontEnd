@@ -14,6 +14,11 @@ import { History } from './pages/history/history'
 import { Home } from './pages/home/home'
 import { Marcas } from './pages/marcas/marcas'
 import { Rentabilidad } from './pages/rentabilidad/rentabilidad'
+import { Proveedores } from './pages/proveedores/proveedores'
+import { ProveedorDetail } from './pages/proveedores/proveedorDetail'
+import { Compras } from './pages/compras/compras'
+import { CompraNueva } from './pages/compras/compraNueva'
+import { CompraDetail } from './pages/compras/compraDetail'
 import { MyTurnos } from './pages/myTurnos/myTurnos'
 import { NotFound } from './pages/notFound/notFound'
 import { Panel } from './pages/panel/panel'
@@ -62,6 +67,11 @@ function App() {
             <Route path="/panel/alergias" element={<AdminAlergias />} />
             <Route path="/panel/marcas" element={<Marcas />} />
             <Route path="/panel/rentabilidad" element={<Rentabilidad />} />
+            <Route path="/panel/proveedores" element={<Proveedores />} />
+            <Route path="/panel/proveedores/:id" element={<ProveedorDetail />} />
+            <Route path="/panel/compras" element={<Compras />} />
+            <Route path="/panel/compras/nueva" element={<CompraNueva />} />
+            <Route path="/panel/compras/:id" element={<CompraDetail />} />
           </Route>
         </Route>
       </Route>

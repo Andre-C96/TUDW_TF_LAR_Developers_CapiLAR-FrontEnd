@@ -15,8 +15,10 @@ const ID_REPETIDO = /\s*\(id (\d+)\)/;
 interface NuevoArticuloModalProps {
   token: string;
   nombreInicial: string;
-  // Los que se pueden usar en una ficha (activos, de uso salón)
+  // Los que se pueden elegir si el artículo ya existe. En una ficha: activos, de uso salón
   articulos: Articulo[];
+  // Desde una compra: formulario completo y sin stock inicial, porque lo suma la compra
+  paraCompra?: boolean;
   // Se creó: hay que sumarlo a la lista de la ficha
   onCreado: (articulo: Articulo) => void;
   // Queda elegido en el producto de la fórmula (el nuevo o el que ya existía)
@@ -24,8 +26,9 @@ interface NuevoArticuloModalProps {
   onClose: () => void;
 }
 
-// Alta rápida desde la ficha: uso y depósito quedan en Salón, y lo demás lo completa el ADMIN si quiere
-export const NuevoArticuloModal = ({ token, nombreInicial, articulos, onCreado, onElegir, onClose }: NuevoArticuloModalProps) => {
+// Alta de un artículo sin salir de lo que se está cargando. Desde la ficha es rápida: uso y depósito quedan en Salón,
+// y lo demás lo completa el ADMIN si quiere
+export const NuevoArticuloModal = ({ token, nombreInicial, articulos, paraCompra = false, onCreado, onElegir, onClose }: NuevoArticuloModalProps) => {
   const marcas = useFetch('marcas', () => getMarcasRequest(token));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -74,7 +77,8 @@ export const NuevoArticuloModal = ({ token, nombreInicial, articulos, onCreado, 
   return (
     <Modal isOpen onClose={close} ariaLabel="Nuevo artículo" className="max-w-2xl!">
       <ArticuloForm
-        rapido
+        rapido={!paraCompra}
+        sinStockInicial={paraCompra}
         nombreInicial={nombreInicial}
         marcas={marcas.data ?? []}
         onCrearMarca={crearMarca}

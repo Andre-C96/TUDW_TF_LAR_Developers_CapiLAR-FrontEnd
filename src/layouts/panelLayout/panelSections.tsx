@@ -135,6 +135,33 @@ export const panelSections: PanelSection[] = [
     ),
   },
   {
+    title: 'Proveedores',
+    text: 'A quién le compra el salón y en qué condiciones.',
+    to: '/panel/proveedores',
+    roles: ['ADMIN'],
+    icon: (
+      <>
+        <path d="M2 7h12v10H2zM14 11h4l4 3v3h-8z" />
+        <circle cx="7" cy="18.5" r="1.8" />
+        <circle cx="18" cy="18.5" r="1.8" />
+      </>
+    ),
+    // Abre el formulario de alta (?nuevo=1)
+    subsections: [{ label: 'Cargar proveedor', param: ['nuevo', '1'] }],
+  },
+  {
+    title: 'Compras',
+    text: 'Lo que se le compró a cada proveedor.',
+    to: '/panel/compras',
+    roles: ['ADMIN'],
+    icon: (
+      <>
+        <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+        <path d="M9 8h6M9 12h6" />
+      </>
+    ),
+  },
+  {
     title: 'Rentabilidad',
     text: 'Lo que dejó cada período después de los productos.',
     to: '/panel/rentabilidad',
