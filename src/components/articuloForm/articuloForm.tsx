@@ -41,11 +41,13 @@ interface ArticuloFormProps {
   onCrearMarca?: (data: MarcaData) => Promise<Marca>;
   // Alta desde la ficha: solo lo necesario para usarlo ya; uso y depósito quedan en Salón y el resto lo completa el ADMIN
   rapido?: boolean;
+  // Alta desde una compra: nace en 0 porque lo que suma el stock es la compra
+  sinStockInicial?: boolean;
   nombreInicial?: string;
 }
 
 // Mismo aspecto que FormField, con un <select> nativo
-const SelectField = ({
+export const SelectField = ({
   label,
   value,
   onChange,
@@ -212,6 +214,7 @@ export const ArticuloForm = ({
   errorAction,
   onCrearMarca,
   rapido = false,
+  sinStockInicial = false,
   nombreInicial = '',
 }: ArticuloFormProps) => {
   const [nombre, setNombre] = useState(articulo?.nombre ?? nombreInicial);
@@ -277,7 +280,9 @@ export const ArticuloForm = ({
             ? 'El stock no se edita acá: cambia con los movimientos.'
             : rapido
               ? 'Queda en el stock y elegido en este producto.'
-              : 'El QR se genera solo al crearlo.'}
+              : sinStockInicial
+                ? 'Se agrega a esta compra: el stock se suma al guardarla.'
+                : 'El QR se genera solo al crearlo.'}
         </p>
       </div>
 
@@ -369,8 +374,8 @@ export const ArticuloForm = ({
           )}
         </div>
 
-        <div className={`grid gap-5 ${articulo || rapido ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
-          {!articulo && (
+        <div className={`grid gap-5 ${articulo || rapido || sinStockInicial ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+          {!articulo && !sinStockInicial && (
             <FormField
               label={rapido ? 'Envases que hay' : 'Stock inicial'}
               inputMode="decimal"
