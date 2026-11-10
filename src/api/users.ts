@@ -1,4 +1,4 @@
-import { ApiError, apiFetch, apiFetchBlob } from './client';
+import { apiFetch, apiFetchBlob } from './client';
 import type { Rol, Usuario } from './auth';
 import { addDays, toIsoDate } from './turnos';
 
@@ -137,9 +137,8 @@ export const searchClientsRequest = (token: string, search: string) => {
   return apiFetch<Usuario[]>(`/users/clientes?${params}`, { token });
 };
 
-// Un cliente activo (PROFESIONAL). El back todavía no tiene GET por id (pedido en PWA-242): se busca en la lista
-export const getClientRequest = async (token: string, id: number) => {
-  const cliente = (await searchClientsRequest(token, '')).find((c) => c.id === id);
-  if (!cliente) throw new ApiError('No encontramos ese cliente: puede que se haya dado de baja.', 404);
-  return cliente;
-};
+// Una clienta (PROFESIONAL): lo de la búsqueda más fechaNacimiento, fechaAlta y fechaBaja. También si está dada de baja
+export type ClienteDetalle = Omit<Usuario, 'rol' | 'profesional'>;
+
+// 404 si ese usuario no es cliente
+export const getClientRequest = (token: string, id: number) => apiFetch<ClienteDetalle>(`/users/clientes/${id}`, { token });

@@ -40,6 +40,8 @@ interface TurnoCardProps {
   badge?: ReactNode;
   // Como fila de una TurnoList (sin borde ni sombra propios)
   enLista?: boolean;
+  // Para el salón sin los datos del cliente (ej. en el perfil de la clienta, donde ya están arriba)
+  sinCliente?: boolean;
 }
 
 // Turnos en modo listado: un solo recuadro con una fila por turno
@@ -87,7 +89,7 @@ export const CalendarDate = ({ fecha }: { fecha: string }) => {
 
 // Turno con fecha, horario, servicios con su profesional, estado y acciones.
 // Para el salón muestra también el cliente con su teléfono y sus alergias.
-export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge, enLista = false }: TurnoCardProps) => {
+export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge, enLista = false, sinCliente = false }: TurnoCardProps) => {
   const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO' || turno.estado === 'AUSENTE';
   const total = turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioBase), 0);
   // Lo cobrado: solo en los completados
@@ -118,7 +120,7 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
           )}
         </div>
 
-        {!paraCliente && (
+        {!paraCliente && !sinCliente && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-inter text-sm">
             <span className="font-semibold text-black">
               {turno.cliente.nombre} {turno.cliente.apellido}
