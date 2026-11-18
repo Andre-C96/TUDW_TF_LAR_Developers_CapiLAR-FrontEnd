@@ -28,7 +28,7 @@ interface FieldErrors {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Botón con aspecto de link (no navega: ejecuta el callback)
-const linkClasses = 'font-semibold text-capilar-violet hover:underline';
+const linkClasses = 'font-semibold text-capilar-violet-text hover:underline';
 
 // Contenido del login
 export const LoginForm = ({

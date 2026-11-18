@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { getAlergiasRequest } from '../../api/alergias';
 import { ApiError } from '../../api/client';
 import { addMyServiceRequest, getMyServicesRequest, removeMyServiceRequest } from '../../api/professionals';
 import { formatDuration, getServicesRequest } from '../../api/services';
@@ -25,6 +26,7 @@ import {
   validateTelefono,
 } from '../../api/users';
 import type { UpdateProfileData } from '../../api/users';
+import { AlergiasField } from '../../components/alergiasField/alergiasField';
 import { Alert } from '../../components/alert/alert';
 import { Avatar } from '../../components/avatar/avatar';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
@@ -36,6 +38,7 @@ import { Modal } from '../../components/modal/modal';
 import { ProfessionalServicesForm } from '../../components/professionalServicesForm/professionalServicesForm';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
+import { useFetch } from '../../customHooks/fetch/useFetch';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
@@ -96,9 +99,12 @@ export const Profile = () => {
 
   const initialTelefono = user?.telefono ?? '';
   const initialAlergia = user?.cliente?.alergia ?? '';
+  const misAlergias = user?.cliente?.alergias ?? [];
   const initialFechaNacimiento = user?.fechaNacimiento ?? '';
   const [telefono, setTelefono] = useState(initialTelefono);
   const [alergia, setAlergia] = useState(initialAlergia);
+  const [alergiaIds, setAlergiaIds] = useState(() => misAlergias.map(({ id }) => id));
+  const listaAlergias = useFetch(isCliente ? 'alergias' : null, getAlergiasRequest);
   const [fechaNacimiento, setFechaNacimiento] = useState(initialFechaNacimiento);
   const [errors, setErrors] = useState<{ telefono?: string; alergia?: string; fechaNacimiento?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -150,7 +156,11 @@ export const Profile = () => {
 
   const telefonoChanged = telefono !== initialTelefono;
   const fechaChanged = fechaNacimiento !== initialFechaNacimiento;
-  const hasChanges = telefonoChanged || fechaChanged || (isCliente && alergia.trim() !== initialAlergia);
+  // El orden en que se tocan no importa
+  const alergiasChanged = [...alergiaIds].sort().join() !== misAlergias.map(({ id }) => id).sort().join();
+  const hasChanges = telefonoChanged || fechaChanged || (isCliente && (alergia.trim() !== initialAlergia || alergiasChanged));
+  // Las que tiene se siguen mostrando aunque el salón las haya dado de baja
+  const opcionesAlergia = [...(listaAlergias.data ?? []), ...misAlergias.filter(({ id }) => !listaAlergias.data?.some((a) => a.id === id))];
 
   const validate = () => {
     const next: typeof errors = {};
@@ -174,6 +184,7 @@ export const Profile = () => {
     if (telefonoChanged) data.telefono = telefono;
     if (fechaChanged) data.fechaNacimiento = fechaNacimiento || null;
     if (isCliente && alergia.trim() !== initialAlergia) data.alergia = alergia.trim() || null;
+    if (isCliente && alergiasChanged) data.alergiaIds = alergiaIds;
 
     setIsSaving(true);
     try {
@@ -181,6 +192,7 @@ export const Profile = () => {
       updateUser(updated);
       setTelefono(updated.telefono ?? '');
       setAlergia(updated.cliente?.alergia ?? '');
+      setAlergiaIds((updated.cliente?.alergias ?? []).map(({ id }) => id));
       setFechaNacimiento(updated.fechaNacimiento ?? '');
       toast.success('Perfil actualizado', { description: 'Tus datos se guardaron correctamente.' });
     } catch (err) {
@@ -456,18 +468,13 @@ export const Profile = () => {
         </div>
 
         {isCliente && (
-          <FormField
-            label="Alergias"
-            value={alergia}
-            onChange={(event) => setAlergia(event.target.value)}
-            maxLength={ALERGIA_MAX}
-            placeholder="Ej.: amoníaco, tinturas con PPD"
-            hint={
-              initialAlergia
-                ? 'Si ya no tenés alergias, dejá el campo vacío.'
-                : 'Opcional. Nos ayuda a cuidarte en cada servicio.'
-            }
-            error={errors.alergia}
+          <AlergiasField
+            opciones={opcionesAlergia}
+            elegidas={alergiaIds}
+            onElegidasChange={setAlergiaIds}
+            otra={alergia}
+            onOtraChange={setAlergia}
+            otraError={errors.alergia}
           />
         )}
 

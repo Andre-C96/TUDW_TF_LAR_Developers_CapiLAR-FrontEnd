@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { getAlergiasRequest } from '../../api/alergias';
 import { forgotPasswordRequest } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { useAuth } from '../../context/auth/useAuth';
+import { useFetch } from '../../customHooks/fetch/useFetch';
 import { ForgotPasswordForm } from '../forgotPasswordForm/forgotPasswordForm';
 import { LoginForm } from '../loginForm/loginForm';
 import { Modal } from '../modal/modal';
@@ -26,6 +28,8 @@ const ariaLabels: Record<AuthView, string> = {
 // Modal único para login, registro y recupero: los links de cada formulario cambian el contenido sin cerrarlo
 export const AuthModal = ({ view, onViewChange, onClose }: AuthModalProps) => {
   const { login, register } = useAuth();
+  // La lista de alergias se pide al abrir el registro
+  const alergias = useFetch(view === 'register' ? 'alergias' : null, getAlergiasRequest);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [isSent, setIsSent] = useState(false);
@@ -84,6 +88,7 @@ export const AuthModal = ({ view, onViewChange, onClose }: AuthModalProps) => {
       )}
       {view === 'register' && (
         <RegisterForm
+          alergias={alergias.data ?? []}
           onSubmit={(data) =>
             submit(
               () => register(data),

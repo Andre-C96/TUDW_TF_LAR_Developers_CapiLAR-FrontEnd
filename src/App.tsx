@@ -3,6 +3,7 @@ import { Layout } from './layouts/layout/layout'
 import { LinkLayout } from './layouts/linkLayout/linkLayout'
 import { PanelLayout } from './layouts/panelLayout/panelLayout'
 import { ProtectedRoute } from './components/protectedRoute/protectedRoute'
+import { AdminAlergias } from './pages/adminAlergias/adminAlergias'
 import { AdminServices } from './pages/adminServices/adminServices'
 import { Agenda } from './pages/agenda/agenda'
 import { Booking } from './pages/booking/booking'
@@ -11,11 +12,20 @@ import { Clients } from './pages/clients/clients'
 import { ColorPreview } from './pages/colorPreview/colorPreview'
 import { History } from './pages/history/history'
 import { Home } from './pages/home/home'
+import { Marcas } from './pages/marcas/marcas'
+import { Rentabilidad } from './pages/rentabilidad/rentabilidad'
+import { Proveedores } from './pages/proveedores/proveedores'
+import { ProveedorDetail } from './pages/proveedores/proveedorDetail'
+import { Compras } from './pages/compras/compras'
+import { CompraNueva } from './pages/compras/compraNueva'
+import { CompraDetail } from './pages/compras/compraDetail'
 import { MyTurnos } from './pages/myTurnos/myTurnos'
 import { NotFound } from './pages/notFound/notFound'
 import { Panel } from './pages/panel/panel'
 import { Profile } from './pages/profile/profile'
 import { ResetPassword } from './pages/resetPassword/resetPassword'
+import { ArticuloDetail } from './pages/stock/articuloDetail'
+import { Stock } from './pages/stock/stock'
 import { TurnoLink } from './pages/turnoLink/turnoLink'
 import { Users } from './pages/users/users'
 import { VerifyEmail } from './pages/verifyEmail/verifyEmail'
@@ -41,6 +51,8 @@ function App() {
       <Route element={<ProtectedRoute roles={['PROFESIONAL', 'ADMIN']} />}>
         <Route element={<PanelLayout />}>
           <Route path="/panel" element={<Panel />} />
+          <Route path="/panel/stock" element={<Stock />} />
+          <Route path="/panel/stock/:id" element={<ArticuloDetail />} />
 
           <Route element={<ProtectedRoute roles={['PROFESIONAL']} />}>
             <Route path="/panel/agenda" element={<Agenda />} />
@@ -52,6 +64,14 @@ function App() {
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>
             <Route path="/panel/usuarios" element={<Users />} />
             <Route path="/panel/servicios" element={<AdminServices />} />
+            <Route path="/panel/alergias" element={<AdminAlergias />} />
+            <Route path="/panel/marcas" element={<Marcas />} />
+            <Route path="/panel/rentabilidad" element={<Rentabilidad />} />
+            <Route path="/panel/proveedores" element={<Proveedores />} />
+            <Route path="/panel/proveedores/:id" element={<ProveedorDetail />} />
+            <Route path="/panel/compras" element={<Compras />} />
+            <Route path="/panel/compras/nueva" element={<CompraNueva />} />
+            <Route path="/panel/compras/:id" element={<CompraDetail />} />
           </Route>
         </Route>
       </Route>

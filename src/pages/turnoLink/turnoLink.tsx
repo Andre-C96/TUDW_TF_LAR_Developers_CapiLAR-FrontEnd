@@ -129,7 +129,7 @@ export const TurnoLink = ({ accion }: TurnoLinkProps) => {
               {data.puedeCancelar && (
                 <Link
                   to={`/turno/cancelar?${new URLSearchParams({ token })}`}
-                  className="font-inter text-sm font-semibold text-capilar-violet hover:underline"
+                  className="font-inter text-sm font-semibold text-capilar-violet-text hover:underline"
                 >
                   ¿No podés ir? Cancelar turno
                 </Link>
@@ -154,7 +154,7 @@ export const TurnoLink = ({ accion }: TurnoLinkProps) => {
               {!yaConfirmado && (
                 <Link
                   to={`/turno/confirmar?${new URLSearchParams({ token })}`}
-                  className="font-inter text-sm font-semibold text-capilar-violet hover:underline"
+                  className="font-inter text-sm font-semibold text-capilar-violet-text hover:underline"
                 >
                   Prefiero confirmar que voy
                 </Link>

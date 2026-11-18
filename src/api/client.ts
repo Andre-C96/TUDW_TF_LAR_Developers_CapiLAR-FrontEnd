@@ -10,6 +10,14 @@ export class ApiError extends Error {
   }
 }
 
+// Formato de las listas paginadas del back. Páginas: Math.ceil(total / porPagina); una pasada del final trae items vacío
+export interface Pagina<T> {
+  items: T[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   // Objeto (va como JSON) o FormData (multipart, ej. una foto)

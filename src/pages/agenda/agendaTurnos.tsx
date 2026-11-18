@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { puedeCargarFicha } from '../../api/fichas';
 import { getUpcomingWorkDatesRequest } from '../../api/professionals';
-import { FRECUENCIAS, getSeriesRequest, seriesPorTurno, turnoEnSerie } from '../../api/series';
+import { FRECUENCIAS, getSeriesRequest, puedeRepetir, seriesPorId } from '../../api/series';
 import {
   MAX_DIAS_AGENDA,
   MAX_DIAS_ANTICIPACION,
@@ -25,7 +25,7 @@ import {
   startOfWeek,
   toIsoDate,
 } from '../../api/turnos';
-import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
+import type { CompletarTurnoData, EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
 import { Collapsible, CountBadge } from '../../components/collapsible/collapsible';
@@ -41,6 +41,8 @@ import { SerieBadge, TurnoAction, TurnoCard, TurnoList } from '../../components/
 import { MonthNav, WeekNav } from '../../components/weekNav/weekNav';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { FilterSelect, RangoField } from './agendaFiltros';
+import { CompletarTurnoModal } from './completarTurnoModal';
+import { avisarSinStock } from './fichaAvisos';
 import { FichaModal } from './fichaModal';
 import { SerieModal } from './serieModal';
 
@@ -213,12 +215,12 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
   const [ficha, setFicha] = useState<{ turno: Turno; detalle: TurnoDetalle } | null>(null);
   // Turno que se va a repetir (serie)
   const [repetir, setRepetir] = useState<Turno | null>(null);
-  // Los turnos no traen su serie: se cruzan con las series del profesional
+  // De la serie del turno solo hace falta la frecuencia, para la etiqueta
   const series = useFetch('series', () => getSeriesRequest(token));
-  const seriePorTurno = seriesPorTurno(series.data ?? []);
+  const seriePorId = seriesPorId(series.data ?? []);
 
   const badgeFor = (turno: Turno) => {
-    const serie = seriePorTurno.get(turno.id);
+    const serie = turno.serieId ? seriePorId.get(turno.serieId) : undefined;
     return serie ? <SerieBadge>{FRECUENCIAS[serie.frecuencia].label}</SerieBadge> : undefined;
   };
 
@@ -256,13 +258,22 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
     if (pending.type === 'cancelar') {
       return run(turno, () => cancelTurnoRequest(token, turno.id, motivo), 'Turno cancelado', 'Le avisamos al cliente por mail.');
     }
-    if (pending.type === 'completar') {
-      return run(turno, () => completeTurnoRequest(token, turno.id), 'Turno completado', 'Ya figura en el historial del cliente.');
-    }
     if (pending.type === 'ausente') {
       return run(turno, () => markAbsentRequest(token, turno.id), 'Marcado como ausente', 'Queda registrado que el cliente no vino.');
     }
   };
+
+  const completar = (turno: Turno, data: CompletarTurnoData) =>
+    run(
+      turno,
+      async () => {
+        const { sinStock, ...completado } = await completeTurnoRequest(token, turno.id, data);
+        avisarSinStock(sinStock);
+        return completado;
+      },
+      'Turno completado',
+      'Ya figura en el historial del cliente.',
+    );
 
   const actionsFor = (turno: Turno) => {
     const busy = busyId === turno.id;
@@ -307,8 +318,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
                 Marcar ausente
               </TurnoAction>
             )}
-            {/* Se repite antes de completarlo: la serie sale de un turno confirmado */}
-            {series.data && !turnoEnSerie(series.data, turno.id) && (
+            {puedeRepetir(turno) && (
               <TurnoAction disabled={busy} onClick={() => setRepetir(turno)}>
                 Repetir
               </TurnoAction>
@@ -318,6 +328,13 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
             </TurnoAction>
           </>
         );
+      // También se repite después de hacerlo (ej. al terminar una coloración se agenda el retoque)
+      case 'COMPLETADO':
+        return puedeRepetir(turno) ? (
+          <TurnoAction disabled={busy} onClick={() => setRepetir(turno)}>
+            Repetir
+          </TurnoAction>
+        ) : undefined;
       case 'REPROGRAMADO':
         return (
           <>
@@ -347,7 +364,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
         onClick={() => setFicha({ turno, detalle })}
         className={`ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 align-middle font-inter text-xs font-semibold transition-colors ${
           tiene
-            ? 'border-capilar-violet/40 bg-purple-50 text-capilar-violet hover:border-capilar-violet'
+            ? 'border-capilar-violet/40 bg-purple-50 text-capilar-violet-text hover:border-capilar-violet'
             : 'border-dashed border-gray-300 text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
         }`}
       >
@@ -399,12 +416,6 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
       confirm: 'Cancelar turno',
       reason: { label: 'Motivo', required: true, hint: 'Se lo enviamos al cliente en el aviso.', placeholder: 'Ej.: no voy a estar ese día' },
     },
-    completar: {
-      title: 'Completar turno',
-      text: '¿Marcar este turno como realizado?',
-      confirm: 'Completar',
-      reason: undefined,
-    },
     ausente: {
       title: 'Marcar ausente',
       text: '¿El cliente no vino a este turno? Queda registrado como ausente.',
@@ -412,7 +423,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
       reason: undefined,
     },
   };
-  const texts = pending && pending.type !== 'reprogramar' ? dialogTexts[pending.type] : null;
+  const texts = pending && pending.type !== 'reprogramar' && pending.type !== 'completar' ? dialogTexts[pending.type] : null;
 
   return (
     // Alto mínimo: con pocos turnos, el calendario del rango entra sin pasar por encima del footer
@@ -447,7 +458,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
               <button
                 type="button"
                 onClick={limpiarFiltros}
-                className="group ml-auto flex shrink-0 items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet transition-transform hover:scale-105"
+                className="group ml-auto flex shrink-0 items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet-text transition-transform hover:scale-105"
               >
                 {/* Cruz fina que se pone en negrita al pasar el mouse, como en los filtros de Usuarios */}
                 <svg
@@ -544,14 +555,24 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
           <p className="mt-2 font-semibold text-black">
             {pending.turno.cliente.nombre} {pending.turno.cliente.apellido} · {formatFechaLarga(pending.turno.fecha)}, {pending.turno.horaInicio}
           </p>
-          {pending.type === 'completar' && (
-            <p className="mt-2">
-              {sinFicha(pending.turno)
-                ? 'Ojo: todavía no cargaste la ficha técnica y, una vez completado, ya no se puede cargar.'
-                : 'La ficha técnica se cierra y la clienta ve tus indicaciones y las fotos en su historial.'}
-            </p>
-          )}
         </ConfirmDialog>
+      )}
+
+      {pending?.type === 'completar' && (
+        <CompletarTurnoModal
+          token={token}
+          turno={pending.turno}
+          onClose={closePending}
+          onConfirm={(data) => completar(pending.turno, data)}
+          isLoading={busyId !== null}
+          error={actionError}
+        >
+          <p>
+            {sinFicha(pending.turno)
+              ? 'Ojo: todavía no cargaste la ficha técnica y, una vez completado, ya no se puede cargar.'
+              : 'La ficha técnica se cierra y la clienta ve tus indicaciones y las fotos en su historial.'}
+          </p>
+        </CompletarTurnoModal>
       )}
 
       <Modal isOpen={pending?.type === 'reprogramar'} onClose={closePending} ariaLabel="Reprogramar turno" className="max-w-3xl!">

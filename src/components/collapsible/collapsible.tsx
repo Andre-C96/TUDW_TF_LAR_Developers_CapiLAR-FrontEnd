@@ -19,6 +19,8 @@ interface CollapsibleProps {
   // Al lado del título (ej. la cantidad de turnos)
   aside?: ReactNode;
   defaultOpen?: boolean;
+  // Al abrirlo (ej. para pedir el contenido recién ahí)
+  onOpen?: () => void;
   variant?: keyof typeof variants;
   as?: 'h2' | 'h3';
   children: ReactNode;
@@ -30,6 +32,7 @@ export const Collapsible = ({
   title,
   aside,
   defaultOpen = false,
+  onOpen,
   variant = 'seccion',
   as: Heading = 'h2',
   children,
@@ -44,7 +47,10 @@ export const Collapsible = ({
       <Heading>
         <button
           type="button"
-          onClick={() => setAbierto(!abierto)}
+          onClick={() => {
+            if (!abierto) onOpen?.();
+            setAbierto(!abierto);
+          }}
           aria-expanded={abierto}
           aria-controls={contenidoId}
           className={`flex w-full items-center gap-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-capilar-violet ${styles.button}`}

@@ -1,10 +1,22 @@
 import { apiFetch } from './client';
+import type { AlergiaDeCliente } from './alergias';
+import type { ArticuloSinStock } from './articulos';
 
 // PENDIENTE: lo pidió el cliente y espera al profesional. REPROGRAMADO: el salón propuso otro horario y espera al cliente.
 // RECHAZADO y CANCELADO liberan el horario. AUSENTE: estaba confirmado y el cliente no vino.
 export type EstadoTurno = 'PENDIENTE' | 'CONFIRMADO' | 'REPROGRAMADO' | 'COMPLETADO' | 'RECHAZADO' | 'CANCELADO' | 'AUSENTE';
 
 export type MetodoPago = 'EFECTIVO' | 'DEBITO' | 'CREDITO' | 'TRANSFERENCIA';
+
+export const METODOS_PAGO: Record<MetodoPago, string> = {
+  EFECTIVO: 'Efectivo',
+  DEBITO: 'Débito',
+  CREDITO: 'Crédito',
+  TRANSFERENCIA: 'Transferencia',
+};
+
+// Mismo límite que el back
+export const PRECIO_FINAL_MAX = 99_999_999.99;
 
 // Un servicio del turno, con su profesional y su propio horario (se hacen uno después del otro)
 export interface TurnoDetalle {
@@ -17,6 +29,8 @@ export interface TurnoDetalle {
   horaFin: string;
   // Precio al reservar, como texto ("15000.00")
   precioBase: string;
+  // Lo que se cobró, como texto ("18000"); null hasta que se completa el turno
+  precioFinal?: string | null;
   // Ficha técnica de este servicio o null. Solo en los turnos del salón (no viene en /turnos/mios)
   fichaId?: number | null;
 }
@@ -31,6 +45,9 @@ export interface Turno {
   // Cuándo el cliente avisó que va (link opcional del recordatorio); null si no avisó
   asistenciaConfirmadaEn: string | null;
   metodoPago: MetodoPago | null;
+  // Serie a la que pertenece y serie que se armó a partir de este turno (una dada de baja no cuenta)
+  serieId?: number | null;
+  serieOrigenId?: number | null;
   // Motivo de la cancelación (lo ven las dos partes) o del rechazo (el cliente no lo recibe)
   motivo?: string | null;
   cliente: {
@@ -38,6 +55,7 @@ export interface Turno {
     nombre: string;
     apellido: string;
     telefono: string;
+    alergias: AlergiaDeCliente[];
     alergia: string | null;
     // null: todavía no verificó su correo (la agenda lo marca)
     emailVerificadoEn: string | null;
@@ -94,6 +112,9 @@ export const createTurnoRequest = (token: string, data: CreateTurnoData) =>
 // Turnos del cliente logueado, del más nuevo al más viejo
 export const getMyTurnosRequest = (token: string) => apiFetch<Turno[]>('/turnos/mios', { token });
 
+// PROFESIONAL: todos los turnos de una clienta con el salón (cualquier profesional y estado), del más nuevo al más viejo
+export const getClientTurnosRequest = (token: string, clienteId: number) => apiFetch<Turno[]>(`/clientes/${clienteId}/turnos`, { token });
+
 // Turnos de un profesional entre dos fechas (incluidas), ordenados por fecha y hora.
 // Sin legajo el back devuelve todo el salón: para "Mi agenda" se manda el propio
 export const getAgendaRequest = (token: string, legajo: number, desde: string, hasta: string) =>
@@ -117,8 +138,15 @@ export const acceptRescheduleRequest = (token: string, id: number) =>
 export const cancelTurnoRequest = (token: string, id: number, motivo?: string) =>
   apiFetch<Turno>(`/turnos/${id}/cancelar`, { method: 'PATCH', body: motivo ? { motivo } : {}, token });
 
-export const completeTurnoRequest = (token: string, id: number) =>
-  apiFetch<Turno>(`/turnos/${id}/completar`, { method: 'PATCH', token });
+export interface CompletarTurnoData {
+  detalles: { turnoDetalleId: number; precioFinal: number }[];
+  metodoPago: MetodoPago;
+}
+
+// Guarda lo cobrado (no se puede cambiar después) y descuenta del stock los insumos de sus fichas:
+// sinStock trae los artículos que quedaron por debajo de 0
+export const completeTurnoRequest = (token: string, id: number, data: CompletarTurnoData) =>
+  apiFetch<Turno & { sinStock: ArticuloSinStock[] }>(`/turnos/${id}/completar`, { method: 'PATCH', body: data, token });
 
 // PROFESIONAL: el cliente no vino (turno CONFIRMADO, desde su hora de fin)
 export const markAbsentRequest = (token: string, id: number) =>

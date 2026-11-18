@@ -2,8 +2,8 @@ import { apiFetch } from './client';
 import { addDays, fromIsoDate, toIsoDate } from './turnos';
 import type { EstadoTurno } from './turnos';
 
-// Turnos recurrentes (F05): el profesional repite un servicio suyo de un turno CONFIRMADO, a la misma hora,
-// cada tantos días y hasta 60 días adelante. La clienta solo las ve (y reserva otro horario en las fechas ocupadas).
+// Turnos recurrentes (F05): el profesional repite un servicio suyo de un turno CONFIRMADO o COMPLETADO, a la misma hora,
+// cada tantos días y hasta 60 días adelante. Cada turno trae su serie (serieId) y la que se armó desde él (serieOrigenId). La clienta solo las ve (y reserva otro horario en las fechas ocupadas).
 
 export type FrecuenciaSerie = 'SEMANAL' | 'QUINCENAL' | 'CADA_20_DIAS' | 'MENSUAL';
 // SUSPENDIDA y BAJA cancelan los turnos que no empezaron; una suspendida se puede reactivar
@@ -111,24 +111,21 @@ export const endSerieRequest = (token: string, id: number, motivo?: string) =>
 export const describeSerie = (serie: Pick<SerieBase, 'frecuencia' | 'horaInicio'>) =>
   `${FRECUENCIAS[serie.frecuencia].label.toLowerCase()} a las ${serie.horaInicio}`;
 
-// Los turnos no traen su serie: se arma el mapa id de turno -> serie con GET /series
-export const seriesPorTurno = (series: Serie[]) => {
-  const map = new Map<number, Serie>();
-  for (const serie of series) {
-    for (const { turno } of serie.fechas) if (turno) map.set(turno.id, serie);
-  }
-  return map;
-};
+// Con su serie (id -> serie), para la etiqueta "↻ Cada 15 días" de cada turno
+export const seriesPorId = (series: Serie[]) => new Map(series.map((serie) => [serie.id, serie]));
 
-// El turno ya es parte de una serie (o es el origen de una que no se dio de baja): no se puede repetir otra vez
-export const turnoEnSerie = (series: Serie[], turnoId: number) =>
-  series.some((s) => (s.turnoOrigenId === turnoId && s.estado !== 'BAJA') || s.fechas.some((f) => f.turno?.id === turnoId));
+// Se puede repetir si no es parte de una serie ni el origen de una que siga vigente (lo mismo que valida el back)
+export const puedeRepetir = (turno: { estado: EstadoTurno; serieId?: number | null; serieOrigenId?: number | null }) =>
+  (turno.estado === 'CONFIRMADO' || turno.estado === 'COMPLETADO') && turno.serieId == null && turno.serieOrigenId == null;
 
-// Rango de la fecha de fin: desde la primera repetición hasta 60 días desde hoy
+// Rango de la fecha de fin: desde la primera repetición que todavía no pasó hasta 60 días desde hoy.
+// Desde un turno completado hace tiempo, las primeras repeticiones ya pasaron: el back las saltea
 export const rangoFechaFin = (fechaTurno: string, frecuencia: FrecuenciaSerie) => {
-  const min = addDays(fromIsoDate(fechaTurno), FRECUENCIAS[frecuencia].dias);
+  const { dias } = FRECUENCIAS[frecuencia];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  let min = addDays(fromIsoDate(fechaTurno), dias);
+  while (toIsoDate(min) <= toIsoDate(today)) min = addDays(min, dias);
   const max = addDays(today, MAX_DIAS_SERIE);
   return { min, max, vacio: toIsoDate(min) > toIsoDate(max) };
 };

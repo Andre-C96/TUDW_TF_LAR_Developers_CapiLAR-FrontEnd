@@ -20,7 +20,7 @@ const MenuIcon = ({ children }: { children: ReactNode }) => (
 
 const itemClass = (activo: boolean) =>
   `flex items-center gap-3 rounded-[6px] px-3 py-2 font-inter text-sm font-semibold transition-colors ${
-    activo ? 'bg-purple-50 text-capilar-violet' : 'text-capilar-grey hover:bg-gray-50 hover:text-capilar-violet'
+    activo ? 'bg-purple-50 text-capilar-violet-text' : 'text-capilar-grey hover:bg-gray-50 hover:text-capilar-violet'
   }`;
 
 // Menú lateral fijo del panel según el rol: el inicio, cada sección y, debajo, sus subopciones (pestañas o filtros).
@@ -32,10 +32,10 @@ export const SideMenu = () => {
   const sections = panelSections.filter((section) => hasRole(...section.roles));
 
   return (
-    <aside className="sticky top-24 mt-32 ml-4 hidden max-h-[calc(100dvh-7rem)] shrink-0 self-start md:block">
+    <aside className="sticky top-24 mt-32 mb-5 ml-4 hidden shrink-0 self-start md:block">
       <nav
         aria-label="Menú del panel"
-        className="scrollbar-soft flex max-h-[calc(100dvh-7rem)] w-16 flex-col gap-1 overflow-y-auto rounded-[6px] border border-gray-200 bg-white p-2 shadow-sm lg:w-60 lg:p-3"
+        className="flex w-16 flex-col gap-1 rounded-[6px] border border-gray-200 bg-white p-2 shadow-sm lg:w-60 lg:p-3"
       >
         <Link to="/panel" title="Inicio" aria-current={pathname === '/panel' ? 'page' : undefined} className={itemClass(pathname === '/panel')}>
           <MenuIcon>
@@ -60,9 +60,13 @@ export const SideMenu = () => {
 
               {section.subsections && (
                 <ul className="mt-1 mb-2 ml-[1.375rem] hidden flex-col border-l border-gray-200 lg:flex">
-                  {section.subsections.map((sub) => {
+                  {section.subsections
+                    .filter((sub) => !sub.roles || hasRole(...sub.roles))
+                    .map((sub) => {
                     const [key, value] = sub.param;
-                    const elegida = pathname === section.to && params.get(key) === value;
+                    // La opción sin parámetro no se marca si está elegida otra de la sección
+                    const otraElegida = section.subsections!.some(({ param: [k, v] }) => v !== null && params.get(k) === v);
+                    const elegida = pathname === section.to && params.get(key) === value && (value !== null || !otraElegida);
                     return (
                       <li key={sub.label}>
                         <Link
@@ -70,7 +74,7 @@ export const SideMenu = () => {
                           aria-current={elegida ? 'page' : undefined}
                           className={`-ml-px block border-l-2 py-1.5 pr-2 pl-4 font-inter text-sm transition-colors ${
                             elegida
-                              ? 'border-capilar-violet font-semibold text-capilar-violet'
+                              ? 'border-capilar-violet font-semibold text-capilar-violet-text'
                               : 'border-transparent text-capilar-grey hover:text-capilar-violet'
                           }`}
                         >

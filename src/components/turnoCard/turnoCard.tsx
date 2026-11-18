@@ -1,7 +1,8 @@
 import { useId } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { formatAlergias } from '../../api/alergias';
 import { formatPrice } from '../../api/services';
-import { fromIsoDate } from '../../api/turnos';
+import { METODOS_PAGO, fromIsoDate } from '../../api/turnos';
 import type { EstadoTurno, Turno, TurnoDetalle } from '../../api/turnos';
 
 // Texto y color de cada estado. El cliente lee el estado desde su lado ("Esperando confirmación")
@@ -39,6 +40,8 @@ interface TurnoCardProps {
   badge?: ReactNode;
   // Como fila de una TurnoList (sin borde ni sombra propios)
   enLista?: boolean;
+  // Para el salón sin los datos del cliente (ej. en el perfil de la clienta, donde ya están arriba)
+  sinCliente?: boolean;
 }
 
 // Turnos en modo listado: un solo recuadro con una fila por turno
@@ -86,9 +89,14 @@ export const CalendarDate = ({ fecha }: { fecha: string }) => {
 
 // Turno con fecha, horario, servicios con su profesional, estado y acciones.
 // Para el salón muestra también el cliente con su teléfono y sus alergias.
-export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge, enLista = false }: TurnoCardProps) => {
+export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAction, badge, enLista = false, sinCliente = false }: TurnoCardProps) => {
   const isClosed = turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO' || turno.estado === 'AUSENTE';
   const total = turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioBase), 0);
+  // Lo cobrado: solo en los completados
+  const cobrado =
+    turno.estado === 'COMPLETADO' && turno.detalles.every((detalle) => detalle.precioFinal != null)
+      ? turno.detalles.reduce((sum, detalle) => sum + Number(detalle.precioFinal), 0)
+      : null;
 
   return (
     <article
@@ -112,11 +120,15 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
           )}
         </div>
 
-        {!paraCliente && (
+        {!paraCliente && !sinCliente && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-inter text-sm">
             <span className="font-semibold text-black">
               {turno.cliente.nombre} {turno.cliente.apellido}
-              <span className="font-normal text-capilar-grey"> · {turno.cliente.telefono}</span>
+              <span className="font-normal text-capilar-grey">
+                {' '}
+                · {turno.cliente.telefono}
+                {formatAlergias(turno.cliente) && ` · Alergias: ${formatAlergias(turno.cliente)}`}
+              </span>
             </span>
             {!turno.cliente.emailVerificadoEn && (
               <span
@@ -124,11 +136,6 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
                 className="self-start rounded-md bg-gray-100 px-2 py-1 text-xs text-capilar-grey"
               >
                 Correo sin verificar
-              </span>
-            )}
-            {turno.cliente.alergia && (
-              <span className="self-start rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                Alergias: {turno.cliente.alergia}
               </span>
             )}
           </div>
@@ -144,7 +151,18 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
           ))}
         </ul>
 
-        {paraCliente && <span className="font-inter text-sm font-semibold text-black">Desde {formatPrice(total)}</span>}
+        {paraCliente && (
+          <span className="font-inter text-sm font-semibold text-black">
+            {cobrado !== null ? `Total ${formatPrice(cobrado)}` : `Desde ${formatPrice(total)}`}
+          </span>
+        )}
+
+        {!paraCliente && cobrado !== null && (
+          <span className="font-inter text-sm font-semibold text-black">
+            Cobrado {formatPrice(cobrado)}
+            {turno.metodoPago && ` · ${METODOS_PAGO[turno.metodoPago]}`}
+          </span>
+        )}
 
         {turno.motivo && isClosed && (
           <p className="font-inter text-sm text-capilar-grey">

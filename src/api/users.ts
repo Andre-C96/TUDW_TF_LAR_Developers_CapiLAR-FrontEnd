@@ -1,4 +1,4 @@
-import { ApiError, apiFetch, apiFetchBlob } from './client';
+import { apiFetch, apiFetchBlob } from './client';
 import type { Rol, Usuario } from './auth';
 import { addDays, toIsoDate } from './turnos';
 
@@ -77,9 +77,12 @@ export const deactivateUserRequest = (token: string, id: number) =>
 export const reactivateUserRequest = (token: string, id: number) =>
   apiFetch<Usuario>(`/users/${id}/alta`, { method: 'PATCH', token });
 
-// Perfil propio (cualquier rol). Solo se mandan los campos a cambiar; alergia solo para CLIENTE ("" o null la borra)
+// Perfil propio (cualquier rol). Solo se mandan los campos a cambiar; las alergias solo para CLIENTE
 export interface UpdateProfileData {
   telefono?: string;
+  // Las de la lista: reemplaza a las que tenía
+  alergiaIds?: number[];
+  // "Otra" ("" o null la borra)
   alergia?: string | null;
   // "YYYY-MM-DD"; null la borra
   fechaNacimiento?: string | null;
@@ -134,9 +137,8 @@ export const searchClientsRequest = (token: string, search: string) => {
   return apiFetch<Usuario[]>(`/users/clientes?${params}`, { token });
 };
 
-// Un cliente activo (PROFESIONAL). El back todavía no tiene GET por id (pedido en PWA-242): se busca en la lista
-export const getClientRequest = async (token: string, id: number) => {
-  const cliente = (await searchClientsRequest(token, '')).find((c) => c.id === id);
-  if (!cliente) throw new ApiError('No encontramos ese cliente: puede que se haya dado de baja.', 404);
-  return cliente;
-};
+// Una clienta (PROFESIONAL): lo de la búsqueda más fechaNacimiento, fechaAlta y fechaBaja. También si está dada de baja
+export type ClienteDetalle = Omit<Usuario, 'rol' | 'profesional'>;
+
+// 404 si ese usuario no es cliente
+export const getClientRequest = (token: string, id: number) => apiFetch<ClienteDetalle>(`/users/clientes/${id}`, { token });

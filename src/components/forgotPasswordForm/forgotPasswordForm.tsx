@@ -21,7 +21,7 @@ interface ForgotPasswordFormProps {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Botón con aspecto de link 
-const linkClasses = 'font-semibold text-capilar-violet hover:underline';
+const linkClasses = 'font-semibold text-capilar-violet-text hover:underline';
 
 // Contenido del recupero de contraseña
 export const ForgotPasswordForm = ({

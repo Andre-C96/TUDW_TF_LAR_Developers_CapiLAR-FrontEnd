@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import type { ConAlergias } from './alergias';
 import type { RegisterData } from '../components/registerForm/registerForm';
 
 export type Rol = 'CLIENTE' | 'PROFESIONAL' | 'ADMIN';
@@ -19,7 +20,7 @@ export interface Usuario {
   fechaBaja: string | null;
   // Subtipo según el rol: alergia del cliente, legajo del profesional (null si no lo tiene).
   // foto: nombre del archivo en el back o null (la imagen se pide con getUserPhotoRequest)
-  cliente?: { alergia: string | null; foto?: string | null } | null;
+  cliente?: (ConAlergias & { foto?: string | null }) | null;
   profesional?: { legajo: number; foto?: string | null } | null;
 }
 

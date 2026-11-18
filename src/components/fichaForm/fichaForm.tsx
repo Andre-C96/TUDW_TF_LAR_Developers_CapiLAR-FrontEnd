@@ -1,34 +1,56 @@
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
+import { formatEnvases, formatMarca, limitarDecimal } from '../../api/articulos';
+import type { Articulo } from '../../api/articulos';
 import {
   FICHA_TEXTO_MAX,
   FORMULAS_MAX,
   FORMULA_DESCRIPCION_MAX,
   INSUMOS_MAX,
   NIVELES,
-  OXIDANTE_MAX,
   POSE_MAX_MIN,
   TIPOS_DE_PELO,
   UNIDADES,
   VOLUMENES_DE_PELO,
+  ZONAS_FORMULA,
+  costoDeInsumo,
+  totalDeProductos,
 } from '../../api/fichas';
-import type { Ficha, FichaData, NivelCapilar, TipoDePelo, UnidadInsumo, VolumenDePelo } from '../../api/fichas';
+import type { Ficha, FichaData, InsumoData, NivelCapilar, TipoDePelo, UnidadInsumo, VolumenDePelo } from '../../api/fichas';
+import { formatPrice } from '../../api/services';
+import { parseTratamientos, serializeTratamientos } from '../../api/tratamientos';
 import { Button } from '../button/button';
-import { Form, FormField } from '../form/form';
+import { Form } from '../form/form';
+import { TotalProductos } from '../totalProductos/totalProductos';
+import { ArticuloPicker } from './articuloPicker';
+import { filaVacia, fromTratamientoDraft, newTratamiento, toTratamientoDraft, validarTratamiento } from './tratamientoDraft';
+import type { TratamientoDraft } from './tratamientoDraft';
+import { TratamientosField } from './tratamientosField';
 
 // Borradores: los números se escriben como texto y se convierten al guardar
 interface InsumoDraft {
   key: number;
+  // Lo que se escribe para buscar en el stock
+  busqueda: string;
+  // El artículo elegido. Se conserva al guardar: sin él, el back deja de descontarlo
+  articuloId: number | null;
+  // Insumo viejo cargado como texto: se conserva tal cual, pero no se pueden sumar nuevos
+  comoTexto: boolean;
   producto: string;
   marca: string;
   tono: string;
   cantidad: string;
   unidad: UnidadInsumo | '';
+  // Costo guardado al completar el turno
+  costoSubtotal: string | null;
 }
 
 interface FormulaDraft {
   key: number;
+  // La zona elegida o, con zonaOtra, lo que se escribió a mano
   descripcion: string;
+  zonaOtra: boolean;
+  // Solo en fichas viejas: se conserva y se reenvía sin cambios (el oxidante ahora es un producto más)
   oxidanteVolumen: string;
   tiempoPoseMin: string;
   insumos: InsumoDraft[];
@@ -36,34 +58,55 @@ interface FormulaDraft {
 
 // Clave estable para las filas que se agregan y quitan
 let nextKey = 0;
-const newInsumo = (): InsumoDraft => ({ key: nextKey++, producto: '', marca: '', tono: '', cantidad: '', unidad: 'G' });
-const newFormula = (): FormulaDraft => ({ key: nextKey++, descripcion: '', oxidanteVolumen: '', tiempoPoseMin: '', insumos: [newInsumo()] });
+const newInsumo = (): InsumoDraft => ({ key: nextKey++, busqueda: '', articuloId: null, comoTexto: false, producto: '', marca: '', tono: '', cantidad: '', unidad: '', costoSubtotal: null });
+const newFormula = (): FormulaDraft => ({ key: nextKey++, descripcion: '', zonaOtra: false, oxidanteVolumen: '', tiempoPoseMin: '', insumos: [newInsumo()] });
+
+// Valor del select para "Otra" (no se guarda: lo que va a la ficha es el texto escrito)
+const ZONA_OTRA = 'otra';
 
 const toDraft = (ficha: Ficha): FormulaDraft[] =>
   ficha.formulas.map((formula) => ({
     key: nextKey++,
     descripcion: formula.descripcion ?? '',
+    zonaOtra: Boolean(formula.descripcion) && !ZONAS_FORMULA.includes(formula.descripcion ?? ''),
     oxidanteVolumen: formula.oxidanteVolumen?.toString() ?? '',
     tiempoPoseMin: formula.tiempoPoseMin?.toString() ?? '',
     insumos: formula.insumos.map((insumo) => ({
       key: nextKey++,
+      busqueda: '',
+      articuloId: insumo.articuloId,
+      comoTexto: insumo.articuloId === null,
       producto: insumo.producto,
       marca: insumo.marca ?? '',
       tono: insumo.tono ?? '',
       cantidad: insumo.cantidad ? String(Number(insumo.cantidad)) : '',
       unidad: insumo.unidad ?? '',
+      costoSubtotal: insumo.costoSubtotal,
     })),
   }));
+
+// Lo que se manda de las fórmulas, para saber si cambiaron (las filas de producto vacías no cuentan)
+const firmaDeFormulas = (formulas: FormulaDraft[]) =>
+  JSON.stringify(
+    formulas.map(({ descripcion, oxidanteVolumen, tiempoPoseMin, insumos }) => [
+      descripcion.trim(),
+      oxidanteVolumen,
+      tiempoPoseMin,
+      insumos.filter((i) => i.articuloId !== null || i.comoTexto).map((i) => [i.articuloId, i.producto, i.cantidad.trim()]),
+    ]),
+  );
 
 // Hasta 2 decimales, con punto o coma
 const CANTIDAD_REGEX = /^\d+([.,]\d{1,2})?$/;
 
-const labelClass = 'font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey';
+// Los títulos de sección van en negro y más grandes, para distinguirlos de los títulos de los campos
+const sectionTitleClass = 'font-inter text-sm font-semibold uppercase tracking-widest text-black';
+const labelClass = 'font-inter text-[11px] font-semibold uppercase tracking-widest text-capilar-grey';
 const smallInputClass =
   'w-full rounded-lg border px-3 py-2 font-inter text-sm text-black outline-none transition-colors placeholder:text-gray-400 focus:border-capilar-violet focus:ring-2 focus:ring-capilar-violet/20';
 
 // Una opción por chip; tocar la elegida la deselecciona (ningún dato es obligatorio)
-const Opciones = <T extends string>({
+export const Opciones = <T extends string>({
   label,
   opciones,
   value,
@@ -87,7 +130,7 @@ const Opciones = <T extends string>({
             type="button"
             aria-pressed={value === opcion}
             onClick={() => onChange(value === opcion ? '' : opcion)}
-            className={`rounded-full border px-3 py-1.5 font-inter text-sm transition-colors ${
+            className={`rounded-[4px] border px-3 py-1.5 font-inter text-sm transition-colors ${
               value === opcion
                 ? 'border-capilar-violet bg-capilar-violet text-white'
                 : 'border-gray-300 bg-white text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
@@ -132,6 +175,12 @@ const FieldError = ({ message }: { message?: string }) =>
 interface FichaFormProps {
   // Ficha a editar; sin ella, el formulario es de alta
   ficha?: Ficha | null;
+  // Los artículos que se pueden elegir para las fórmulas
+  articulos: Articulo[];
+  // No se pudieron cargar los artículos
+  articulosError?: string;
+  // Si viene, el buscador ofrece crear un artículo; quien lo usa lo crea y llama a `elegir` para dejarlo en ese producto
+  onCrearArticulo?: (nombre: string, elegir: (articulo: Articulo) => void) => void;
   // Recibe los datos ya validados; quien lo usa llama a la API
   onSubmit: (data: FichaData) => void;
   onCancel: () => void;
@@ -142,26 +191,57 @@ interface FichaFormProps {
   error?: string;
 }
 
-// Ficha técnica de un servicio: diagnóstico, tratamientos previos, fórmulas con sus productos e indicaciones.
-// Ningún campo es obligatorio: se completa durante el servicio y se puede guardar varias veces.
-export const FichaForm = ({ ficha, onSubmit, onCancel, onDelete, isLoading = false, error }: FichaFormProps) => {
+// Ficha técnica de un servicio: diagnóstico, tratamientos previos, fórmulas con sus productos del stock e indicaciones.
+// Ningún campo es obligatorio: se completa durante el servicio y se puede guardar varias veces, también ya cerrada.
+export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, onSubmit, onCancel, onDelete, isLoading = false, error }: FichaFormProps) => {
   const [porosidad, setPorosidad] = useState<NivelCapilar | ''>(ficha?.porosidad ?? '');
   const [elasticidad, setElasticidad] = useState<NivelCapilar | ''>(ficha?.elasticidad ?? '');
   const [tipoDePelo, setTipoDePelo] = useState<TipoDePelo | ''>(ficha?.tipoDePelo ?? '');
   const [volumenDePelo, setVolumenDePelo] = useState<VolumenDePelo | ''>(ficha?.volumenDePelo ?? '');
   const [porcentajeCanas, setPorcentajeCanas] = useState(ficha?.porcentajeCanas?.toString() ?? '');
-  const [tratamientosPrevios, setTratamientosPrevios] = useState(ficha?.tratamientosPrevios ?? '');
+  // Filas y notas salen del mismo texto guardado (ver api/tratamientos.ts): se leen una sola vez, al abrir
+  const [tratamientosGuardados] = useState(() => parseTratamientos(ficha?.tratamientosPrevios ?? null));
+  const [tratamientos, setTratamientos] = useState<TratamientoDraft[]>(() => tratamientosGuardados.filas.map(toTratamientoDraft));
+  const [notasTratamientos, setNotasTratamientos] = useState(tratamientosGuardados.notas);
+  const [erroresTratamientos, setErroresTratamientos] = useState<Record<number, string | undefined>>({});
   const [indicacionesCliente, setIndicacionesCliente] = useState(ficha?.indicacionesCliente ?? '');
   const [observacionesInternas, setObservacionesInternas] = useState(ficha?.observacionesInternas ?? '');
   const [formulas, setFormulas] = useState<FormulaDraft[]>(() => (ficha ? toDraft(ficha) : []));
-  // Errores por campo: "canas", "f0.oxidante", "f0.i1.producto", etc.
+  const [firmaInicial] = useState(() => firmaDeFormulas(formulas));
+  // Errores por campo: "canas", "f0.pose", "f0.i1.producto", etc.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Ficha cerrada sin cambios en las fórmulas: vale el costo guardado. Si cambian, el back recalcula todo con el precio de hoy
+  const usarCostoGuardado = Boolean(ficha?.cerradaEn) && firmaDeFormulas(formulas) === firmaInicial;
+
+  // Lo que suman los productos ya elegidos, para calcular cuánto cobrar
+  const totalProductos = totalDeProductos(
+    formulas
+      .flatMap((formula) => formula.insumos)
+      .filter((insumo) => insumo.articuloId !== null || insumo.comoTexto)
+      .map((insumo) => ({
+        articuloId: insumo.articuloId,
+        cantidad: insumo.cantidad.replace(',', '.'),
+        costoSubtotal: usarCostoGuardado ? insumo.costoSubtotal : null,
+      })),
+    articulos,
+  );
 
   const updateFormula = (key: number, changes: Partial<FormulaDraft>) =>
     setFormulas((prev) => prev.map((f) => (f.key === key ? { ...f, ...changes } : f)));
 
   const updateInsumo = (formula: FormulaDraft, key: number, changes: Partial<InsumoDraft>) =>
     updateFormula(formula.key, { insumos: formula.insumos.map((i) => (i.key === key ? { ...i, ...changes } : i)) });
+
+  const elegirArticulo = (formula: FormulaDraft, key: number, articulo: Articulo) =>
+    updateInsumo(formula, key, {
+      articuloId: articulo.id,
+      busqueda: '',
+      producto: articulo.nombre,
+      marca: formatMarca(articulo.marca),
+      tono: articulo.tonalidad ?? '',
+      unidad: articulo.tipoPeso,
+    });
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -175,33 +255,44 @@ export const FichaForm = ({ ficha, onSubmit, onCancel, onDelete, isLoading = fal
     };
 
     const canas = entero(porcentajeCanas, 0, 100, 'canas', 'Un número entero entre 0 y 100');
+
+    // Las filas vacías no se guardan
+    const filas = tratamientos.filter((fila) => !filaVacia(fila));
+    const nuevosErrores = Object.fromEntries(filas.map((fila) => [fila.key, validarTratamiento(fila)]));
+    setErroresTratamientos(nuevosErrores);
+    if (Object.values(nuevosErrores).some(Boolean)) errors.tratamientos = 'Revisá los tratamientos previos';
+    const textoTratamientos = serializeTratamientos({ filas: filas.map(fromTratamientoDraft), notas: notasTratamientos });
+    if (textoTratamientos.length > FICHA_TEXTO_MAX) errors.tratamientos = 'Los tratamientos previos son demasiado largos: sacá alguna fila o acortá las notas';
+
     const data: FichaData = {
       porosidad: porosidad || null,
       elasticidad: elasticidad || null,
       tipoDePelo: tipoDePelo || null,
       volumenDePelo: volumenDePelo || null,
       porcentajeCanas: canas,
-      tratamientosPrevios: tratamientosPrevios.trim() || null,
+      tratamientosPrevios: textoTratamientos || null,
       indicacionesCliente: indicacionesCliente.trim() || null,
       observacionesInternas: observacionesInternas.trim() || null,
       formulas: formulas.map((formula, f) => ({
         descripcion: formula.descripcion.trim() || null,
-        oxidanteVolumen: entero(formula.oxidanteVolumen, 1, OXIDANTE_MAX, `f${f}.oxidante`, `Entre 1 y ${OXIDANTE_MAX} vol`),
+        oxidanteVolumen: formula.oxidanteVolumen ? Number(formula.oxidanteVolumen) : null,
         tiempoPoseMin: entero(formula.tiempoPoseMin, 1, POSE_MAX_MIN, `f${f}.pose`, `Entre 1 y ${POSE_MAX_MIN} minutos`),
         // Las filas vacías no se mandan
         insumos: formula.insumos
           .map((insumo, i) => ({ insumo, i }))
-          .filter(({ insumo }) => insumo.producto.trim() || insumo.marca.trim() || insumo.tono.trim() || insumo.cantidad.trim())
-          .map(({ insumo, i }) => {
-            if (!insumo.producto.trim()) errors[`f${f}.i${i}.producto`] = 'Indicá el producto';
+          .filter(({ insumo }) => insumo.articuloId !== null || insumo.comoTexto || insumo.busqueda.trim() || insumo.cantidad.trim())
+          .map(({ insumo, i }): InsumoData => {
             const cantidad = insumo.cantidad.trim().replace(',', '.');
-            if (cantidad && (!CANTIDAD_REGEX.test(insumo.cantidad.trim()) || Number(cantidad) <= 0)) {
+            if (!insumo.comoTexto && insumo.articuloId === null) errors[`f${f}.i${i}.producto`] = 'Elegí un artículo de la lista';
+            else if (!insumo.comoTexto && !cantidad) errors[`f${f}.i${i}.cantidad`] = 'Indicá cuánto usaste';
+            else if (cantidad && (!CANTIDAD_REGEX.test(insumo.cantidad.trim()) || Number(cantidad) <= 0)) {
               errors[`f${f}.i${i}.cantidad`] = 'La cantidad tiene que ser mayor a 0, con hasta 2 decimales';
             }
+            if (insumo.articuloId !== null) return { articuloId: insumo.articuloId, cantidad: Number(cantidad) };
             return {
-              producto: insumo.producto.trim(),
-              marca: insumo.marca.trim() || null,
-              tono: insumo.tono.trim() || null,
+              producto: insumo.producto,
+              marca: insumo.marca || null,
+              tono: insumo.tono || null,
               cantidad: cantidad ? Number(cantidad) : null,
               unidad: cantidad ? insumo.unidad || null : null,
             };
@@ -215,43 +306,68 @@ export const FichaForm = ({ ficha, onSubmit, onCancel, onDelete, isLoading = fal
 
   return (
     <Form onSubmit={handleSubmit} noValidate className="gap-8!">
+      {ficha?.cerradaEn && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 font-inter text-xs text-amber-800">
+          Esta ficha ya está cerrada. Si cambiás los productos o las cantidades, el stock se corrige solo con la diferencia y el costo se recalcula con el precio de hoy. La clienta ve los cambios en sus indicaciones y fotos.
+        </p>
+      )}
       <section className="flex flex-col gap-5">
-        <h3 className="font-inter text-sm font-semibold text-black">Diagnóstico</h3>
+        <h3 className={sectionTitleClass}>Diagnóstico</h3>
         <div className="grid gap-5 sm:grid-cols-2">
           <Opciones label="Porosidad" opciones={NIVELES} value={porosidad} onChange={setPorosidad} />
           <Opciones label="Elasticidad" opciones={NIVELES} value={elasticidad} onChange={setElasticidad} />
           <Opciones label="Tipo de pelo" opciones={TIPOS_DE_PELO} value={tipoDePelo} onChange={setTipoDePelo} />
           <Opciones label="Volumen" opciones={VOLUMENES_DE_PELO} value={volumenDePelo} onChange={setVolumenDePelo} />
         </div>
-        <div className="sm:w-1/2">
-          <FormField
-            label="% de canas"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={100}
-            value={porcentajeCanas}
-            onChange={(event) => setPorcentajeCanas(event.target.value)}
-            placeholder="Ej.: 30"
-            error={fieldErrors.canas}
-          />
+        <div className="flex flex-col gap-1">
+          <label className={`${labelClass} flex items-center gap-3`}>
+            % de canas
+            <input
+              inputMode="numeric"
+              value={porcentajeCanas}
+              // Solo dígitos, y no deja pasar de 100
+              onChange={(event) => {
+                const digitos = event.target.value.replace(/\D/g, '');
+                setPorcentajeCanas(Number(digitos) > 100 ? '100' : digitos);
+              }}
+              placeholder="0 a 100"
+              aria-invalid={fieldErrors.canas ? true : undefined}
+              className={`${smallInputClass} w-20! py-1! text-center font-normal normal-case tracking-normal ${fieldErrors.canas ? 'border-red-500' : 'border-gray-300'}`}
+            />
+          </label>
+          <FieldError message={fieldErrors.canas} />
         </div>
-        <TextArea
-          label="Tratamientos previos"
-          value={tratamientosPrevios}
-          onChange={setTratamientosPrevios}
-          hint="Ej.: decoloración hace 6 meses, alisado, henna."
-        />
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-4">
+            <h3 className={sectionTitleClass}>Tratamientos previos</h3>
+            <button
+              type="button"
+              onClick={() => setTratamientos((prev) => [...prev, newTratamiento()])}
+              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
+            >
+              + Agregar tratamiento
+            </button>
+          </div>
+          {tratamientos.length === 0 && <p className="font-inter text-sm text-capilar-grey">Sin tratamientos cargados.</p>}
+          <TratamientosField filas={tratamientos} onChange={setTratamientos} errores={erroresTratamientos} inputClass={smallInputClass} />
+          <TextArea
+            label="Otros datos (opcional)"
+            value={notasTratamientos}
+            onChange={setNotasTratamientos}
+            hint="Lo que no entre en las filas, o lo que ya estaba escrito en la ficha."
+          />
+          <FieldError message={fieldErrors.tratamientos} />
+        </div>
       </section>
 
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
-          <h3 className="font-inter text-sm font-semibold text-black">Fórmulas</h3>
+          <h3 className={sectionTitleClass}>Fórmulas</h3>
           {formulas.length < FORMULAS_MAX && (
             <button
               type="button"
               onClick={() => setFormulas((prev) => [...prev, newFormula()])}
-              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
             >
               + Agregar fórmula
             </button>
@@ -276,35 +392,39 @@ export const FichaForm = ({ ficha, onSubmit, onCancel, onDelete, isLoading = fal
                 Quitar
               </button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
-              <div className="flex flex-col gap-1">
+            <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
+              <div className="flex flex-col gap-2">
                 <label className={labelClass}>
-                  Zona o descripción
+                  Zona
+                  <select
+                    value={formula.zonaOtra ? ZONA_OTRA : formula.descripcion}
+                    onChange={(event) =>
+                      updateFormula(
+                        formula.key,
+                        event.target.value === ZONA_OTRA ? { zonaOtra: true, descripcion: '' } : { zonaOtra: false, descripcion: event.target.value },
+                      )
+                    }
+                    className={`${smallInputClass} mt-1 border-gray-300 bg-white normal-case tracking-normal font-normal`}
+                  >
+                    <option value="">Sin indicar</option>
+                    {ZONAS_FORMULA.map((zona) => (
+                      <option key={zona} value={zona}>
+                        {zona}
+                      </option>
+                    ))}
+                    <option value={ZONA_OTRA}>Otra</option>
+                  </select>
+                </label>
+                {formula.zonaOtra && (
                   <input
                     value={formula.descripcion}
                     onChange={(event) => updateFormula(formula.key, { descripcion: event.target.value })}
                     maxLength={FORMULA_DESCRIPCION_MAX}
-                    placeholder="Ej.: Raíz"
-                    className={`${smallInputClass} mt-1 border-gray-300 normal-case tracking-normal font-normal`}
+                    placeholder="¿Qué zona?"
+                    aria-label={`Otra zona de la fórmula ${f + 1}`}
+                    className={`${smallInputClass} border-gray-300`}
                   />
-                </label>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className={labelClass}>
-                  Oxidante (vol)
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={OXIDANTE_MAX}
-                    value={formula.oxidanteVolumen}
-                    onChange={(event) => updateFormula(formula.key, { oxidanteVolumen: event.target.value })}
-                    placeholder="20"
-                    aria-invalid={fieldErrors[`f${f}.oxidante`] ? true : undefined}
-                    className={`${smallInputClass} mt-1 normal-case tracking-normal font-normal ${fieldErrors[`f${f}.oxidante`] ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                </label>
-                <FieldError message={fieldErrors[`f${f}.oxidante`]} />
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label className={labelClass}>
@@ -325,60 +445,69 @@ export const FichaForm = ({ ficha, onSubmit, onCancel, onDelete, isLoading = fal
               </div>
             </div>
 
+            {formula.oxidanteVolumen && <p className="font-inter text-sm text-capilar-grey">Oxidante {formula.oxidanteVolumen} vol</p>}
+
             <div className="flex flex-col gap-2">
               <span className={labelClass}>Productos</span>
+              {articulosError && <p className="rounded-md bg-amber-50 px-3 py-2 font-inter text-xs text-amber-800">No se pudo cargar el stock: {articulosError}</p>}
               {formula.insumos.map((insumo, i) => {
                 const errorProducto = fieldErrors[`f${f}.i${i}.producto`];
                 const errorCantidad = fieldErrors[`f${f}.i${i}.cantidad`];
+                const elegido = insumo.articuloId !== null || insumo.comoTexto;
+                const articulo = articulos.find((a) => a.id === insumo.articuloId);
+                const cantidadUsada = Number(insumo.cantidad.replace(',', '.')) || 0;
+                const costoDeLaFila =
+                  usarCostoGuardado && insumo.costoSubtotal !== null
+                    ? Number(insumo.costoSubtotal)
+                    : articulo && cantidadUsada > 0
+                      ? costoDeInsumo(articulo, cantidadUsada)
+                      : null;
                 return (
                   <div key={insumo.key} className="flex flex-col gap-1">
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-[2fr_1.5fr_1fr_1fr_auto_auto]">
-                      <input
-                        value={insumo.producto}
-                        onChange={(event) => updateInsumo(formula, insumo.key, { producto: event.target.value })}
-                        maxLength={100}
-                        placeholder="Producto (ej.: Tintura)"
-                        aria-label={`Producto ${i + 1} de la fórmula ${f + 1}`}
-                        aria-invalid={errorProducto ? true : undefined}
-                        className={`${smallInputClass} col-span-2 sm:col-span-1 ${errorProducto ? 'border-red-500' : 'border-gray-300'}`}
-                      />
-                      <input
-                        value={insumo.marca}
-                        onChange={(event) => updateInsumo(formula, insumo.key, { marca: event.target.value })}
-                        maxLength={100}
-                        placeholder="Marca"
-                        aria-label={`Marca del producto ${i + 1}`}
-                        className={`${smallInputClass} border-gray-300`}
-                      />
-                      <input
-                        value={insumo.tono}
-                        onChange={(event) => updateInsumo(formula, insumo.key, { tono: event.target.value })}
-                        maxLength={50}
-                        placeholder="Tono"
-                        aria-label={`Tono del producto ${i + 1}`}
-                        className={`${smallInputClass} border-gray-300`}
-                      />
+                    <div className="grid grid-cols-[1fr_5rem_auto] items-center gap-2 sm:grid-cols-[1fr_6rem_2.5rem_auto]">
+                      <div className="col-span-3 sm:col-span-1">
+                        {elegido ? (
+                          <div className="flex flex-col rounded-lg border border-gray-200 bg-white px-3 py-1.5 font-inter text-sm">
+                            <span className="font-semibold text-black">
+                              {insumo.producto}
+                              {insumo.tono && ` · ${insumo.tono}`}
+                            </span>
+                            <span className="text-xs text-capilar-grey">
+                              {insumo.comoTexto
+                                ? [insumo.marca, 'Cargado como texto: no descuenta stock'].filter(Boolean).join(' · ')
+                                : [
+                                    insumo.marca,
+                                    articulo && `Hay ${formatEnvases(articulo.stock)}`,
+                                    articulo && `1 envase = ${Number(articulo.pesoInicial)} ${UNIDADES[articulo.tipoPeso]}`,
+                                    costoDeLaFila !== null && formatPrice(costoDeLaFila),
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                            </span>
+                          </div>
+                        ) : (
+                          <ArticuloPicker
+                            value={insumo.busqueda}
+                            onChange={(busqueda) => updateInsumo(formula, insumo.key, { busqueda })}
+                            articulos={articulos}
+                            onSelect={(elegidoDelStock) => elegirArticulo(formula, insumo.key, elegidoDelStock)}
+                            onCrear={onCrearArticulo && ((nombre) => onCrearArticulo(nombre, (nuevo) => elegirArticulo(formula, insumo.key, nuevo)))}
+                            aria-label={`Producto ${i + 1} de la fórmula ${f + 1}`}
+                            invalid={Boolean(errorProducto)}
+                            className={`${smallInputClass} ${errorProducto ? 'border-red-500' : 'border-gray-300'}`}
+                          />
+                        )}
+                      </div>
                       <input
                         inputMode="decimal"
                         value={insumo.cantidad}
-                        onChange={(event) => updateInsumo(formula, insumo.key, { cantidad: event.target.value })}
+                        onChange={(event) => updateInsumo(formula, insumo.key, { cantidad: limitarDecimal(event.target.value, 2) })}
                         placeholder="Cant."
                         aria-label={`Cantidad del producto ${i + 1}`}
                         aria-invalid={errorCantidad ? true : undefined}
                         className={`${smallInputClass} ${errorCantidad ? 'border-red-500' : 'border-gray-300'}`}
                       />
-                      <select
-                        value={insumo.unidad}
-                        onChange={(event) => updateInsumo(formula, insumo.key, { unidad: event.target.value as UnidadInsumo | '' })}
-                        aria-label={`Unidad del producto ${i + 1}`}
-                        className={`${smallInputClass} border-gray-300 bg-white`}
-                      >
-                        {(Object.keys(UNIDADES) as UnidadInsumo[]).map((unidad) => (
-                          <option key={unidad} value={unidad}>
-                            {UNIDADES[unidad]}
-                          </option>
-                        ))}
-                      </select>
+                      <span className="font-inter text-sm text-capilar-grey">{insumo.unidad ? UNIDADES[insumo.unidad as UnidadInsumo] : ''}</span>
                       <button
                         type="button"
                         onClick={() => updateFormula(formula.key, { insumos: formula.insumos.filter((x) => x.key !== insumo.key) })}
@@ -396,7 +525,7 @@ export const FichaForm = ({ ficha, onSubmit, onCancel, onDelete, isLoading = fal
                 <button
                   type="button"
                   onClick={() => updateFormula(formula.key, { insumos: [...formula.insumos, newInsumo()] })}
-                  className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+                  className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
                 >
                   + Agregar producto
                 </button>
@@ -404,6 +533,7 @@ export const FichaForm = ({ ficha, onSubmit, onCancel, onDelete, isLoading = fal
             </div>
           </fieldset>
         ))}
+        <TotalProductos {...totalProductos} />
       </section>
 
       <section className="flex flex-col gap-5">

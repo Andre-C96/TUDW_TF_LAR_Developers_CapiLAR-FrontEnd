@@ -8,6 +8,8 @@
   --color-capilar-peach: #F98D56;
   --color-capilar-grey: #737373;
   --color-capilar-plum: #8A2B5E;
+  /* Violeta más oscuro para los textos clickeables: el violeta de marca no llega al contraste 4.5:1 sobre blanco (WAVE) */
+  --color-capilar-violet-text: #8F3CD2;
 
   /* Gradient */
   --background-image-capilar-gradient: linear-gradient(to right, var(--color-capilar-violet), var(--color-capilar-peach));

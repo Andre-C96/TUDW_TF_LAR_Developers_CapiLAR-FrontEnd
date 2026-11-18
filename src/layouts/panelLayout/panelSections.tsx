@@ -5,6 +5,8 @@ import type { Rol } from '../../api/auth';
 export interface PanelSubsection {
   label: string;
   param: [key: string, value: string | null];
+  // Si solo es para algunos roles de la sección
+  roles?: Rol[];
 }
 
 export interface PanelSection {
@@ -55,18 +57,6 @@ export const panelSections: PanelSection[] = [
     ),
   },
   {
-    title: 'Perfil',
-    text: 'Tus datos personales y de contacto.',
-    to: '/panel/perfil',
-    roles: ['PROFESIONAL'],
-    icon: (
-      <>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
-      </>
-    ),
-  },
-  {
     title: 'Usuarios',
     text: 'Buscá usuarios y administrá sus roles.',
     to: '/panel/usuarios',
@@ -99,6 +89,101 @@ export const panelSections: PanelSection[] = [
     ),
     // Abre el formulario de alta (?nuevo=1)
     subsections: [{ label: 'Cargar servicio', param: ['nuevo', '1'] }],
+  },
+  {
+    title: 'Alergias',
+    text: 'La lista de alergias que eligen las clientas.',
+    to: '/panel/alergias',
+    roles: ['ADMIN'],
+    icon: (
+      <>
+        <path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6l-8-3Z" />
+        <path d="M12 8v5M12 16.5v.01" />
+      </>
+    ),
+    // Abre el formulario de alta (?nuevo=1)
+    subsections: [{ label: 'Cargar alergia', param: ['nuevo', '1'] }],
+  },
+  {
+    title: 'Stock',
+    text: 'Artículos, movimientos y envases abiertos.',
+    to: '/panel/stock',
+    roles: ['PROFESIONAL', 'ADMIN'],
+    icon: (
+      <>
+        <path d="M21 8 12 3 3 8v8l9 5 9-5V8Z" />
+        <path d="m3 8 9 5 9-5M12 13v8" />
+      </>
+    ),
+    // El filtro de poco stock (?bajo=1; sin él, todos) y el formulario de alta (?nuevo=1)
+    subsections: [
+      { label: 'Artículos', param: ['bajo', null] },
+      { label: 'Poco stock', param: ['bajo', '1'] },
+      { label: 'Cargar artículo', param: ['nuevo', '1'] },
+    ],
+  },
+  {
+    title: 'Marcas',
+    text: 'Las marcas y líneas de los artículos.',
+    to: '/panel/marcas',
+    roles: ['ADMIN'],
+    icon: (
+      <>
+        <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" />
+        <circle cx="8" cy="8" r="1.5" />
+      </>
+    ),
+  },
+  {
+    title: 'Proveedores',
+    text: 'A quién le compra el salón y en qué condiciones.',
+    to: '/panel/proveedores',
+    roles: ['ADMIN'],
+    icon: (
+      <>
+        <path d="M2 7h12v10H2zM14 11h4l4 3v3h-8z" />
+        <circle cx="7" cy="18.5" r="1.8" />
+        <circle cx="18" cy="18.5" r="1.8" />
+      </>
+    ),
+    // Abre el formulario de alta (?nuevo=1)
+    subsections: [{ label: 'Cargar proveedor', param: ['nuevo', '1'] }],
+  },
+  {
+    title: 'Compras',
+    text: 'Lo que se le compró a cada proveedor.',
+    to: '/panel/compras',
+    roles: ['ADMIN'],
+    icon: (
+      <>
+        <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+        <path d="M9 8h6M9 12h6" />
+      </>
+    ),
+  },
+  {
+    title: 'Rentabilidad',
+    text: 'Lo que dejó cada período después de los productos.',
+    to: '/panel/rentabilidad',
+    roles: ['ADMIN'],
+    icon: <path d="M3 21h18M6 21v-7M12 21V5M18 21v-11" />,
+    // Las pestañas de la sección (?tab=; sin él, Resumen)
+    subsections: [
+      { label: 'Resumen', param: ['tab', null] },
+      { label: 'Gráficos', param: ['tab', 'graficos'] },
+    ],
+  },
+  {
+    title: 'Perfil',
+    text: 'Tus datos personales y de contacto.',
+    to: '/panel/perfil',
+    roles: ['PROFESIONAL'],
+    icon: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+      </>
+    ),
   },
 ];
 

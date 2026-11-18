@@ -5,13 +5,15 @@ interface GradientIconProps {
   id: string;
   // Trazos del ícono en una grilla de 24×24 (rect, path, circle...)
   children: ReactNode;
+  // Tamaño (por defecto, h-8 w-8)
+  className?: string;
 }
 
 // Ícono de línea con el degradado de marca
-export const GradientIcon = ({ id, children }: GradientIconProps) => (
+export const GradientIcon = ({ id, children, className = 'h-8 w-8' }: GradientIconProps) => (
   <svg
     viewBox="0 0 24 24"
-    className="h-8 w-8"
+    className={className}
     fill="none"
     stroke={`url(#${id})`}
     strokeWidth={1.75}
