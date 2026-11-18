@@ -254,7 +254,7 @@ export const Stock = () => {
             <button
               type="button"
               onClick={limpiarFiltros}
-              className="ml-auto flex items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet transition-transform hover:scale-105"
+              className="ml-auto flex items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet-text transition-transform hover:scale-105"
             >
               <span aria-hidden="true">✕</span> Limpiar filtros
             </button>

@@ -54,7 +54,7 @@ const POR_PAGINA = 50;
 
 const labelClass = 'font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey';
 const cardClass = 'flex flex-col gap-4 rounded-[6px] border border-gray-200 bg-white p-6 shadow-md';
-const linkButtonClass = 'font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline disabled:opacity-50';
+const linkButtonClass = 'font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline disabled:opacity-50';
 
 const Dato = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="flex flex-col gap-1">

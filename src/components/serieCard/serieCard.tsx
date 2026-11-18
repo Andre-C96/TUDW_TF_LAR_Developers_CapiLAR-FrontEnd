@@ -60,7 +60,7 @@ export const SerieCard = ({ serie, paraCliente = false, actions, fechaAction }: 
         onClick={() => setAbierta(!abierta)}
         aria-expanded={abierta}
         aria-controls={fechasId}
-        className="flex items-center gap-2 self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+        className="flex items-center gap-2 self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
       >
         {abierta ? 'Ocultar fechas' : `Ver fechas (${serie.fechas.length})`}
         <svg

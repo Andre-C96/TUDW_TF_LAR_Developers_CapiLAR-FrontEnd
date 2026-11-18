@@ -270,7 +270,7 @@ export const Rentabilidad = () => {
           <button
             type="button"
             onClick={limpiarFiltros}
-            className="group ml-auto flex shrink-0 items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet transition-transform hover:scale-105"
+            className="group ml-auto flex shrink-0 items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet-text transition-transform hover:scale-105"
           >
             {/* Cruz fina que se pone en negrita al pasar el mouse, como en la agenda */}
             <svg

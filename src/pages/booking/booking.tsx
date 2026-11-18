@@ -251,7 +251,7 @@ export const Booking = () => {
             <Alert variant="error" title="No se pudo reservar el turno">
               {saveError}
               {needsVerification && (
-                <Link to="/mi-perfil" className="mt-2 block font-semibold text-capilar-violet hover:underline">
+                <Link to="/mi-perfil" className="mt-2 block font-semibold text-capilar-violet-text hover:underline">
                   Ir a mi perfil para pedir otro enlace
                 </Link>
               )}

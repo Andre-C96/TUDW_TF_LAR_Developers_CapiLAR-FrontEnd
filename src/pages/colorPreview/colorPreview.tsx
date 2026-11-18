@@ -279,7 +279,7 @@ export const ColorPreview = () => {
               download={`capilar-${resultado.color.nombre.toLowerCase().replace(/\s+/g, '-')}.jpg`}
               target="_blank"
               rel="noreferrer"
-              className="font-inter text-sm font-semibold text-capilar-violet hover:underline"
+              className="font-inter text-sm font-semibold text-capilar-violet-text hover:underline"
             >
               Descargar
             </a>

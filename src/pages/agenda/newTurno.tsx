@@ -171,7 +171,7 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
           ) : services.data.length === 0 ? (
             <p className="font-inter text-sm text-capilar-grey">
               Todavía no elegiste servicios. Sumalos desde{' '}
-              <Link to="/panel/perfil" className="font-semibold text-capilar-violet hover:underline">
+              <Link to="/panel/perfil" className="font-semibold text-capilar-violet-text hover:underline">
                 Mi perfil
               </Link>
               .

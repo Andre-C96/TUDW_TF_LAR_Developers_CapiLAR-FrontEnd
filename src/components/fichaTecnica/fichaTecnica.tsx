@@ -322,7 +322,7 @@ export const FichaTecnica = ({ token, ficha, defaultAbierta = false, onEditar, c
               <button
                 type="button"
                 onClick={onEditar}
-                className="pb-3 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+                className="pb-3 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
               >
                 Editar
               </button>

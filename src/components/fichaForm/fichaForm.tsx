@@ -343,7 +343,7 @@ export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, o
             <button
               type="button"
               onClick={() => setTratamientos((prev) => [...prev, newTratamiento()])}
-              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
             >
               + Agregar tratamiento
             </button>
@@ -367,7 +367,7 @@ export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, o
             <button
               type="button"
               onClick={() => setFormulas((prev) => [...prev, newFormula()])}
-              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
             >
               + Agregar fórmula
             </button>
@@ -525,7 +525,7 @@ export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, o
                 <button
                   type="button"
                   onClick={() => updateFormula(formula.key, { insumos: [...formula.insumos, newInsumo()] })}
-                  className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+                  className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
                 >
                   + Agregar producto
                 </button>

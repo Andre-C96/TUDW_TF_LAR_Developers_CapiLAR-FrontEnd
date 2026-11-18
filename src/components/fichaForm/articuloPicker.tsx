@@ -128,7 +128,7 @@ export const ArticuloPicker = ({ value, onChange, articulos, onSelect, onCrear, 
                 crear();
               }}
               onMouseEnter={() => setActivo(resultados.length)}
-              className={`cursor-pointer border-t border-gray-100 px-3 py-2 font-inter text-sm font-semibold text-capilar-violet ${activo === resultados.length ? 'bg-purple-50' : ''}`}
+              className={`cursor-pointer border-t border-gray-100 px-3 py-2 font-inter text-sm font-semibold text-capilar-violet-text ${activo === resultados.length ? 'bg-purple-50' : ''}`}
             >
               + Crear artículo "{value.trim()}"
             </li>

@@ -20,7 +20,7 @@ const MenuIcon = ({ children }: { children: ReactNode }) => (
 
 const itemClass = (activo: boolean) =>
   `flex items-center gap-3 rounded-[6px] px-3 py-2 font-inter text-sm font-semibold transition-colors ${
-    activo ? 'bg-purple-50 text-capilar-violet' : 'text-capilar-grey hover:bg-gray-50 hover:text-capilar-violet'
+    activo ? 'bg-purple-50 text-capilar-violet-text' : 'text-capilar-grey hover:bg-gray-50 hover:text-capilar-violet'
   }`;
 
 // Menú lateral fijo del panel según el rol: el inicio, cada sección y, debajo, sus subopciones (pestañas o filtros).
@@ -74,7 +74,7 @@ export const SideMenu = () => {
                           aria-current={elegida ? 'page' : undefined}
                           className={`-ml-px block border-l-2 py-1.5 pr-2 pl-4 font-inter text-sm transition-colors ${
                             elegida
-                              ? 'border-capilar-violet font-semibold text-capilar-violet'
+                              ? 'border-capilar-violet font-semibold text-capilar-violet-text'
                               : 'border-transparent text-capilar-grey hover:text-capilar-violet'
                           }`}
                         >

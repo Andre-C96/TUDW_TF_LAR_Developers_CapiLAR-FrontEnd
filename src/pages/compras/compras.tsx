@@ -108,7 +108,7 @@ export const Compras = () => {
             <button
               type="button"
               onClick={limpiarFiltros}
-              className="group ml-auto flex shrink-0 items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet transition-transform hover:scale-105"
+              className="group ml-auto flex shrink-0 items-center gap-1.5 font-inter text-sm font-semibold text-capilar-violet-text transition-transform hover:scale-105"
             >
               <svg
                 viewBox="0 0 24 24"

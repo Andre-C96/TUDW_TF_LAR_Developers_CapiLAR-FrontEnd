@@ -88,7 +88,7 @@ export const NuevoArticuloModal = ({ token, nombreInicial, articulos, paraCompra
         error={error || marcas.error}
         errorAction={
           existente && (
-            <button type="button" onClick={usarExistente} className="self-center font-inter text-sm font-semibold text-capilar-violet hover:underline">
+            <button type="button" onClick={usarExistente} className="self-center font-inter text-sm font-semibold text-capilar-violet-text hover:underline">
               Usar el que ya existe: {existente.nombre}
               {existente.tonalidad && ` · ${existente.tonalidad}`} ({formatMarca(existente.marca)})
             </button>

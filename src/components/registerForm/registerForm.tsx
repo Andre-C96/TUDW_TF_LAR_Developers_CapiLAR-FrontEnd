@@ -96,7 +96,7 @@ const validate = (values: FormValues): FieldErrors => {
 };
 
 // Botón con aspecto de link (no navega: ejecuta el callback)
-const linkClasses = 'font-semibold text-capilar-violet hover:underline';
+const linkClasses = 'font-semibold text-capilar-violet-text hover:underline';
 
 // Contenido del registro de cuenta 
 export const RegisterForm = ({ alergias, onSubmit, isLoading = false, error, onLoginClick }: RegisterFormProps) => {

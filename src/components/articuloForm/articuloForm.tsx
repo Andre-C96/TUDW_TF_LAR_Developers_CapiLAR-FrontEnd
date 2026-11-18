@@ -150,7 +150,7 @@ const MarcaField = ({
         <button
           type="button"
           onClick={() => setCreando(true)}
-          className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline"
+          className="self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline"
         >
           + Nueva marca
         </button>
@@ -177,7 +177,7 @@ const MarcaField = ({
               type="button"
               onClick={guardar}
               disabled={guardando}
-              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet hover:underline disabled:opacity-50"
+              className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-violet-text hover:underline disabled:opacity-50"
             >
               {guardando ? 'Guardando...' : 'Guardar marca'}
             </button>
