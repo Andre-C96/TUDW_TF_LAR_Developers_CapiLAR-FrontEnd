@@ -273,6 +273,8 @@ export const AdminServices = () => {
         ariaLabel={isForm ? (pending.type === 'crear' ? 'Nuevo servicio' : 'Editar servicio') : texts?.title}
         // El formulario es largo: más ancho para que quede más bajo
         className={isForm ? 'max-w-xl!' : ''}
+        // Las confirmaciones se cierran al tocar afuera; el formulario no
+        closeOnBackdrop={!isForm}
       >
         {isForm && (
           <ServiceForm

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -9,9 +9,15 @@ interface ModalProps {
   // Texto para lectores de pantalla (ej. "Iniciar sesión")
   ariaLabel?: string;
   className?: string;
+  // Cerrar al tocar el fondo: solo para modales sin nada que perder (confirmaciones, una foto).
+  // Con formularios queda apagado: un toque sin querer borraba todo lo escrito
+  closeOnBackdrop?: boolean;
 }
 
-export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '' }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '', closeOnBackdrop = false }: ModalProps) => {
+  // Dónde empezó el toque: si arrancó dentro de la caja (ej. seleccionando texto) y se soltó afuera, no se cierra
+  const pressedBackdrop = useRef(false);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -37,7 +43,13 @@ export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '' }: 
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
+      onMouseDown={(event) => {
+        pressedBackdrop.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => {
+        if (closeOnBackdrop && pressedBackdrop.current && event.target === event.currentTarget) onClose();
+        pressedBackdrop.current = false;
+      }}
     >
       <div
         role="dialog"
@@ -46,7 +58,7 @@ export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '' }: 
         // Nunca más alto que la pantalla. La caja recorta (mantiene las esquinas redondeadas)
         // y el contenido scrollea adentro, con la cruz siempre visible
         className={`relative flex w-full max-w-md max-h-[calc(100dvh-2rem)] flex-col overflow-hidden bg-white rounded-[6px] shadow-xl ${className}`}
-        // Un click dentro de la caja no debe cerrar el modal
+        // Los clicks dentro de la caja no llegan al fondo ni a los componentes que contienen al modal
         onClick={(event) => event.stopPropagation()}
       >
         {/* Círculo blanco detrás de la cruz: el contenido scrollea por debajo y así no se mezcla con el texto */}
