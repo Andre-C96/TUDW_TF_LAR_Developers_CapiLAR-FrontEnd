@@ -56,6 +56,8 @@ interface ListItemProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   description?: ReactNode;
   // Elemento a la derecha (botones, estado, precio)
   trailing?: ReactNode;
+  // En el celular, trailing baja a una segunda fila (para controles anchos, ej. el rol en Usuarios)
+  stackOnMobile?: boolean;
 }
 
 // Fila estándar de la lista: [leading] título + descripción [trailing]
@@ -64,19 +66,28 @@ export const ListItem = ({
   title,
   description,
   trailing,
+  stackOnMobile = false,
   className = '',
   ...props
 }: ListItemProps) => {
   return (
-    <div className={`flex items-center gap-4 px-5 py-4 ${className}`} {...props}>
+    <div
+      className={`flex items-center px-5 py-4 ${stackOnMobile ? 'flex-wrap gap-x-4 gap-y-3 sm:flex-nowrap' : 'gap-4'} ${className}`}
+      {...props}
+    >
       {leading && <div className="shrink-0">{leading}</div>}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate font-inter font-semibold text-black">{title}</span>
         {description && (
-          <span className="font-inter text-sm text-capilar-grey">{description}</span>
+          // Un texto largo sin espacios (ej. un correo) se corta en vez de pisar lo de al lado
+          <span className="font-inter text-sm text-capilar-grey wrap-anywhere">{description}</span>
         )}
       </div>
-      {trailing && <div className="flex shrink-0 items-center gap-2">{trailing}</div>}
+      {trailing && (
+        <div className={`flex shrink-0 items-center gap-2 ${stackOnMobile ? 'w-full justify-end sm:w-auto' : ''}`}>
+          {trailing}
+        </div>
+      )}
     </div>
   );
 };

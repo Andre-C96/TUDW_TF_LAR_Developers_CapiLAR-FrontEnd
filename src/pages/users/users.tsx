@@ -283,6 +283,8 @@ export const Users = () => {
                 title={isMe ? `${fullName(user)} (vos)` : fullName(user)}
                 description={isInactive ? `${contact} · Dado de baja el ${formatDate(user.fechaBaja!)}` : contact}
                 className={isInactive ? 'bg-gray-50 opacity-60' : ''}
+                // En el celular el rol y eliminar no entran al lado del nombre: van debajo
+                stackOnMobile
                 trailing={
                   isInactive ? (
                     // Dado de baja: rol solo como texto y opción de volver a darlo de alta
