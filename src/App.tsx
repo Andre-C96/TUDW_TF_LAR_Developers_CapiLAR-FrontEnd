@@ -53,12 +53,12 @@ function App() {
           <Route path="/panel" element={<Panel />} />
           <Route path="/panel/stock" element={<Stock />} />
           <Route path="/panel/stock/:id" element={<ArticuloDetail />} />
+          <Route path="/panel/perfil" element={<Profile />} />
 
           <Route element={<ProtectedRoute roles={['PROFESIONAL']} />}>
             <Route path="/panel/agenda" element={<Agenda />} />
             <Route path="/panel/clientes" element={<Clients />} />
             <Route path="/panel/clientes/:id" element={<ClientProfile />} />
-            <Route path="/panel/perfil" element={<Profile />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>
