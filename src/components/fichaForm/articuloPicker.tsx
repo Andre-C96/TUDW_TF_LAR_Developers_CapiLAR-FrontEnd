@@ -89,11 +89,12 @@ export const ArticuloPicker = ({ value, onChange, articulos, onSelect, onCrear, 
         onKeyDown={onKeyDown}
         className={className}
       />
+      {/* En el celular, del ancho del buscador: con 320 px fijos se salía del modal */}
       {visible && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute top-full left-0 z-30 mt-1 max-h-72 w-80 max-w-[80vw] overflow-y-auto rounded-[6px] border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute top-full left-0 z-30 mt-1 max-h-72 w-full overflow-y-auto sm:w-80 sm:max-w-[80vw] rounded-[6px] border border-gray-200 bg-white py-1 shadow-lg"
         >
           {resultados.length === 0 && <li className="px-3 py-2 font-inter text-sm text-capilar-grey">No hay artículos en el stock con ese nombre.</li>}
           {resultados.map((articulo, index) => (

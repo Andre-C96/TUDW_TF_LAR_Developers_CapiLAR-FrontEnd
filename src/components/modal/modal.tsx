@@ -49,11 +49,12 @@ export const Modal = ({ isOpen, onClose, children, ariaLabel, className = '' }: 
         // Un click dentro de la caja no debe cerrar el modal
         onClick={(event) => event.stopPropagation()}
       >
+        {/* Círculo blanco detrás de la cruz: el contenido scrollea por debajo y así no se mezcla con el texto */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar"
-          className="absolute top-4 right-5 z-10 text-2xl leading-none text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-2.5 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-2xl leading-none text-gray-400 shadow-sm transition-colors hover:text-gray-600"
         >
           ✕
         </button>

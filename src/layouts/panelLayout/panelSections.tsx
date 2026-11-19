@@ -177,7 +177,7 @@ export const panelSections: PanelSection[] = [
     title: 'Perfil',
     text: 'Tus datos personales y de contacto.',
     to: '/panel/perfil',
-    roles: ['PROFESIONAL'],
+    roles: ['PROFESIONAL', 'ADMIN'],
     icon: (
       <>
         <circle cx="12" cy="8" r="4" />

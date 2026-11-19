@@ -89,13 +89,16 @@ const CameraIcon = () => (
   </svg>
 );
 
-// Perfil del usuario logueado (CLIENTE en /mi-perfil, PROFESIONAL en /panel/perfil): nombre, apellido y correo fijos;
+// Perfil del usuario logueado (CLIENTE en /mi-perfil, PROFESIONAL y ADMIN en /panel/perfil): nombre, apellido y correo fijos;
 // teléfono y fecha de nacimiento (con la edad) editables; alergias editables solo para CLIENTE; legajo fijo y servicios editables solo para PROFESIONAL
 // (los elige del catálogo del salón).
 // Foto de perfil con la cámara sobre el círculo (sin foto, las iniciales). Cambio de contraseña y baja de la cuenta al final.
+// El ADMIN no tiene foto ni puede darse de baja (el back no lo deja): ve sus iniciales y no tiene la baja.
 export const Profile = () => {
   const { user, token, updateUser, changePassword, logout } = useAuth();
   const isCliente = user?.rol === 'CLIENTE';
+  const isAdmin = user?.rol === 'ADMIN';
+  const rolLabel = isCliente ? 'Cliente' : isAdmin ? 'Administrador' : 'Profesional';
 
   const initialTelefono = user?.telefono ?? '';
   const initialAlergia = user?.cliente?.alergia ?? '';
@@ -368,27 +371,31 @@ export const Profile = () => {
             foto={foto}
             className={`h-24 w-24 text-3xl transition-opacity ${isPhotoSaving ? 'opacity-60' : ''}`}
           />
-          <button
-            type="button"
-            onClick={() => photoInput.current?.click()}
-            disabled={isPhotoSaving}
-            aria-label={foto ? 'Cambiar foto' : 'Subir foto'}
-            title={foto ? 'Cambiar foto' : 'Subir foto'}
-            className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-capilar-grey shadow-md transition-colors hover:border-capilar-violet hover:text-capilar-violet disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <CameraIcon />
-          </button>
-          <input ref={photoInput} type="file" accept={FOTO_TIPOS.join(',')} onChange={changePhoto} className="hidden" />
+          {!isAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={() => photoInput.current?.click()}
+                disabled={isPhotoSaving}
+                aria-label={foto ? 'Cambiar foto' : 'Subir foto'}
+                title={foto ? 'Cambiar foto' : 'Subir foto'}
+                className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-capilar-grey shadow-md transition-colors hover:border-capilar-violet hover:text-capilar-violet disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <CameraIcon />
+              </button>
+              <input ref={photoInput} type="file" accept={FOTO_TIPOS.join(',')} onChange={changePhoto} className="hidden" />
+            </>
+          )}
         </div>
         <div className="flex flex-col gap-1">
           <p className="font-inter text-2xl font-semibold text-black">
             {user.nombre} {user.apellido}
           </p>
           <p className="font-inter text-sm text-capilar-grey">
-            {isCliente ? 'Cliente' : 'Profesional'} desde {formatMonthYear(user.fechaAlta)}
+            {rolLabel} desde {formatMonthYear(user.fechaAlta)}
             {user.fechaNacimiento && ` · ${formatEdad(user.fechaNacimiento)}`}
           </p>
-          {foto ? (
+          {isAdmin ? null : foto ? (
             <button
               type="button"
               onClick={removePhoto}
@@ -560,20 +567,22 @@ export const Profile = () => {
         </button>
       </div>
 
-      {/* Baja de la cuenta: al final y con confirmación */}
-      <div className={`${sectionClasses} md:flex-row md:items-center md:justify-between`}>
-        <div className="flex flex-col gap-1">
-          <p className="font-inter font-semibold text-black">Dar de baja mi cuenta</p>
-          <p className="font-inter text-sm text-capilar-grey">No vas a poder volver a iniciar sesión con esta cuenta.</p>
+      {/* Baja de la cuenta: al final y con confirmación (el ADMIN no puede darse de baja) */}
+      {!isAdmin && (
+        <div className={`${sectionClasses} md:flex-row md:items-center md:justify-between`}>
+          <div className="flex flex-col gap-1">
+            <p className="font-inter font-semibold text-black">Dar de baja mi cuenta</p>
+            <p className="font-inter text-sm text-capilar-grey">No vas a poder volver a iniciar sesión con esta cuenta.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDeleteOpen(true)}
+            className="shrink-0 rounded-lg border border-gray-300 bg-white px-4 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors hover:border-red-500 hover:text-red-500"
+          >
+            Dar de baja
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsDeleteOpen(true)}
-          className="shrink-0 rounded-lg border border-gray-300 bg-white px-4 py-2 font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey transition-colors hover:border-red-500 hover:text-red-500"
-        >
-          Dar de baja
-        </button>
-      </div>
+      )}
 
       <Modal isOpen={isServicesOpen} onClose={closeServices} ariaLabel="Mis servicios">
         {catalog && services ? (
