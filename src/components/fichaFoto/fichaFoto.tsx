@@ -91,7 +91,7 @@ export const FichaFotoVisor = ({ token, fichaId, fotos, index, onChange }: Ficha
   }, [index, fotos.length, onChange]);
 
   return (
-    <Modal isOpen={foto !== undefined} onClose={() => onChange(null)} ariaLabel="Foto de la ficha técnica" className="max-w-2xl">
+    <Modal isOpen={foto !== undefined} onClose={() => onChange(null)} ariaLabel="Foto de la ficha técnica" closeOnBackdrop className="max-w-2xl">
       {foto && index !== null && (
         <div className="flex flex-col gap-4">
           <p className="pr-8 font-inter text-sm">

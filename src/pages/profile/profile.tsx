@@ -619,7 +619,7 @@ export const Profile = () => {
         />
       </Modal>
 
-      <Modal isOpen={isDeleteOpen}onClose={closeDeleteModal} ariaLabel="Dar de baja mi cuenta">
+      <Modal isOpen={isDeleteOpen} onClose={closeDeleteModal} ariaLabel="Dar de baja mi cuenta" closeOnBackdrop>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2 text-center">
             <Title as="h2">Dar de baja mi cuenta</Title>

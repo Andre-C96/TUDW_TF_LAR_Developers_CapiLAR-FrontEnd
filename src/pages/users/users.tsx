@@ -345,7 +345,7 @@ export const Users = () => {
         />
       )}
 
-      <Modal isOpen={pending !== null} onClose={closeModal} ariaLabel={texts?.title}>
+      <Modal isOpen={pending !== null} onClose={closeModal} ariaLabel={texts?.title} closeOnBackdrop>
         {texts && (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2 text-center">
