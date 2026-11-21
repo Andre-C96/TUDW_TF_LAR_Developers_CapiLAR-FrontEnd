@@ -29,7 +29,7 @@ import { Title } from '../../components/title/title';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { avisarSinStock } from './fichaAvisos';
 import { FichaEditModal } from './fichaEditModal';
-import { FichaTabs } from './fichaTabs';
+import { Tabs } from '../../components/tabs/tabs';
 import { NuevoArticuloModal } from './nuevoArticuloModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
@@ -174,7 +174,8 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
             )}
           </div>
 
-          <FichaTabs
+          <Tabs
+            ariaLabel="Secciones de la ficha"
             tabs={pestanias}
             value={pestania}
             onChange={(value) => {

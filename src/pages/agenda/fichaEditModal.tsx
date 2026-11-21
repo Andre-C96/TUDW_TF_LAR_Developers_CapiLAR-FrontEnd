@@ -14,7 +14,7 @@ import { Modal } from '../../components/modal/modal';
 import { Title } from '../../components/title/title';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { avisarSinStock } from './fichaAvisos';
-import { FichaTabs } from './fichaTabs';
+import { Tabs } from '../../components/tabs/tabs';
 import { NuevoArticuloModal } from './nuevoArticuloModal';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
@@ -95,7 +95,8 @@ export const FichaEditModal = ({ token, ficha: inicial, onClose, onSaved }: Fich
           </p>
         </div>
 
-        <FichaTabs
+        <Tabs
+          ariaLabel="Secciones de la ficha"
           tabs={[
             ['ficha', 'Ficha'],
             ['fotos', `Fotos (${ficha.fotos.length})`],
