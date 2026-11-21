@@ -108,7 +108,7 @@ export const ClientProfile = () => {
   const c = cliente.data;
 
   return (
-    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-24 pb-16">
       <Breadcrumbs
         items={[{ label: 'Panel', to: '/panel' }, { label: 'Clientes', to: '/panel/clientes' }, { label: c ? `${c.nombre} ${c.apellido}` : 'Cliente' }]}
       />

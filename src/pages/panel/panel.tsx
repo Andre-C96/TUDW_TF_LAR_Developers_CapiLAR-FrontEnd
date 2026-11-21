@@ -11,7 +11,7 @@ export const Panel = () => {
   const visible = panelSections.filter((section) => hasRole(...section.roles));
 
   return (
-    <section className="mx-auto flex max-w-5xl flex-col items-center gap-10 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-5xl flex-col items-center gap-10 px-6 pt-24 pb-16">
       <div className="flex flex-col items-center gap-2 text-center">
         <Title>Tu espacio de trabajo</Title>
         <p className="font-inter text-capilar-grey">Elegí a dónde querés ir.</p>
