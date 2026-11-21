@@ -125,6 +125,13 @@ html[data-rol] ::selection {
   color: var(--color-gray-300);
 }
 
+/* Días que el profesional trabaja pero ya no tienen lugar (prop fullDates): grises y tachados, para distinguirlos de los
+   que no atiende (grises sin tachar) */
+.rdp-root .rdp-full:not(.rdp-selected) .rdp-day_button {
+  color: var(--color-gray-400);
+  text-decoration: line-through;
+}
+
 /* Calendario más bajo (className="rdp-compact"), ej. en Mis horarios para que quede a la altura de la semana */
 .rdp-root.rdp-compact {
   --rdp-day-height: 34px;
