@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import type { AlergiaDeCliente } from '../../api/alergias';
 import { validatePassword } from '../../api/auth';
 import {
@@ -12,6 +13,7 @@ import {
   validateFechaNacimiento,
   validateTelefono,
 } from '../../api/users';
+import { Alert } from '../alert/alert';
 import { AlergiasField } from '../alergiasField/alergiasField';
 import { Button } from '../button/button';
 import { Form, FormField } from '../form/form';
@@ -41,6 +43,10 @@ interface RegisterFormProps {
   error?: string;
   // Link para volver al login
   onLoginClick?: () => void;
+  // Cuando el backend creó la cuenta: muestra el aviso de verificación en vez del formulario
+  registeredUser?: { nombre: string; email: string };
+  // "Entendido" y el link a Mi perfil (cierran el modal)
+  onDone?: () => void;
 }
 
 interface FormValues {
@@ -99,10 +105,52 @@ const validate = (values: FormValues): FieldErrors => {
 const linkClasses = 'font-semibold text-capilar-violet-text hover:underline';
 
 // Contenido del registro de cuenta 
-export const RegisterForm = ({ alergias, onSubmit, isLoading = false, error, onLoginClick }: RegisterFormProps) => {
+export const RegisterForm = ({
+  alergias,
+  onSubmit,
+  isLoading = false,
+  error,
+  onLoginClick,
+  registeredUser,
+  onDone,
+}: RegisterFormProps) => {
   const [values, setValues] = useState<FormValues>(initialValues);
   const [alergiaIds, setAlergiaIds] = useState<number[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  // Encuesta TP4: sin este aviso, varios no se enteraban de que tenían que verificar el correo hasta querer reservar
+  if (registeredUser) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1 text-center">
+          <Title as="h2" className="text-xl! md:text-2xl!">¡Cuenta creada!</Title>
+          <p className="font-inter text-sm text-capilar-grey">Te damos la bienvenida a CapiLAR, {registeredUser.nombre}</p>
+        </div>
+
+        <Alert variant="advertencia" title="Verificá tu correo para reservar turnos">
+          <p>
+            Te mandamos un enlace a <span className="font-semibold break-all">{registeredUser.email}</span>. Abrilo para
+            poder reservar y confirmar tus turnos.
+          </p>
+          <p className="mt-2">
+            ¿No lo encontrás? Revisá la carpeta de spam o correo no deseado. Si no llegó, desde{' '}
+            <Link to="/mi-perfil" onClick={onDone} className="font-semibold underline hover:no-underline">
+              Mi perfil
+            </Link>{' '}
+            podés pedir otro enlace.
+          </p>
+        </Alert>
+
+        <Button
+          type="button"
+          onClick={onDone}
+          className="w-full py-2.5 text-white! font-bold! uppercase tracking-wider"
+        >
+          Entendido
+        </Button>
+      </div>
+    );
+  }
 
   // Devuelve las props value/onChange/error de un campo (inputs más bajos que en el login, el registro tiene más campos)
   const bind = (name: keyof FormValues) => ({
