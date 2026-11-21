@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { MAX_DIAS_ANTICIPACION, addDays, formatFechaLarga, getHorariosLibresRequest } from '../../api/turnos';
+import { MAX_DIAS_ANTICIPACION, addDays, buscarDiasSinLugar, formatFechaLarga, getHorariosLibresRequest, toIsoDate } from '../../api/turnos';
 import type { HorariosLibresOptions, TurnoItem } from '../../api/turnos';
 import { Alert } from '../alert/alert';
 import { DatePicker } from '../datePicker/datePicker';
@@ -33,10 +33,46 @@ interface Result {
   error: string;
 }
 
+// Días completos de la última búsqueda; `key` dice para qué días y servicios es (si no coincide, arranca de cero)
+interface SinLugar {
+  key: string;
+  fechas: string[];
+  terminado: boolean;
+}
+
 // Elegir fecha (calendario) y horario de inicio (los libres que devuelve el back, cada 15 min)
 export const SlotPicker = ({ token, items, workDates, options, value, onChange }: SlotPickerProps) => {
   const [result, setResult] = useState<Result | null>(null);
   const key = `${value.fecha}|${JSON.stringify(items)}|${JSON.stringify(options ?? {})}`;
+
+  // Encuesta TP4: entre los días que trabaja, los que ya no tienen lugar se apagan en el calendario a medida que se sabe
+  const [sinLugar, setSinLugar] = useState<SinLugar | null>(null);
+  const hoy = toIsoDate(new Date());
+  const proximas = (workDates ?? []).filter((fecha) => fecha >= hoy).sort();
+  const sinLugarKey = `${proximas.join(',')}|${JSON.stringify(items)}|${JSON.stringify(options ?? {})}`;
+
+  useEffect(() => {
+    if (proximas.length === 0 || items.length === 0) return;
+    let cancelado = false;
+    const agregar = (fecha: string) =>
+      setSinLugar((prev) => ({
+        key: sinLugarKey,
+        fechas: [...(prev?.key === sinLugarKey ? prev.fechas : []), fecha],
+        terminado: false,
+      }));
+    buscarDiasSinLugar(token, proximas, items, options ?? {}, agregar, () => cancelado).then(() => {
+      if (!cancelado) setSinLugar((prev) => ({ key: sinLugarKey, fechas: prev?.key === sinLugarKey ? prev.fechas : [], terminado: true }));
+    });
+    return () => {
+      cancelado = true;
+    };
+    // `sinLugarKey` resume las fechas, los items y las options (llegan como objetos nuevos en cada render)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, sinLugarKey]);
+
+  const actual = sinLugar?.key === sinLugarKey ? sinLugar : null;
+  const completos = actual?.fechas ?? [];
+  const todosCompletos = actual?.terminado === true && proximas.length > 0 && completos.length >= proximas.length;
 
   useEffect(() => {
     if (!value.fecha || items.length === 0) return;
@@ -59,16 +95,38 @@ export const SlotPicker = ({ token, items, workDates, options, value, onChange }
   today.setHours(0, 0, 0, 0);
   const current = result?.key === key ? result : null;
 
+  if (todosCompletos) {
+    return (
+      <p className="font-inter text-sm text-capilar-grey">
+        No quedan horarios libres en los próximos {MAX_DIAS_ANTICIPACION} días. Probá con otra persona del equipo.
+      </p>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 md:flex-row md:items-start">
-      <div className="self-center rounded-[6px] border border-gray-200 bg-white p-3 md:self-start">
-        <DatePicker
-          value={value.fecha}
-          onChange={(fecha) => onChange({ fecha, hora: '' })}
-          min={today}
-          max={addDays(today, MAX_DIAS_ANTICIPACION)}
-          enabledDates={workDates}
-        />
+      <div className="flex flex-col gap-2 self-center md:self-start">
+        <div className="rounded-[6px] border border-gray-200 bg-white p-3">
+          <DatePicker
+            value={value.fecha}
+            onChange={(fecha) => onChange({ fecha, hora: '' })}
+            min={today}
+            max={addDays(today, MAX_DIAS_ANTICIPACION)}
+            enabledDates={workDates}
+            fullDates={completos}
+          />
+        </div>
+        {workDates && (
+          <p className="flex flex-wrap gap-x-4 gap-y-1 px-1 font-inter text-xs text-capilar-grey">
+            <span>
+              <span className="font-bold text-capilar-plum">15</span> con horarios
+            </span>
+            <span>
+              <span className="text-gray-400 line-through">15</span> sin lugar
+            </span>
+            {proximas.length > 0 && !actual?.terminado && <span>Revisando días…</span>}
+          </p>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -96,9 +154,10 @@ export const SlotPicker = ({ token, items, workDates, options, value, onChange }
                       role="radio"
                       aria-checked={selected}
                       onClick={() => onChange({ fecha: value.fecha, hora })}
+                      // Elegido como el resto de las opciones (servicio, profesional, chips): borde violeta y fondo lila
                       className={`rounded-lg border px-2 py-2 font-inter text-sm transition-colors ${
                         selected
-                          ? 'border-transparent bg-capilar-gradient font-semibold text-white'
+                          ? 'border-capilar-violet bg-capilar-violet/10 font-semibold text-black'
                           : 'border-gray-300 bg-white text-black hover:border-capilar-violet hover:text-capilar-violet'
                       }`}
                     >

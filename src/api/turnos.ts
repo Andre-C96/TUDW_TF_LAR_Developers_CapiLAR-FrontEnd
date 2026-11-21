@@ -105,6 +105,42 @@ export interface HorariosLibresOptions {
 export const getHorariosLibresRequest = (token: string, fecha: string, items: TurnoItem[], options: HorariosLibresOptions = {}) =>
   apiFetch<HorariosLibres>('/turnos/horarios-libres', { method: 'POST', body: { fecha, items, ...options }, token });
 
+// Pedidos de horarios libres a la vez: el back no tiene uno por rango de fechas, así que se pregunta día por día
+const PEDIDOS_A_LA_VEZ = 4;
+
+// Encuesta TP4: los días que trabaja el profesional pero ya no tienen lugar. Pregunta cada fecha (de a 4 a la vez) y
+// avisa con onSinLugar apenas sabe que una está completa, para que el calendario las vaya apagando sin esperar a todas.
+// Si un pedido falla, ese día se deja elegible (al tocarlo se ve el error). `cancelado` corta al cambiar de servicio o profesional
+export const buscarDiasSinLugar = async (
+  token: string,
+  fechas: string[],
+  items: TurnoItem[],
+  options: HorariosLibresOptions,
+  onSinLugar: (fecha: string) => void,
+  cancelado: () => boolean,
+) => {
+  const pendientes = [...fechas];
+  const worker = async () => {
+    for (let fecha = pendientes.shift(); fecha && !cancelado(); fecha = pendientes.shift()) {
+      const libres = await getHorariosLibresRequest(token, fecha, items, options).catch(() => null);
+      if (!cancelado() && libres && libres.horarios.length === 0) onSinLugar(fecha);
+    }
+  };
+  await Promise.all(Array.from({ length: PEDIDOS_A_LA_VEZ }, worker));
+};
+
+// El primer día con lugar (y su primer horario) entre `fechas` ordenadas, o null si no hay. Pregunta de a 4 fechas en
+// orden y corta en la primera tanda que tiene alguna con lugar
+export const buscarPrimerHorarioLibre = async (token: string, fechas: string[], items: TurnoItem[]) => {
+  for (let i = 0; i < fechas.length; i += PEDIDOS_A_LA_VEZ) {
+    const tanda = fechas.slice(i, i + PEDIDOS_A_LA_VEZ);
+    const respuestas = await Promise.all(tanda.map((fecha) => getHorariosLibresRequest(token, fecha, items).catch(() => null)));
+    const conLugar = respuestas.find((r) => r && r.horarios.length > 0);
+    if (conLugar) return { fecha: conLugar.fecha, hora: conLugar.horarios[0] };
+  }
+  return null;
+};
+
 // CLIENTE: queda PENDIENTE si algún servicio requiere aprobación; si no, CONFIRMADO. PROFESIONAL con clienteId: CONFIRMADO
 export const createTurnoRequest = (token: string, data: CreateTurnoData) =>
   apiFetch<Turno>('/turnos', { method: 'POST', body: data, token });
