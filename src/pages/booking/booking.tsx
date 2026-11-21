@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getProfessionalsRequest, getUpcomingWorkDatesRequest } from '../../api/professionals';
 import { agruparPorCategoria, formatDuration, formatPrice, getServicesRequest } from '../../api/services';
-import { HORAS_CANCELACION_CLIENTE, createTurnoRequest, formatFechaLarga } from '../../api/turnos';
+import { HORAS_CANCELACION_CLIENTE, MAX_DIAS_ANTICIPACION, buscarPrimerHorarioLibre, createTurnoRequest, formatFechaLarga, toIsoDate } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
@@ -67,6 +67,10 @@ export const Booking = () => {
   const [saveError, setSaveError] = useState('');
   // 403: el back no deja reservar sin verificar el correo
   const [needsVerification, setNeedsVerification] = useState(false);
+  // "Primer turno disponible": buscando, lo que encontró (o null si no hay en 60 días) y un número para descartar
+  // la respuesta si mientras tanto se cambió de servicio o se eligió una profesional a mano
+  const [primero, setPrimero] = useState<{ estado: 'buscando' } | { estado: 'listo'; encontrado: boolean } | null>(null);
+  const busquedaPrimero = useRef(0);
 
   const services = useFetch('servicios', getServicesRequest);
   const professionals = useFetch(servicioId ? `profesionales-${servicioId}` : null, () =>
@@ -85,6 +89,8 @@ export const Booking = () => {
   const profesional = professionals.data?.find((p) => p.legajo === legajo);
 
   const chooseService = (id: number) => {
+    busquedaPrimero.current++;
+    setPrimero(null);
     setServicioId(id);
     setLegajo(null);
     setSlot({ fecha: '', hora: '' });
@@ -92,9 +98,43 @@ export const Booking = () => {
   };
 
   const chooseProfessional = (id: number) => {
+    busquedaPrimero.current++;
+    setPrimero(null);
     setLegajo(id);
     setSlot({ fecha: '', hora: '' });
     setSaveError('');
+  };
+
+  // Busca, entre todas las profesionales que hacen el servicio, el primer día con lugar de cada una (de los que
+  // trabaja) y se queda con el más cercano: elige profesional, día y horario, y queda listo para confirmar
+  const findFirstSlot = async () => {
+    if (!servicioId || !professionals.data?.length) return;
+    const busqueda = ++busquedaPrimero.current;
+    setPrimero({ estado: 'buscando' });
+    setLegajo(null);
+    setSlot({ fecha: '', hora: '' });
+    setSaveError('');
+
+    const hoy = toIsoDate(new Date());
+    const porProfesional = await Promise.all(
+      professionals.data.map(async (p) => {
+        const dias = await getUpcomingWorkDatesRequest(token, p.legajo).catch(() => []);
+        const proximos = dias.filter((d) => d >= hoy).sort();
+        const libre = await buscarPrimerHorarioLibre(token, proximos, [{ servicioId, legajo: p.legajo }]);
+        return libre && { legajo: p.legajo, ...libre };
+      }),
+    );
+    if (busqueda !== busquedaPrimero.current) return;
+
+    // El más cercano: por fecha y, el mismo día, por hora ("HH:mm" se compara como texto)
+    const mejor = porProfesional
+      .filter((r) => r !== null)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora))[0];
+    setPrimero({ estado: 'listo', encontrado: Boolean(mejor) });
+    if (mejor) {
+      setLegajo(mejor.legajo);
+      setSlot({ fecha: mejor.fecha, hora: mejor.hora });
+    }
   };
 
   const confirm = async () => {
@@ -184,24 +224,58 @@ export const Booking = () => {
               Por ahora nadie del equipo hace este servicio. Probá con otro o consultanos.
             </p>
           ) : (
-            <RadioGroup aria-label="Profesional" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {professionals.data.map((p) => (
-                <Option key={p.legajo} selected={p.legajo === legajo} onClick={() => chooseProfessional(p.legajo)}>
+            <div className="flex flex-col gap-4">
+              <RadioGroup aria-label="Profesional" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Quality del TF: sin elegir a nadie, el turno libre más cercano entre todo el equipo */}
+                <Option selected={primero !== null} onClick={findFirstSlot}>
                   <span className="flex items-center gap-3">
                     <span
                       aria-hidden="true"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-capilar-gradient text-xs font-semibold text-white"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-capilar-violet text-capilar-violet"
                     >
-                      {p.nombre[0]}
-                      {p.apellido[0]}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 2" />
+                      </svg>
                     </span>
-                    <span className="font-semibold text-black">
-                      {p.nombre} {p.apellido}
+                    <span className="flex flex-col">
+                      <span className="font-semibold text-black">Primer turno disponible</span>
+                      <span className="text-xs text-capilar-grey">Con cualquiera del equipo</span>
                     </span>
                   </span>
                 </Option>
-              ))}
-            </RadioGroup>
+                {professionals.data.map((p) => (
+                  <Option key={p.legajo} selected={primero === null && p.legajo === legajo} onClick={() => chooseProfessional(p.legajo)}>
+                    <span className="flex items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-capilar-gradient text-xs font-semibold text-white"
+                      >
+                        {p.nombre[0]}
+                        {p.apellido[0]}
+                      </span>
+                      <span className="font-semibold text-black">
+                        {p.nombre} {p.apellido}
+                      </span>
+                    </span>
+                  </Option>
+                ))}
+              </RadioGroup>
+              {primero?.estado === 'buscando' && (
+                <Loader size="sm" label="Buscando el primer turno libre..." className="items-start! py-2" />
+              )}
+              {primero?.estado === 'listo' &&
+                (primero.encontrado && profesional && slot.hora ? (
+                  <Alert variant="info" title="Encontramos el primer turno libre">
+                    <span className="first-letter:uppercase">{formatFechaLarga(slot.fecha)}</span> a las {slot.hora} con{' '}
+                    {profesional.nombre} {profesional.apellido}. Revisalo abajo y confirmá, o elegí otro día y horario.
+                  </Alert>
+                ) : !primero.encontrado ? (
+                  <Alert variant="advertencia" title="No hay turnos libres">
+                    Nadie del equipo tiene lugar para este servicio en los próximos {MAX_DIAS_ANTICIPACION} días.
+                  </Alert>
+                ) : null)}
+            </div>
           )}
         </Step>
       )}
