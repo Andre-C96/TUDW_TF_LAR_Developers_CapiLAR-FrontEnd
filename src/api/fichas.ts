@@ -1,5 +1,5 @@
 import { apiFetch, apiFetchBlob } from './client';
-import { minutosHastaInicio } from './turnos';
+import { fromIsoDate, minutosHastaInicio } from './turnos';
 import type { Turno, TurnoDetalle } from './turnos';
 import type { Articulo, ArticuloSinStock } from './articulos';
 
@@ -60,6 +60,10 @@ export interface FotoFicha {
   tipo: MomentoFoto;
   creadaEn: string;
 }
+
+// Lo que dice el texto alternativo de cada foto, después del momento: "Coloración, 12/10/2026"
+export const contextoDeFoto = (servicio: string, fecha: string) =>
+  `${servicio}, ${fromIsoDate(fecha).toLocaleDateString('es-AR')}`;
 
 // Ficha completa, para el salón
 export interface Ficha {

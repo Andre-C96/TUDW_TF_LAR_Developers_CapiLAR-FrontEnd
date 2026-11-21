@@ -105,7 +105,16 @@ export const FichaEditModal = ({ token, ficha: inicial, onClose, onSaved }: Fich
         />
 
         {pestania === 'fotos' ? (
-          <FichaGaleria token={token} fichaId={ficha.id} fotos={ficha.fotos} onAdd={addPhoto} onRemove={removePhoto} busy={saving} />
+          <FichaGaleria
+            token={token}
+            fichaId={ficha.id}
+            fotos={ficha.fotos}
+            servicio={ficha.servicio}
+            fecha={ficha.fecha}
+            onAdd={addPhoto}
+            onRemove={removePhoto}
+            busy={saving}
+          />
         ) : (
           <FichaForm
             ficha={ficha}

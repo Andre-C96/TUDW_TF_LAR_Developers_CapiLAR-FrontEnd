@@ -1,14 +1,16 @@
 import { useEffect } from 'react';
-import { getFichaPhotoRequest } from '../../api/fichas';
+import { contextoDeFoto, getFichaPhotoRequest } from '../../api/fichas';
 import type { FotoFicha } from '../../api/fichas';
 import { useBlobUrl } from '../../customHooks/blobUrl/useBlobUrl';
 import { Modal } from '../modal/modal';
+
+const capitalizar = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1);
 
 interface FichaFotoProps {
   token: string;
   fichaId: number;
   fotoId: number;
-  // Texto para lectores de pantalla (ej. "Foto de antes 1")
+  // Describe la foto, en minúscula (ej. "foto de antes 1 – Coloración, 12/10/2026"): es el alt y va en los botones
   label: string;
   // Al tocarla (ya bajada): para mostrarla grande
   onOpen: () => void;
@@ -31,7 +33,7 @@ export const FichaFoto = ({ token, fichaId, fotoId, label, onOpen, onRemove, dis
         className="block h-full w-full overflow-hidden rounded-[6px] border border-gray-200 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-capilar-violet"
       >
         {url ? (
-          <img src={url} alt="" className="h-full w-full object-cover transition-transform hover:scale-105" />
+          <img src={url} alt={capitalizar(label)} className="h-full w-full object-cover transition-transform hover:scale-105" />
         ) : (
           <span className="flex h-full items-center justify-center font-inter text-xs text-capilar-grey">
             {failed ? 'No se pudo cargar' : <span className="h-full w-full animate-pulse bg-gray-200" />}
@@ -59,6 +61,9 @@ interface FichaFotoVisorProps {
   fichaId: number;
   // Todas las fotos en el orden en que se recorren (antes y después)
   fotos: FotoFicha[];
+  // Servicio y fecha de la ficha, para el texto alternativo
+  servicio: string;
+  fecha: string;
   // La que se ve; null: cerrado
   index: number | null;
   onChange: (index: number | null) => void;
@@ -70,7 +75,7 @@ const flechaClass =
   'absolute top-1/2 flex h-12 w-10 -translate-y-1/2 items-center justify-center rounded-[6px] border border-gray-200 bg-white/90 text-capilar-grey shadow-md transition-colors hover:text-capilar-violet active:bg-capilar-violet active:text-white disabled:pointer-events-none disabled:opacity-0';
 
 // Foto grande con anterior/siguiente entre todas las fotos de la ficha (también con las flechas del teclado)
-export const FichaFotoVisor = ({ token, fichaId, fotos, index, onChange }: FichaFotoVisorProps) => {
+export const FichaFotoVisor = ({ token, fichaId, fotos, servicio, fecha, index, onChange }: FichaFotoVisorProps) => {
   const foto = index !== null ? fotos[index] : undefined;
   const { url, failed } = useBlobUrl(foto ? `ficha-${fichaId}-foto-${foto.id}` : null, () =>
     getFichaPhotoRequest(token, fichaId, foto!.id),
@@ -79,6 +84,10 @@ export const FichaFotoVisor = ({ token, fichaId, fotos, index, onChange }: Ficha
   const haySiguiente = index !== null && index < fotos.length - 1;
   // Número de la foto dentro de su momento ("Antes 2 de 3")
   const delMomento = foto ? fotos.filter((f) => f.tipo === foto.tipo) : [];
+  // "Foto de después 2 de 3 – Coloración, 12/10/2026"
+  const alt = foto
+    ? `Foto de ${MOMENTO_LABEL[foto.tipo].toLowerCase()} ${delMomento.indexOf(foto) + 1} de ${delMomento.length} – ${contextoDeFoto(servicio, fecha)}`
+    : '';
 
   useEffect(() => {
     if (index === null) return;
@@ -104,7 +113,7 @@ export const FichaFotoVisor = ({ token, fichaId, fotos, index, onChange }: Ficha
 
           <div className="relative flex min-h-64 items-center justify-center rounded-[6px] bg-gray-50">
             {url ? (
-              <img src={url} alt="" className="max-h-[65vh] w-full rounded-[6px] object-contain" />
+              <img src={url} alt={alt} className="max-h-[65vh] w-full rounded-[6px] object-contain" />
             ) : failed ? (
               <span className="font-inter text-sm text-capilar-grey">No se pudo cargar la foto.</span>
             ) : (
