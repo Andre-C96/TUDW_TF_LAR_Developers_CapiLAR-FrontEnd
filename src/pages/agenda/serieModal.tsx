@@ -9,6 +9,7 @@ import { Button } from '../../components/button/button';
 import { DatePicker } from '../../components/datePicker/datePicker';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
+import { RadioGroup } from '../../components/radioGroup/radioGroup';
 import { Title } from '../../components/title/title';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 
@@ -108,25 +109,25 @@ export const SerieModal = ({ token, legajo, turno, onClose, onCreated }: SerieMo
             {propios.length > 1 && (
               <div className="flex flex-col gap-2">
                 <span className={labelClass}>Servicio</span>
-                <div role="radiogroup" aria-label="Servicio que se repite" className="flex flex-wrap gap-2">
+                <RadioGroup aria-label="Servicio que se repite" className="flex flex-wrap gap-2">
                   {propios.map((d) => (
                     <Chip key={d.id} selected={d.id === detalleId} onClick={() => setDetalleId(d.id)}>
                       {d.servicio}
                     </Chip>
                   ))}
-                </div>
+                </RadioGroup>
               </div>
             )}
 
             <div className="flex flex-col gap-2">
               <span className={labelClass}>Frecuencia</span>
-              <div role="radiogroup" aria-label="Frecuencia" className="flex flex-wrap gap-2 md:max-w-80">
+              <RadioGroup aria-label="Frecuencia" className="flex flex-wrap gap-2 md:max-w-80">
                 {(Object.keys(FRECUENCIAS) as FrecuenciaSerie[]).map((f) => (
                   <Chip key={f} selected={f === frecuencia} onClick={() => setFrecuencia(f)}>
                     {FRECUENCIAS[f].label}
                   </Chip>
                 ))}
-              </div>
+              </RadioGroup>
             </div>
 
             {!rango.vacio && (

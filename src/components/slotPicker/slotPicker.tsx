@@ -5,6 +5,7 @@ import type { HorariosLibresOptions, TurnoItem } from '../../api/turnos';
 import { Alert } from '../alert/alert';
 import { DatePicker } from '../datePicker/datePicker';
 import { Loader } from '../loader/loader';
+import { RadioGroup } from '../radioGroup/radioGroup';
 
 export interface Slot {
   fecha: string;
@@ -85,7 +86,7 @@ export const SlotPicker = ({ token, items, workDates, options, value, onChange }
             ) : current.horarios.length === 0 ? (
               <p className="font-inter text-sm text-capilar-grey">No quedan horarios libres ese día. Probá con otra fecha.</p>
             ) : (
-              <div role="radiogroup" aria-label="Horario de inicio" className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+              <RadioGroup aria-label="Horario de inicio" className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                 {current.horarios.map((hora) => {
                   const selected = value.hora === hora;
                   return (
@@ -105,7 +106,7 @@ export const SlotPicker = ({ token, items, workDates, options, value, onChange }
                     </button>
                   );
                 })}
-              </div>
+              </RadioGroup>
             )}
           </>
         )}

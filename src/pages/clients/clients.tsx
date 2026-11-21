@@ -56,7 +56,7 @@ export const Clients = () => {
             <li key={c.id}>
               <Link
                 to={`/panel/clientes/${c.id}`}
-                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-capilar-violet/5 focus-visible:bg-capilar-violet/5 focus-visible:outline-none"
+                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-capilar-violet/5 focus-visible:bg-capilar-violet/5 focus-visible:-outline-offset-2"
               >
                 <Avatar
                   token={token}

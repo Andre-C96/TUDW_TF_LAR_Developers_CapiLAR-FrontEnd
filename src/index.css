@@ -22,6 +22,15 @@
   --font-inter: "Inter", sans-serif;
 }
 
+/* Foco visible al navegar con teclado (solo :focus-visible: con el mouse no aparece), en el color de acento del rol.
+   En base para que lo pise lo de cada componente (ej. los campos con su anillo usan outline-none + ring) */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-capilar-violet-text);
+    outline-offset: 2px;
+  }
+}
+
 /* Color de cada rol en su panel (PanelLayout marca <html data-rol>). "capilar-violet" es el color de acento:
    el cliente lo ve violeta y, en el panel, pasa a fucsia (profesional) o naranja (admin). Así cambian solos los hovers,
    las líneas de las pestañas, lo elegido, la sombra del header, el calendario... El degradado de marca queda igual */

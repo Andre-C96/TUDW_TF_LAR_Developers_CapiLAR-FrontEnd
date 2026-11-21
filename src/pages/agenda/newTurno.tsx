@@ -11,6 +11,7 @@ import { getClientRequest, searchClientsRequest } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
 import { CategoriaChips } from '../../components/categoriaChips/categoriaChips';
+import { RadioGroup } from '../../components/radioGroup/radioGroup';
 import { Loader } from '../../components/loader/loader';
 import { SearchBox } from '../../components/searchBox/searchBox';
 import { SlotPicker } from '../../components/slotPicker/slotPicker';
@@ -186,7 +187,7 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
               {grupos.length > 1 && (
                 <CategoriaChips categorias={grupos.map((g) => g.categoria)} value={categoriaId} onChange={setCategoriaId} />
               )}
-              <div role="radiogroup" aria-label="Servicio" className="flex flex-col gap-5">
+              <RadioGroup aria-label="Servicio" className="flex flex-col gap-5">
                 {grupos
                   .filter((g) => categoriaId === null || g.categoria.id === categoriaId)
                   .map(({ categoria, servicios }) => (
@@ -218,7 +219,7 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
                       </div>
                     </div>
                   ))}
-              </div>
+              </RadioGroup>
             </>
           )}
         </div>

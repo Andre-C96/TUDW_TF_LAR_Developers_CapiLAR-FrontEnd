@@ -11,6 +11,7 @@ import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
 import { CategoriaChips } from '../../components/categoriaChips/categoriaChips';
 import { Loader } from '../../components/loader/loader';
+import { RadioGroup } from '../../components/radioGroup/radioGroup';
 import { SlotPicker } from '../../components/slotPicker/slotPicker';
 import type { Slot } from '../../components/slotPicker/slotPicker';
 import { Title } from '../../components/title/title';
@@ -140,7 +141,7 @@ export const Booking = () => {
               <CategoriaChips categorias={grupos.map((g) => g.categoria)} value={categoriaId} onChange={setCategoriaId} />
             )}
 
-            <div role="radiogroup" aria-label="Servicio" className="flex flex-col gap-6">
+            <RadioGroup aria-label="Servicio" className="flex flex-col gap-6">
               {grupos
                 .filter((g) => categoriaId === null || g.categoria.id === categoriaId)
                 .map(({ categoria, servicios }) => (
@@ -165,7 +166,7 @@ export const Booking = () => {
                     </div>
                   </div>
                 ))}
-            </div>
+            </RadioGroup>
           </>
         )}
       </Step>
@@ -183,7 +184,7 @@ export const Booking = () => {
               Por ahora nadie del equipo hace este servicio. Probá con otro o consultanos.
             </p>
           ) : (
-            <div role="radiogroup" aria-label="Profesional" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <RadioGroup aria-label="Profesional" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {professionals.data.map((p) => (
                 <Option key={p.legajo} selected={p.legajo === legajo} onClick={() => chooseProfessional(p.legajo)}>
                   <span className="flex items-center gap-3">
@@ -200,7 +201,7 @@ export const Booking = () => {
                   </span>
                 </Option>
               ))}
-            </div>
+            </RadioGroup>
           )}
         </Step>
       )}
