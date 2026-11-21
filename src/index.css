@@ -10,14 +10,64 @@
   --color-capilar-plum: #8A2B5E;
   /* Violeta más oscuro para los textos clickeables: el violeta de marca no llega al contraste 4.5:1 sobre blanco (WAVE) */
   --color-capilar-violet-text: #8F3CD2;
+  /* Fondo suave de lo elegido o resaltado (el lila de capilar-violet-soft, pero que sigue al color del rol) */
+  --color-capilar-violet-soft: color-mix(in srgb, var(--color-capilar-violet) 8%, white);
 
-  /* Gradient */
-  --background-image-capilar-gradient: linear-gradient(to right, var(--color-capilar-violet), var(--color-capilar-peach));
-  --background-image-capilar-gradient-reverse: linear-gradient(to right, var(--color-capilar-peach), var(--color-capilar-violet));
+  /* Gradient: con los colores de marca fijos, igual en todos los roles (no sigue a --color-capilar-violet) */
+  --background-image-capilar-gradient: linear-gradient(to right, #A35FDA, #F98D56);
+  --background-image-capilar-gradient-reverse: linear-gradient(to right, #F98D56, #A35FDA);
 
   /* Tipography */
   --font-sans: "Montserrat", sans-serif; 
   --font-inter: "Inter", sans-serif;
+}
+
+/* Color de cada rol en su panel (PanelLayout marca <html data-rol>). "capilar-violet" es el color de acento:
+   el cliente lo ve violeta y, en el panel, pasa a fucsia (profesional) o naranja (admin). Así cambian solos los hovers,
+   las líneas de las pestañas, lo elegido, la sombra del header, el calendario... El degradado de marca queda igual */
+html[data-rol='profesional'] {
+  --color-capilar-violet: #D93B95;
+  --color-capilar-violet-text: #B0267A;
+}
+/* Naranja y no el durazno de marca (#F98D56): así se distingue del final del degradado */
+html[data-rol='admin'] {
+  --color-capilar-violet: #EE6A1A;
+  --color-capilar-violet-text: #B4530A;
+}
+/* En los paneles, los textos en el color de acento usan el tono oscuro: el fucsia y el durazno no llegan a 4.5:1 sobre
+   blanco (en el cliente no cambia nada). Ojo: le gana a un hover:text-* del mismo elemento (hoy no hay ninguno en
+   los paneles; el carrusel con hover:text-white está solo en la home) */
+html[data-rol] .text-capilar-violet,
+html[data-rol] .hover\:text-capilar-violet:hover {
+  color: var(--color-capilar-violet-text);
+}
+/* Texto seleccionado con el mouse, con un tinte del color del rol */
+html[data-rol] ::selection {
+  background-color: color-mix(in srgb, var(--color-capilar-violet) 25%, white);
+}
+
+/* Barra de scroll finita del color de acento (className="scrollbar-acento", ej. el menú lateral del panel) */
+.scrollbar-acento::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-acento::-webkit-scrollbar-button {
+  display: none;
+}
+.scrollbar-acento::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-acento::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-capilar-violet) 45%, white);
+  border-radius: 9999px;
+}
+.scrollbar-acento::-webkit-scrollbar-thumb:hover {
+  background: var(--color-capilar-violet);
+}
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-acento {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-capilar-violet) 45%, white) transparent;
+  }
 }
 
 /* Calendario (react-day-picker) con los colores de marca: día elegido con un aro degradado */

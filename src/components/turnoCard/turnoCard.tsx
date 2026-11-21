@@ -51,7 +51,7 @@ export const TurnoList = ({ children }: { children: ReactNode }) => (
 
 // Etiqueta de los turnos que son parte de una serie: "↻ Cada 15 días"
 export const SerieBadge = ({ children }: { children: ReactNode }) => (
-  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 font-inter text-xs font-semibold text-capilar-violet">
+  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-capilar-violet-soft px-2.5 py-1 font-inter text-xs font-semibold text-capilar-violet">
     <span aria-hidden="true">↻</span>
     {children}
   </span>
@@ -183,7 +183,7 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
 const actionVariants = {
   // Borde degradado con relleno blanco (lila al pasar el mouse): resalta sin pesar tanto como un violeta lleno
   positiva:
-    'border-transparent text-capilar-violet [background:linear-gradient(white,white)_padding-box,var(--background-image-capilar-gradient)_border-box] hover:[background:linear-gradient(var(--color-purple-50),var(--color-purple-50))_padding-box,var(--background-image-capilar-gradient)_border-box]',
+    'border-transparent text-capilar-violet [background:linear-gradient(white,white)_padding-box,var(--background-image-capilar-gradient)_border-box] hover:[background:linear-gradient(var(--color-capilar-violet-soft),var(--color-capilar-violet-soft))_padding-box,var(--background-image-capilar-gradient)_border-box]',
   neutra: 'border-gray-300 bg-white text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet',
   peligro: 'border-gray-300 bg-white text-capilar-grey hover:border-red-500 hover:text-red-500',
 };

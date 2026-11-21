@@ -20,7 +20,7 @@ const MenuIcon = ({ children }: { children: ReactNode }) => (
 
 const itemClass = (activo: boolean) =>
   `flex items-center gap-3 rounded-[6px] px-3 py-2 font-inter text-sm font-semibold transition-colors ${
-    activo ? 'bg-purple-50 text-capilar-violet-text' : 'text-capilar-grey hover:bg-gray-50 hover:text-capilar-violet'
+    activo ? 'bg-capilar-violet-soft text-capilar-violet-text' : 'text-capilar-grey hover:bg-gray-50 hover:text-capilar-violet'
   }`;
 
 // Menú lateral fijo del panel según el rol: el inicio, cada sección y, debajo, sus subopciones (pestañas o filtros).
@@ -36,7 +36,7 @@ export const SideMenu = () => {
       {/* Alto máximo: la pantalla menos la franja del header y un margen abajo. Si no entra, scrollea solo el menú */}
       <nav
         aria-label="Menú del panel"
-        className="flex max-h-[calc(100vh-7.25rem)] w-16 flex-col gap-1 overflow-y-auto overscroll-contain rounded-[6px] border border-gray-200 bg-white p-2 shadow-sm lg:w-60 lg:p-3"
+        className="flex scrollbar-acento max-h-[calc(100vh-7.25rem)] w-16 flex-col gap-1 overflow-y-auto overscroll-contain rounded-[6px] border border-gray-200 bg-white p-2 shadow-sm lg:w-60 lg:p-3"
       >
         <Link to="/panel" title="Inicio" aria-current={pathname === '/panel' ? 'page' : undefined} className={itemClass(pathname === '/panel')}>
           <MenuIcon>

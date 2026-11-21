@@ -13,7 +13,7 @@ const variants = {
   exito: { box: 'bg-green-50 border-green-500 text-green-800', icon: null },
   error: { box: 'bg-red-50 border-red-500 text-red-800', icon: '✕' },
   advertencia: { box: 'bg-amber-50 border-amber-500 text-amber-800', icon: '!' },
-  info: { box: 'bg-purple-50 border-capilar-violet text-capilar-violet', icon: 'i' },
+  info: { box: 'bg-capilar-violet-soft border-capilar-violet text-capilar-violet', icon: 'i' },
 };
 
 export const Alert = ({ variant = 'info', title, children, onClose, className = '', ...props }: AlertProps) => {

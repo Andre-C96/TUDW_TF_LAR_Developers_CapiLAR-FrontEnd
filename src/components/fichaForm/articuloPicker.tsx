@@ -108,7 +108,7 @@ export const ArticuloPicker = ({ value, onChange, articulos, onSelect, onCrear, 
                 elegir(articulo);
               }}
               onMouseEnter={() => setActivo(index)}
-              className={`flex cursor-pointer flex-col px-3 py-2 font-inter text-sm ${index === activo ? 'bg-purple-50 text-capilar-violet' : 'text-black'}`}
+              className={`flex cursor-pointer flex-col px-3 py-2 font-inter text-sm ${index === activo ? 'bg-capilar-violet-soft text-capilar-violet' : 'text-black'}`}
             >
               <span className="font-semibold">
                 {articulo.nombre}
@@ -129,7 +129,7 @@ export const ArticuloPicker = ({ value, onChange, articulos, onSelect, onCrear, 
                 crear();
               }}
               onMouseEnter={() => setActivo(resultados.length)}
-              className={`cursor-pointer border-t border-gray-100 px-3 py-2 font-inter text-sm font-semibold text-capilar-violet-text ${activo === resultados.length ? 'bg-purple-50' : ''}`}
+              className={`cursor-pointer border-t border-gray-100 px-3 py-2 font-inter text-sm font-semibold text-capilar-violet-text ${activo === resultados.length ? 'bg-capilar-violet-soft' : ''}`}
             >
               + Crear artículo "{value.trim()}"
             </li>

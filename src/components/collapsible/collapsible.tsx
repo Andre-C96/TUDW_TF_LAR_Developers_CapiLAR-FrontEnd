@@ -87,7 +87,7 @@ export const Collapsible = ({
 
 const countColors = {
   // Lo vigente (ej. turnos próximos)
-  violeta: 'bg-purple-50 text-capilar-violet',
+  violeta: 'bg-capilar-violet-soft text-capilar-violet',
   // Lo que ya pasó o se canceló
   gris: 'bg-gray-100 text-capilar-grey',
 };
