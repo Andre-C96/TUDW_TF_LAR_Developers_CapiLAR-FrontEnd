@@ -193,7 +193,7 @@ export const Users = () => {
   const texts = pending && confirmTexts(pending);
 
   return (
-    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 pt-24 pb-16">
       <div className="flex flex-col gap-4">
         <Breadcrumbs items={[{ label: 'Panel', to: '/panel' }, { label: 'Usuarios' }]} />
         <div className="flex flex-col gap-2">

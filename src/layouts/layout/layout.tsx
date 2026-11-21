@@ -63,6 +63,12 @@ export const Layout = () => {
         }}
       />
 
+      {/* Franja blanca detrás del header (como en el panel): lo que sube al hacer scroll desaparece en esa línea en vez
+          de verse detrás del header. En el inicio no va: ahí las secciones pasan por detrás del header a propósito */}
+      {location.pathname !== '/' && (
+        <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-40 h-24 bg-white" />
+      )}
+
       <main className="flex-1">
         <Outlet context={{ openAuth: setAuthView } satisfies LayoutContext} />
       </main>
