@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
-import { formatDuration, formatPrice } from '../../api/services';
+import { agruparPorCategoria, formatDuration, formatPrice } from '../../api/services';
 import type { Servicio } from '../../api/services';
 import { Button } from '../button/button';
 import { Form } from '../form/form';
@@ -29,6 +29,17 @@ export const ProfessionalServicesForm = ({
   error,
 }: ProfessionalServicesFormProps) => {
   const [selected, setSelected] = useState(() => new Set(assignedIds));
+  const groupId = useId();
+  // Categorías desplegadas: arrancan todas cerradas y cada profesional abre las que necesita
+  const [abiertas, setAbiertas] = useState(() => new Set<number>());
+
+  const toggleCategoria = (id: number) =>
+    setAbiertas((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const toggle = (id: number) =>
     setSelected((prev) => {
@@ -58,26 +69,63 @@ export const ProfessionalServicesForm = ({
             Todavía no hay servicios en el catálogo del salón. Los carga la administración.
           </p>
         ) : (
-          <fieldset className="max-h-80 divide-y divide-gray-200 overflow-y-auto rounded-[6px] border border-gray-200">
-            <legend className="sr-only">Servicios del catálogo</legend>
-            {services.map((servicio) => (
-              <label
-                key={servicio.id}
-                className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-capilar-violet/5"
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.has(servicio.id)}
-                  onChange={() => toggle(servicio.id)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-capilar-violet"
-                />
-                <span className="flex-1 font-inter text-sm text-black">{servicio.tipo}</span>
-                <span className="shrink-0 font-inter text-xs text-capilar-grey">
-                  {formatDuration(servicio.tiempoDuracion)} · Desde {formatPrice(servicio.precio)}
-                </span>
-              </label>
-            ))}
-          </fieldset>
+          // Agrupados por categoría, desplegables para no scrollear de más
+          <div className="max-h-96 divide-y divide-gray-200 overflow-y-auto rounded-[6px] border border-gray-200">
+            {agruparPorCategoria(services).map(({ categoria, servicios }) => {
+              const abierta = abiertas.has(categoria.id);
+              const tildados = servicios.filter((s) => selected.has(s.id)).length;
+              const panelId = `${groupId}-${categoria.id}`;
+              return (
+                <div key={categoria.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCategoria(categoria.id)}
+                    aria-expanded={abierta}
+                    aria-controls={panelId}
+                    className="flex w-full items-center justify-between gap-3 bg-gray-50 px-4 py-3 text-left transition-colors hover:bg-gray-100"
+                  >
+                    <span className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey">{categoria.nombre}</span>
+                    <span className="flex items-center gap-2 font-inter text-xs text-capilar-grey">
+                      {tildados} de {servicios.length}
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`h-4 w-4 transition-transform ${abierta ? 'rotate-180' : ''}`}
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </span>
+                  </button>
+                  {abierta && (
+                    <div id={panelId} role="group" aria-label={categoria.nombre} className="divide-y divide-gray-200 border-t border-gray-200">
+                      {servicios.map((servicio) => (
+                        <label
+                          key={servicio.id}
+                          className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-capilar-violet/5"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected.has(servicio.id)}
+                            onChange={() => toggle(servicio.id)}
+                            className="h-4 w-4 shrink-0 cursor-pointer accent-capilar-violet"
+                          />
+                          <span className="flex-1 font-inter text-sm text-black">{servicio.tipo}</span>
+                          <span className="shrink-0 font-inter text-xs text-capilar-grey">
+                            {formatDuration(servicio.tiempoDuracion)} · Desde {formatPrice(servicio.precio)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
 
         {error && (
