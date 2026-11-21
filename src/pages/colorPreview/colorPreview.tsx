@@ -38,6 +38,12 @@ const esColoracion = (tipo: string) => {
   return texto.includes('color') || texto.includes('tintura');
 };
 
+// Celular o tablet: ahí se ofrece sacar la selfie con la cámara. En la compu `capture` no hace nada
+// (abriría el mismo selector de archivos), así que solo queda subirla
+const esTactil = window.matchMedia('(pointer: coarse)').matches;
+
+const SELFIE_TIPOS = 'image/jpeg,image/png,image/webp';
+
 interface Resultado extends VistaPreviaColor {
   color: ColorCarta;
 }
@@ -113,6 +119,11 @@ export const ColorPreview = () => {
   };
 
   const canApply = Boolean(selfie && color && acepta) && !isApplying;
+  const isSelfieBusy = isPreparing || isApplying;
+  // Botones de la selfie: son labels que abren el input de archivo
+  const selfieButtonClasses = `rounded-[4px] border-2 border-capilar-violet px-5 py-2 font-inter text-sm font-semibold text-capilar-violet transition-colors ${
+    isSelfieBusy ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-capilar-violet hover:text-white'
+  }`;
 
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-32 pb-16">
@@ -121,7 +132,8 @@ export const ColorPreview = () => {
         <div className="flex flex-col gap-2">
           <Title>Probá un color</Title>
           <p className="font-inter text-capilar-grey">
-            Subí una selfie, elegí un color de nuestra carta y mirá cómo te quedaría antes de reservar.
+            {esTactil ? 'Sacá o subí' : 'Subí'} una selfie, elegí un color de nuestra carta y mirá cómo te quedaría antes
+            de reservar.
           </p>
         </div>
       </div>
@@ -134,27 +146,39 @@ export const ColorPreview = () => {
             ) : selfie ? (
               <img src={selfie.url} alt="Tu selfie" className="h-full w-full object-cover" />
             ) : (
-              <span className="px-4 text-center font-inter text-xs text-capilar-grey">Todavía no subiste una foto</span>
+              <span className="px-4 text-center font-inter text-xs text-capilar-grey">Todavía no {esTactil ? 'cargaste' : 'subiste'} una foto</span>
             )}
           </div>
           <div className="flex flex-col gap-3">
             <p className="font-inter text-sm text-capilar-grey">
               De frente, con buena luz y el pelo visible. Mejor sin gorro ni el pelo atado.
             </p>
-            <label
-              className={`self-start rounded-[4px] border-2 border-capilar-violet px-5 py-2 font-inter text-sm font-semibold text-capilar-violet transition-colors ${
-                isPreparing || isApplying ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-capilar-violet hover:text-white'
-              }`}
-            >
-              {selfie ? 'Cambiar foto' : 'Subir foto'}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={chooseSelfie}
-                disabled={isPreparing || isApplying}
-                className="sr-only"
-              />
-            </label>
+            <div className="flex flex-wrap gap-3">
+              {/* Encuesta TP4: poder sacarla en el momento, no solo subirla de la galería */}
+              {esTactil && (
+                <label className={selfieButtonClasses}>
+                  {selfie ? 'Sacar otra' : 'Sacar selfie'}
+                  <input
+                    type="file"
+                    accept={SELFIE_TIPOS}
+                    capture="user"
+                    onChange={chooseSelfie}
+                    disabled={isSelfieBusy}
+                    className="sr-only"
+                  />
+                </label>
+              )}
+              <label className={selfieButtonClasses}>
+                {selfie ? 'Cambiar foto' : esTactil ? 'Subir de la galería' : 'Subir foto'}
+                <input
+                  type="file"
+                  accept={SELFIE_TIPOS}
+                  onChange={chooseSelfie}
+                  disabled={isSelfieBusy}
+                  className="sr-only"
+                />
+              </label>
+            </div>
           </div>
         </div>
       </Step>
