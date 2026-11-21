@@ -33,11 +33,14 @@ export const AuthModal = ({ view, onViewChange, onClose }: AuthModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [isSent, setIsSent] = useState(false);
+  // La cuenta recién creada: el registro muestra el aviso de verificar el correo
+  const [registeredUser, setRegisteredUser] = useState<{ nombre: string; email: string }>();
 
-  // No arrastra el error ni el aviso de envío del anterior
+  // No arrastra el error ni los avisos de envío y de registro del anterior
   const resetStatus = () => {
     setError(undefined);
     setIsSent(false);
+    setRegisteredUser(undefined);
   };
 
   const changeView = (next: AuthView) => {
@@ -90,17 +93,17 @@ export const AuthModal = ({ view, onViewChange, onClose }: AuthModalProps) => {
         <RegisterForm
           alergias={alergias.data ?? []}
           onSubmit={(data) =>
+            // Ya queda con la sesión iniciada; el modal sigue abierto con el aviso hasta que lo cierre
             submit(
               () => register(data),
-              (user) => {
-                close();
-                toast.success('¡Cuenta creada!', { description: `Te damos la bienvenida a CapiLAR, ${user.nombre}.` });
-              },
+              (user) => setRegisteredUser({ nombre: user.nombre, email: user.email }),
             )
           }
           isLoading={isLoading}
           error={error}
           onLoginClick={() => changeView('login')}
+          registeredUser={registeredUser}
+          onDone={close}
         />
       )}
       {view === 'forgotPassword' && (
