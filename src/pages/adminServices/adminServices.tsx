@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { getAllCategoriasRequest } from '../../api/categorias';
+import type { Categoria } from '../../api/categorias';
 import { ApiError } from '../../api/client';
 import {
+  agruparPorCategoria,
   createServiceRequest,
   deactivateServiceRequest,
   formatDuration,
@@ -22,8 +25,10 @@ import { Modal } from '../../components/modal/modal';
 import { IconButton } from '../../components/iconButton/iconButton';
 import { SearchBox } from '../../components/searchBox/searchBox';
 import { ServiceForm } from '../../components/serviceForm/serviceForm';
+import { Tabs } from '../../components/tabs/tabs';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
+import { AdminCategorias } from './adminCategorias';
 
 const unexpectedError = 'Ocurrió un error inesperado. Probá de nuevo.';
 
@@ -66,11 +71,15 @@ const confirmTexts = (action: { type: 'baja' | 'alta'; servicio: Servicio }): { 
       };
 };
 
-// Sección Servicios del ADMIN: crear, modificar y dar de baja o de alta servicios (baja lógica)
+// Sección Servicios del ADMIN: crear, modificar y dar de baja o de alta servicios (baja lógica).
+// En la pestaña Categorías, las categorías con las que se agrupan
 export const AdminServices = () => {
   const { token } = useAuth();
+  const [tab, setTab] = useState<'servicios' | 'categorias'>('servicios');
   const [search, setSearch] = useState('');
   const [services, setServices] = useState<Servicio[]>([]);
+  // Todas, incluidas las dadas de baja; el formulario ofrece solo las activas
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -86,14 +95,16 @@ export const AdminServices = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  // Son pocos servicios: se piden una vez (con los dados de baja) y la búsqueda filtra en el navegador
+  // Son pocos servicios: se piden una vez (con los dados de baja), junto con las categorías, y la búsqueda filtra en el navegador
   useEffect(() => {
     if (!token) return;
     let ignore = false;
 
-    getAllServicesRequest(token)
-      .then((data) => {
-        if (!ignore) setServices(data);
+    Promise.all([getAllServicesRequest(token), getAllCategoriasRequest(token)])
+      .then(([servicios, cats]) => {
+        if (ignore) return;
+        setServices(servicios);
+        setCategorias(cats);
       })
       .catch((err) => {
         if (!ignore) setError(err instanceof ApiError ? err.message : unexpectedError);
@@ -114,6 +125,16 @@ export const AdminServices = () => {
     .sort(
       (a, b) =>
         Number(a.fechaBaja !== null) - Number(b.fechaBaja !== null) || a.tipo.localeCompare(b.tipo, 'es'),
+    );
+  const grupos = agruparPorCategoria(visibleServices);
+  const categoriasActivas = categorias.filter((categoria) => categoria.fechaBaja === null);
+
+  // Al renombrar una categoría, sus servicios muestran el nombre nuevo
+  const renameCategoria = (categoria: Categoria) =>
+    setServices((prev) =>
+      prev.map((servicio) =>
+        servicio.categoria.id === categoria.id ? { ...servicio, categoria: { id: categoria.id, nombre: categoria.nombre } } : servicio,
+      ),
     );
 
   const replaceService = (updated: Servicio) =>
@@ -160,6 +181,7 @@ export const AdminServices = () => {
     if (data.tiempoDuracion !== servicio.tiempoDuracion) changes.tiempoDuracion = data.tiempoDuracion;
     if (data.precio !== Number(servicio.precio)) changes.precio = data.precio;
     if (data.requiereEvaluacion !== servicio.requiereEvaluacion) changes.requiereEvaluacion = data.requiereEvaluacion;
+    if (data.categoriaId !== servicio.categoria.id) changes.categoriaId = data.categoriaId;
     if (Object.keys(changes).length === 0) {
       setPending(null);
       return;
@@ -193,6 +215,40 @@ export const AdminServices = () => {
     }
   };
 
+  const renderServicio = (servicio: Servicio) => {
+    const isInactive = servicio.fechaBaja !== null;
+    const summary = servicio.requiereEvaluacion
+      ? `${formatDuration(servicio.tiempoDuracion)} · Requiere aprobación`
+      : formatDuration(servicio.tiempoDuracion);
+
+    return (
+      <ListItem
+        title={servicio.tipo}
+        description={isInactive ? `${summary} · Dado de baja el ${formatDate(servicio.fechaBaja!)}` : summary}
+        className={isInactive ? 'bg-gray-50 opacity-60' : ''}
+        trailing={
+          <>
+            <span className="font-inter text-sm font-semibold text-black">Desde {formatPrice(servicio.precio)}</span>
+            {isInactive ? (
+              <button
+                type="button"
+                onClick={() => setPending({ type: 'alta', servicio })}
+                className={`${rowButtonClasses} hover:border-capilar-violet hover:text-capilar-violet`}
+              >
+                Dar de alta
+              </button>
+            ) : (
+              <>
+                <IconButton icon="editar" onClick={() => setPending({ type: 'editar', servicio })} aria-label={`Editar ${servicio.tipo}`} />
+                <IconButton icon="eliminar" onClick={() => setPending({ type: 'baja', servicio })} aria-label={`Eliminar ${servicio.tipo}`} />
+              </>
+            )}
+          </>
+        }
+      />
+    );
+  };
+
   const isForm = pending?.type === 'crear' || pending?.type === 'editar';
   const texts = pending && (pending.type === 'baja' || pending.type === 'alta') ? confirmTexts(pending) : null;
 
@@ -203,18 +259,29 @@ export const AdminServices = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-2">
             <Title>Servicios</Title>
-            <p className="font-inter text-capilar-grey">Cargá los servicios del salón con su duración y precio.</p>
+            <p className="font-inter text-capilar-grey">Cargá los servicios del salón con su categoría, duración y precio.</p>
           </div>
-          <Button
-            onClick={() => setSearchParams({ nuevo: '1' })}
-            className="shrink-0 self-start px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider md:self-auto"
-          >
-            Nuevo servicio
-          </Button>
+          {tab === 'servicios' && (
+            <Button
+              onClick={() => setSearchParams({ nuevo: '1' })}
+              className="shrink-0 self-start px-6 py-2 text-sm text-white! font-bold! uppercase tracking-wider md:self-auto"
+            >
+              Nuevo servicio
+            </Button>
+          )}
         </div>
       </div>
 
-      <SearchBox value={search} onChange={setSearch} label="Buscar servicios" placeholder="Buscar por nombre" />
+      <Tabs
+        ariaLabel="Secciones de servicios"
+        variant="subrayado"
+        tabs={[
+          ['servicios', 'Servicios'],
+          ['categorias', 'Categorías'],
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
       {error ? (
         <Alert variant="error" title="No se pudo cargar el listado">
@@ -222,49 +289,40 @@ export const AdminServices = () => {
         </Alert>
       ) : isLoading ? (
         <Loader label="Cargando servicios..." className="py-12" />
+      ) : tab === 'categorias' ? (
+        token && (
+          <AdminCategorias
+            token={token}
+            categorias={categorias}
+            servicios={services}
+            onCategoriasChange={setCategorias}
+            onRenamed={renameCategoria}
+          />
+        )
       ) : (
-        <List
-          items={visibleServices}
-          getKey={(servicio) => servicio.id}
-          emptyMessage={
-            services.length === 0
-              ? 'Todavía no hay servicios. Creá el primero con "Nuevo servicio".'
-              : 'No hay servicios que coincidan con la búsqueda.'
-          }
-          renderItem={(servicio) => {
-            const isInactive = servicio.fechaBaja !== null;
-            const summary = servicio.requiereEvaluacion
-              ? `${formatDuration(servicio.tiempoDuracion)} · Requiere aprobación`
-              : formatDuration(servicio.tiempoDuracion);
-
-            return (
-              <ListItem
-                title={servicio.tipo}
-                description={isInactive ? `${summary} · Dado de baja el ${formatDate(servicio.fechaBaja!)}` : summary}
-                className={isInactive ? 'bg-gray-50 opacity-60' : ''}
-                trailing={
-                  <>
-                    <span className="font-inter text-sm font-semibold text-black">Desde {formatPrice(servicio.precio)}</span>
-                    {isInactive ? (
-                      <button
-                        type="button"
-                        onClick={() => setPending({ type: 'alta', servicio })}
-                        className={`${rowButtonClasses} hover:border-capilar-violet hover:text-capilar-violet`}
-                      >
-                        Dar de alta
-                      </button>
-                    ) : (
-                      <>
-                        <IconButton icon="editar" onClick={() => setPending({ type: 'editar', servicio })} aria-label={`Editar ${servicio.tipo}`} />
-                        <IconButton icon="eliminar" onClick={() => setPending({ type: 'baja', servicio })} aria-label={`Eliminar ${servicio.tipo}`} />
-                      </>
-                    )}
-                  </>
-                }
-              />
-            );
-          }}
-        />
+        <>
+          <SearchBox value={search} onChange={setSearch} label="Buscar servicios" placeholder="Buscar por nombre" />
+          {grupos.length === 0 ? (
+            <p className="py-8 text-center font-inter text-sm text-capilar-grey">
+              {services.length === 0
+                ? 'Todavía no hay servicios. Creá el primero con "Nuevo servicio".'
+                : 'No hay servicios que coincidan con la búsqueda.'}
+            </p>
+          ) : (
+            grupos.map(({ categoria, servicios }) => (
+              <div key={categoria.id} className="flex flex-col gap-3">
+                <Title as="h2" className="text-lg! md:text-xl!">
+                  {categoria.nombre}
+                </Title>
+                <List
+                  items={servicios}
+                  getKey={(servicio) => servicio.id}
+                  renderItem={renderServicio}
+                />
+              </div>
+            ))
+          )}
+        </>
       )}
 
       <Modal
@@ -281,6 +339,7 @@ export const AdminServices = () => {
             // key: al pasar de un servicio a otro, el formulario arranca de cero
             key={pending.type === 'editar' ? pending.servicio.id : 'nuevo'}
             servicio={pending.type === 'editar' ? pending.servicio : undefined}
+            categorias={categoriasActivas}
             onSubmit={submitForm}
             onCancel={closeModal}
             isLoading={isSaving}

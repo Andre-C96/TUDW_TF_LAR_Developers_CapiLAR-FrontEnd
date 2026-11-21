@@ -4,11 +4,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getProfessionalsRequest, getUpcomingWorkDatesRequest } from '../../api/professionals';
-import { formatDuration, formatPrice, getServicesRequest } from '../../api/services';
+import { agruparPorCategoria, formatDuration, formatPrice, getServicesRequest } from '../../api/services';
 import { HORAS_CANCELACION_CLIENTE, createTurnoRequest, formatFechaLarga } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
+import { CategoriaChips } from '../../components/categoriaChips/categoriaChips';
 import { Loader } from '../../components/loader/loader';
 import { SlotPicker } from '../../components/slotPicker/slotPicker';
 import type { Slot } from '../../components/slotPicker/slotPicker';
@@ -57,6 +58,8 @@ export const Booking = () => {
   const [searchParams] = useSearchParams();
 
   const [servicioId, setServicioId] = useState<number | null>(Number(searchParams.get('servicio')) || null);
+  // Chip de categoría elegido; null: todas
+  const [categoriaId, setCategoriaId] = useState<number | null>(null);
   const [legajo, setLegajo] = useState<number | null>(null);
   const [slot, setSlot] = useState<Slot>({ fecha: '', hora: '' });
   const [isSaving, setIsSaving] = useState(false);
@@ -77,6 +80,7 @@ export const Booking = () => {
   if (!token) return null;
 
   const servicio = services.data?.find((s) => s.id === servicioId);
+  const grupos = agruparPorCategoria(services.data ?? []);
   const profesional = professionals.data?.find((p) => p.legajo === legajo);
 
   const chooseService = (id: number) => {
@@ -130,21 +134,39 @@ export const Booking = () => {
         ) : !services.data ? (
           <Loader label="Cargando servicios..." className="py-4" />
         ) : (
-          <div role="radiogroup" aria-label="Servicio" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {services.data.map((s) => (
-              <Option key={s.id} selected={s.id === servicioId} onClick={() => chooseService(s.id)}>
-                <span className="font-semibold text-black">{s.tipo}</span>
-                {s.descripcion && (
-                  <span className="line-clamp-2 text-xs text-capilar-grey" title={s.descripcion}>
-                    {s.descripcion}
-                  </span>
-                )}
-                <span className="text-capilar-grey">
-                  {formatDuration(s.tiempoDuracion)} · Desde {formatPrice(s.precio)}
-                </span>
-              </Option>
-            ))}
-          </div>
+          <>
+            {/* Encuesta TP4: el listado se hacía largo. Con "Todas" se ven agrupados; cada chip deja solo su categoría */}
+            {grupos.length > 1 && (
+              <CategoriaChips categorias={grupos.map((g) => g.categoria)} value={categoriaId} onChange={setCategoriaId} />
+            )}
+
+            <div role="radiogroup" aria-label="Servicio" className="flex flex-col gap-6">
+              {grupos
+                .filter((g) => categoriaId === null || g.categoria.id === categoriaId)
+                .map(({ categoria, servicios }) => (
+                  <div key={categoria.id} className="flex flex-col gap-3">
+                    {grupos.length > 1 && (
+                      <h3 className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey">{categoria.nombre}</h3>
+                    )}
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {servicios.map((s) => (
+                        <Option key={s.id} selected={s.id === servicioId} onClick={() => chooseService(s.id)}>
+                          <span className="font-semibold text-black">{s.tipo}</span>
+                          {s.descripcion && (
+                            <span className="line-clamp-2 text-xs text-capilar-grey" title={s.descripcion}>
+                              {s.descripcion}
+                            </span>
+                          )}
+                          <span className="text-capilar-grey">
+                            {formatDuration(s.tiempoDuracion)} · Desde {formatPrice(s.precio)}
+                          </span>
+                        </Option>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </>
         )}
       </Step>
 
