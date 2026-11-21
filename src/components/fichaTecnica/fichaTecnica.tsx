@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
-import { FOTOS_POR_MOMENTO, NIVELES, TIPOS_DE_PELO, UNIDADES, VOLUMENES_DE_PELO, insumosDeFicha, totalDeProductos } from '../../api/fichas';
+import { FOTOS_POR_MOMENTO, NIVELES, contextoDeFoto, TIPOS_DE_PELO, UNIDADES, VOLUMENES_DE_PELO, insumosDeFicha, totalDeProductos } from '../../api/fichas';
 import type { Ficha, FichaCliente, FotoFicha, Insumo, MomentoFoto } from '../../api/fichas';
 import { formatPrice } from '../../api/services';
 import { parseTratamientos } from '../../api/tratamientos';
@@ -143,6 +143,9 @@ interface FichaGaleriaProps {
   token: string;
   fichaId: number;
   fotos: FotoFicha[];
+  // Servicio y fecha de la ficha, para el texto alternativo de las fotos
+  servicio: string;
+  fecha: string;
   // Si vienen, la galería se puede editar: sumar fotos (hasta 5 de cada una) y quitarlas
   onAdd?: (tipo: MomentoFoto, file: File) => void;
   onRemove?: (foto: FotoFicha) => void;
@@ -151,10 +154,11 @@ interface FichaGaleriaProps {
 }
 
 // Fotos de antes y después; al tocar una se ve grande y se puede pasar a las demás (primero las de antes)
-export const FichaGaleria = ({ token, fichaId, fotos, onAdd, onRemove, busy = false }: FichaGaleriaProps) => {
+export const FichaGaleria = ({ token, fichaId, fotos, servicio, fecha, onAdd, onRemove, busy = false }: FichaGaleriaProps) => {
   // Posición en `recorrido` de la foto abierta
   const [abierta, setAbierta] = useState<number | null>(null);
   const recorrido = MOMENTOS.flatMap(({ tipo }) => fotos.filter((foto) => foto.tipo === tipo));
+  const contexto = contextoDeFoto(servicio, fecha);
 
   const elegir = (tipo: MomentoFoto) => (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -184,7 +188,7 @@ export const FichaGaleria = ({ token, fichaId, fotos, onAdd, onRemove, busy = fa
                     token={token}
                     fichaId={fichaId}
                     fotoId={foto.id}
-                    label={`foto de ${titulo.toLowerCase()} ${index + 1}`}
+                    label={`foto de ${titulo.toLowerCase()} ${index + 1} – ${contexto}`}
                     onOpen={() => setAbierta(recorrido.indexOf(foto))}
                     onRemove={onRemove && (() => onRemove(foto))}
                     disabled={busy}
@@ -212,7 +216,15 @@ export const FichaGaleria = ({ token, fichaId, fotos, onAdd, onRemove, busy = fa
         );
       })}
 
-      <FichaFotoVisor token={token} fichaId={fichaId} fotos={recorrido} index={abierta} onChange={setAbierta} />
+      <FichaFotoVisor
+        token={token}
+        fichaId={fichaId}
+        fotos={recorrido}
+        servicio={servicio}
+        fecha={fecha}
+        index={abierta}
+        onChange={setAbierta}
+      />
     </div>
   );
 };
@@ -332,7 +344,9 @@ export const FichaTecnica = ({ token, ficha, defaultAbierta = false, onEditar, c
           <div role="tabpanel" id={`${baseId}-panel-${activa}`} aria-labelledby={`${baseId}-tab-${activa}`} className="p-6 md:p-8">
             {activa === 'fotos' ? (
               // Las fotos se bajan recién al abrir la pestaña
-              abierta && <FichaGaleria token={token} fichaId={ficha.id} fotos={ficha.fotos} />
+              abierta && (
+                <FichaGaleria token={token} fichaId={ficha.id} fotos={ficha.fotos} servicio={ficha.servicio} fecha={ficha.fecha} />
+              )
             ) : completa ? (
               <FichaDatos ficha={ficha} />
             ) : (
