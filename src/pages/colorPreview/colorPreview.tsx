@@ -10,6 +10,7 @@ import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
 import { Button } from '../../components/button/button';
 import { Loader } from '../../components/loader/loader';
+import { RadioGroup } from '../../components/radioGroup/radioGroup';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
 import { useFetch } from '../../customHooks/fetch/useFetch';
@@ -184,7 +185,7 @@ export const ColorPreview = () => {
       </Step>
 
       <Step number={2} title="Color">
-        <div role="radiogroup" aria-label="Color" className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <RadioGroup aria-label="Color" className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {CARTA_DE_COLORES.map((c) => {
             const selected = c.hex === color?.hex;
             return (
@@ -207,7 +208,7 @@ export const ColorPreview = () => {
               </button>
             );
           })}
-        </div>
+        </RadioGroup>
 
         <label className="flex flex-col gap-2 font-inter text-sm">
           <span className="flex justify-between text-xs font-semibold uppercase tracking-widest text-capilar-grey">

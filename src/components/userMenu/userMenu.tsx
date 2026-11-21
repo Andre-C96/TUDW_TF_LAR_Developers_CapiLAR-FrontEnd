@@ -78,7 +78,7 @@ export const UserMenu = ({ userName, items }: UserMenuProps) => {
                 to={item.to}
                 role="menuitem"
                 onClick={() => setIsOpen(false)}
-                className="block px-4 py-2 font-inter text-sm hover:bg-gray-50 hover:text-capilar-violet focus-visible:bg-gray-50 focus-visible:outline-none"
+                className="block px-4 py-2 font-inter text-sm hover:bg-gray-50 hover:text-capilar-violet focus-visible:bg-gray-50 focus-visible:-outline-offset-2"
               >
                 {item.label}
               </Link>
