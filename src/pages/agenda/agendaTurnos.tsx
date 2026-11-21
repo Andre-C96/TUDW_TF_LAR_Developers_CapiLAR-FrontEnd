@@ -364,7 +364,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
         onClick={() => setFicha({ turno, detalle })}
         className={`ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 align-middle font-inter text-xs font-semibold transition-colors ${
           tiene
-            ? 'border-capilar-violet/40 bg-purple-50 text-capilar-violet-text hover:border-capilar-violet'
+            ? 'border-capilar-violet/40 bg-capilar-violet-soft text-capilar-violet-text hover:border-capilar-violet'
             : 'border-dashed border-gray-300 text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
         }`}
       >

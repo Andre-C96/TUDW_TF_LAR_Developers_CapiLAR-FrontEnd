@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../../context/auth/useAuth';
@@ -7,7 +8,17 @@ import { SideMenu } from './sideMenu';
 
 // Estructura del panel de profesional y admin: header sin links de la landing, menú lateral, contenido y footer
 export const PanelLayout = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasRole } = useAuth();
+  const rol = hasRole('ADMIN') ? 'admin' : 'profesional';
+
+  // Cada rol con su color en el panel (ver html[data-rol] en index.css). Va en <html> para que también lo tomen los
+  // modales, que se dibujan fuera del layout. Al salir del panel (o cerrar sesión) vuelve el violeta del cliente
+  useEffect(() => {
+    document.documentElement.dataset.rol = rol;
+    return () => {
+      delete document.documentElement.dataset.rol;
+    };
+  }, [rol]);
 
   return (
     <div className="flex min-h-screen flex-col">

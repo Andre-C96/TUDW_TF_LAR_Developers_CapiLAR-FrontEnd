@@ -214,7 +214,7 @@ export const Users = () => {
                 key={filter.label}
                 className={`inline-flex items-center rounded-[6px] border font-inter text-sm transition-colors ${
                   isActive
-                    ? 'border-capilar-violet bg-purple-50 font-semibold text-capilar-violet'
+                    ? 'border-capilar-violet bg-capilar-violet-soft font-semibold text-capilar-violet'
                     : 'border-gray-300 bg-white font-medium text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
                 }`}
               >
