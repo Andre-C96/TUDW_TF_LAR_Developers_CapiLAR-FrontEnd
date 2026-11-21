@@ -154,9 +154,10 @@ export const SlotPicker = ({ token, items, workDates, options, value, onChange }
                       role="radio"
                       aria-checked={selected}
                       onClick={() => onChange({ fecha: value.fecha, hora })}
+                      // Elegido como el resto de las opciones (servicio, profesional, chips): borde violeta y fondo lila
                       className={`rounded-lg border px-2 py-2 font-inter text-sm transition-colors ${
                         selected
-                          ? 'border-transparent bg-capilar-gradient font-semibold text-white'
+                          ? 'border-capilar-violet bg-capilar-violet/10 font-semibold text-black'
                           : 'border-gray-300 bg-white text-black hover:border-capilar-violet hover:text-capilar-violet'
                       }`}
                     >
