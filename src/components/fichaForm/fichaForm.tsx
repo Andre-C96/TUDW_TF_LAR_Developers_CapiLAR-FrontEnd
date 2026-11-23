@@ -169,7 +169,8 @@ export const Opciones = <T extends string>({
             onClick={() => onChange(value === opcion ? '' : opcion)}
             className={`rounded-[4px] border px-3 py-1.5 font-inter text-sm transition-colors ${
               value === opcion
-                ? 'border-capilar-violet bg-capilar-violet text-white'
+                ? // Elegida como en los turnos: borde del color del rol y fondo suave
+                  'border-capilar-violet bg-capilar-violet-soft font-semibold text-black'
                 : 'border-gray-300 bg-white text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
             }`}
           >
