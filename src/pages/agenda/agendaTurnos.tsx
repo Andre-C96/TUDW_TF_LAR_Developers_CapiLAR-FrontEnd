@@ -82,11 +82,13 @@ type Vista = FiltroFecha | 'busqueda';
 // La búsqueda mira los turnos de los últimos 30 días y los próximos 60 (el máximo para reservar)
 const BUSQUEDA_DIAS_ATRAS = 30;
 
-// Más nuevo arriba: días de la fecha más lejana a la más vieja (dentro del día, por hora)
-const porFechaDesc = (a: Turno, b: Turno) => b.fecha.localeCompare(a.fecha) || a.horaInicio.localeCompare(b.horaInicio);
-
 // Cancelados y rechazados se cuentan aparte (en gris) en cada día
 const esCancelado = (turno: Turno) => turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO';
+
+// Más nuevo arriba: días de la fecha más lejana a la más vieja. Dentro del día, los cancelados y rechazados al final
+// (para no mezclarlos con los activos) y después por hora
+const porFechaDesc = (a: Turno, b: Turno) =>
+  b.fecha.localeCompare(a.fecha) || Number(esCancelado(a)) - Number(esCancelado(b)) || a.horaInicio.localeCompare(b.horaInicio);
 
 // Sin mayúsculas ni tildes, para comparar lo que se busca
 const normalizar = (texto: string) =>
