@@ -32,7 +32,8 @@ const Chip = ({ selected, onClick, children }: { selected: boolean; onClick: () 
     onClick={onClick}
     className={`rounded-full border px-3 py-1.5 font-inter text-sm transition-colors ${
       selected
-        ? 'border-capilar-violet bg-capilar-violet text-white'
+        ? // Elegido como en los turnos: borde del color del rol y fondo suave
+          'border-capilar-violet bg-capilar-violet-soft font-semibold text-black'
         : 'border-gray-300 bg-white text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
     }`}
   >

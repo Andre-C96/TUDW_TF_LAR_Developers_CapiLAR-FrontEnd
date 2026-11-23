@@ -274,7 +274,6 @@ export const AdminServices = () => {
 
       <Tabs
         ariaLabel="Secciones de servicios"
-        variant="subrayado"
         tabs={[
           ['servicios', 'Servicios'],
           ['categorias', 'Categorías'],
