@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../api/client';
-import { MAX_DIAS_ANTICIPACION, addDays, buscarDiasSinLugar, formatFechaLarga, getHorariosLibresRequest, toIsoDate } from '../../api/turnos';
+import {
+  MAX_DIAS_ANTICIPACION,
+  addDays,
+  buscarDiasSinLugar,
+  esServicioRepetido,
+  formatFechaLarga,
+  getHorariosLibresRequest,
+  toIsoDate,
+} from '../../api/turnos';
 import type { HorariosLibresOptions, TurnoItem } from '../../api/turnos';
 import { Alert } from '../alert/alert';
 import { DatePicker } from '../datePicker/datePicker';
@@ -31,6 +39,8 @@ interface Result {
   key: string;
   horarios: string[];
   error: string;
+  // 409: la clienta ya tiene ese servicio ese día. No es una falla: se avisa el motivo del back
+  repetido: boolean;
 }
 
 // Días completos de la última búsqueda; `key` dice para qué días y servicios es (si no coincide, arranca de cero)
@@ -79,10 +89,16 @@ export const SlotPicker = ({ token, items, workDates, options, value, onChange }
     let ignore = false;
     getHorariosLibresRequest(token, value.fecha, items, options)
       .then((data) => {
-        if (!ignore) setResult({ key, horarios: data.horarios, error: '' });
+        if (!ignore) setResult({ key, horarios: data.horarios, error: '', repetido: false });
       })
       .catch((err) => {
-        if (!ignore) setResult({ key, horarios: [], error: err instanceof ApiError ? err.message : unexpectedError });
+        if (!ignore)
+          setResult({
+            key,
+            horarios: [],
+            error: err instanceof ApiError ? err.message : unexpectedError,
+            repetido: esServicioRepetido(err),
+          });
       });
     return () => {
       ignore = true;
@@ -137,6 +153,10 @@ export const SlotPicker = ({ token, items, workDates, options, value, onChange }
             <p className="font-inter text-sm font-semibold text-black first-letter:uppercase">{formatFechaLarga(value.fecha)}</p>
             {!current ? (
               <Loader size="sm" label="Buscando horarios libres..." className="items-start! py-2" />
+            ) : current.repetido ? (
+              <Alert variant="advertencia" title={current.error}>
+                Probá con otra fecha.
+              </Alert>
             ) : current.error ? (
               <Alert variant="error" title="No se pudieron cargar los horarios">
                 {current.error}

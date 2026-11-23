@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { ApiError, apiFetch } from './client';
 import type { AlergiaDeCliente } from './alergias';
 import type { ArticuloSinStock } from './articulos';
 
@@ -105,12 +105,23 @@ export interface HorariosLibresOptions {
 export const getHorariosLibresRequest = (token: string, fecha: string, items: TurnoItem[], options: HorariosLibresOptions = {}) =>
   apiFetch<HorariosLibres>('/turnos/horarios-libres', { method: 'POST', body: { fecha, items, ...options }, token });
 
+// Un servicio por día por clienta: si ya tiene ese servicio ese día (PENDIENTE o CONFIRMADO), el back da 409 con el motivo
+// ("Ya tenés un turno de Corte ese día") en vez de una lista vacía
+export const esServicioRepetido = (err: unknown): err is ApiError => err instanceof ApiError && err.status === 409;
+
+// Para buscar días: el 409 cuenta como día sin lugar; otro error, null (no se sabe)
+const horariosDelDia = (token: string, fecha: string, items: TurnoItem[], options: HorariosLibresOptions = {}) =>
+  getHorariosLibresRequest(token, fecha, items, options).catch((err) =>
+    esServicioRepetido(err) ? { fecha, horarios: [] as string[] } : null,
+  );
+
 // Pedidos de horarios libres a la vez: el back no tiene uno por rango de fechas, así que se pregunta día por día
 const PEDIDOS_A_LA_VEZ = 4;
 
 // Encuesta TP4: los días que trabaja el profesional pero ya no tienen lugar. Pregunta cada fecha (de a 4 a la vez) y
 // avisa con onSinLugar apenas sabe que una está completa, para que el calendario las vaya apagando sin esperar a todas.
-// Si un pedido falla, ese día se deja elegible (al tocarlo se ve el error). `cancelado` corta al cambiar de servicio o profesional
+// Los días en que la clienta ya tiene ese servicio (409) también se apagan. Si un pedido falla por otra cosa, ese día se
+// deja elegible (al tocarlo se ve el error). `cancelado` corta al cambiar de servicio o profesional
 export const buscarDiasSinLugar = async (
   token: string,
   fechas: string[],
@@ -122,7 +133,7 @@ export const buscarDiasSinLugar = async (
   const pendientes = [...fechas];
   const worker = async () => {
     for (let fecha = pendientes.shift(); fecha && !cancelado(); fecha = pendientes.shift()) {
-      const libres = await getHorariosLibresRequest(token, fecha, items, options).catch(() => null);
+      const libres = await horariosDelDia(token, fecha, items, options);
       if (!cancelado() && libres && libres.horarios.length === 0) onSinLugar(fecha);
     }
   };
@@ -130,11 +141,11 @@ export const buscarDiasSinLugar = async (
 };
 
 // El primer día con lugar (y su primer horario) entre `fechas` ordenadas, o null si no hay. Pregunta de a 4 fechas en
-// orden y corta en la primera tanda que tiene alguna con lugar
+// orden y corta en la primera tanda que tiene alguna con lugar. Los días en que la clienta ya tiene ese servicio se saltean
 export const buscarPrimerHorarioLibre = async (token: string, fechas: string[], items: TurnoItem[]) => {
   for (let i = 0; i < fechas.length; i += PEDIDOS_A_LA_VEZ) {
     const tanda = fechas.slice(i, i + PEDIDOS_A_LA_VEZ);
-    const respuestas = await Promise.all(tanda.map((fecha) => getHorariosLibresRequest(token, fecha, items).catch(() => null)));
+    const respuestas = await Promise.all(tanda.map((fecha) => horariosDelDia(token, fecha, items)));
     const conLugar = respuestas.find((r) => r && r.horarios.length > 0);
     if (conLugar) return { fecha: conLugar.fecha, hora: conLugar.horarios[0] };
   }
