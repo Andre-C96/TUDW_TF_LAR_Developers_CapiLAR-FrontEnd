@@ -25,13 +25,12 @@ import type { Turno, TurnoDetalle } from '../../api/turnos';
 import { validateFoto } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
-import { ConfirmDialog } from '../../components/confirmDialog/confirmDialog';
 import { FichaForm } from '../../components/fichaForm/fichaForm';
 import type { FichaBorrador, FichaFormHandle } from '../../components/fichaForm/fichaForm';
 import { FichaDatos, FichaGaleria, FichaTecnica } from '../../components/fichaTecnica/fichaTecnica';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
-import { SugerenciaIACard } from '../../components/sugerenciaIA/sugerenciaIA';
+import { DialogoIA, SugerenciaIACard } from '../../components/sugerenciaIA/sugerenciaIA';
 import { Title } from '../../components/title/title';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { avisarSinStock } from './fichaAvisos';
@@ -434,32 +433,32 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
           )}
         </div>
       </Modal>
-      <ConfirmDialog
+      <DialogoIA
         isOpen={preguntaFormulas !== null}
-        onClose={() => responderFormulas(false)}
         title="Fórmulas sugeridas"
         confirmLabel="Reemplazar"
         cancelLabel="Mantener las mías"
         onConfirm={() => responderFormulas(true)}
+        onCancel={() => responderFormulas(false)}
       >
         La IA sugiere {preguntaFormulas?.formulas.length === 1 ? 'una fórmula' : `${preguntaFormulas?.formulas.length} fórmulas`} con productos del
         stock. ¿Querés reemplazar las que ya cargaste?
-      </ConfirmDialog>
-      <ConfirmDialog
+      </DialogoIA>
+      <DialogoIA
         isOpen={guardarConAlertas !== null}
-        onClose={() => setGuardarConAlertas(null)}
         title="Revisá las alertas de la IA"
         confirmLabel="Ya las revisé"
         cancelLabel="Volver a la ficha"
         onConfirm={confirmarAlertas}
+        onCancel={() => setGuardarConAlertas(null)}
         isLoading={saving}
       >
-        <ul className="flex list-disc flex-col gap-2 pl-4 text-left text-black">
+        <ul className="flex list-disc flex-col gap-1 pl-4 text-black">
           {sugerencia?.analisis.alertas.map((alerta, index) => (
             <li key={index}>{alerta}</li>
           ))}
         </ul>
-      </ConfirmDialog>
+      </DialogoIA>
       {editando && (
         <FichaEditModal
           token={token}

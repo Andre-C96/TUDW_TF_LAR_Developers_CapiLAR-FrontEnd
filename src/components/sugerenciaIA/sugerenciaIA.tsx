@@ -1,5 +1,51 @@
+import type { ReactNode } from 'react';
 import type { SugerenciaIA } from '../../api/fichas';
 import { Alert } from '../alert/alert';
+import { Modal } from '../modal/modal';
+
+interface DialogoIAProps {
+  isOpen: boolean;
+  title: string;
+  children: ReactNode;
+  confirmLabel: string;
+  cancelLabel: string;
+  onConfirm: () => void;
+  // También con Escape o la cruz
+  onCancel: () => void;
+  isLoading?: boolean;
+}
+
+// Pregunta corta de la IA en la ficha (reemplazar fórmulas, revisar alertas): chica, con botones chicos centrados.
+// La opción principal va con borde degradado y letra negra en negrita
+export const DialogoIA = ({ isOpen, title, children, confirmLabel, cancelLabel, onConfirm, onCancel, isLoading = false }: DialogoIAProps) => (
+  <Modal isOpen={isOpen} onClose={() => !isLoading && onCancel()} ariaLabel={title} className="max-w-sm!">
+    <div className="flex flex-col gap-4 font-inter text-sm">
+      <h2 className="pr-8 text-base font-semibold text-black">{title}</h2>
+      <div className="text-capilar-grey">{children}</div>
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isLoading}
+          className="text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:text-black disabled:opacity-60"
+        >
+          {cancelLabel}
+        </button>
+        {/* Borde degradado de 2px (como "Sugerir con IA") y letra negra */}
+        <div className="rounded-[4px] bg-capilar-gradient p-[2px] shadow-sm transition-transform active:scale-95">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="rounded-[2px] bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-black transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoading ? 'Guardando...' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Modal>
+);
 
 interface SugerenciaIACardProps {
   sugerencia: SugerenciaIA;
