@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { API_URL, apiFetch } from './client';
 import type { Servicio } from './services';
 import { MAX_DIAS_ANTICIPACION, addDays, toIsoDate } from './turnos';
 
@@ -25,6 +25,8 @@ export interface ProfesionalResumen {
   legajo: number;
   nombre: string;
   apellido: string;
+  // Si cargó foto de perfil (ver fotoProfesionalUrl)
+  tieneFoto: boolean;
 }
 
 // Horario de trabajo de una fecha ("YYYY-MM-DD"), con horas "HH:mm". Cada semana puede ser distinta
@@ -78,3 +80,7 @@ export const removeAvailabilityRequest = (token: string, legajo: number, id: num
 // Baja lógica de todos los horarios de una fecha. 409 si hay turnos reservados ese día
 export const removeAvailabilityDateRequest = (token: string, legajo: number, fecha: string) =>
   apiFetch<{ message: string }>(`/profesionales/${legajo}/disponibilidad?fecha=${fecha}`, { method: 'DELETE', token });
+
+// Foto de perfil del profesional, directo en un <img> (sin token). El back la va a hacer pública para el equipo del
+// inicio; mientras pida sesión responde 401 y quien la usa muestra las iniciales
+export const fotoProfesionalUrl = (legajo: number) => `${API_URL}/profesionales/${legajo}/foto`;

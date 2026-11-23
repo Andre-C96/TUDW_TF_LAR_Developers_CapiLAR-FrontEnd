@@ -6,6 +6,7 @@ import { Button } from '../../components/button/button';
 import { Card } from '../../components/card/card';
 import { GradientIcon } from '../../components/gradientIcon/gradientIcon';
 import { ServicesCarousel } from '../../components/servicesCarousel/servicesCarousel';
+import { TeamCarousel } from '../../components/teamCarousel/teamCarousel';
 import type { LayoutContext } from '../../layouts/layout/layout';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
@@ -123,9 +124,9 @@ export const Home = () => {
         />
       </HomeSection>
 
-      {/* foto y nombre de los profesionales */}
-      <HomeSection id="nosotros" title="Nosotros">
-        <ComingSoon>Próximamente vas a conocer a nuestro equipo de profesionales.</ComingSoon>
+      {/* foto y nombre de los profesionales: sin tarjeta, directo sobre el fondo blanco */}
+      <HomeSection id="nosotros">
+        <TeamCarousel title="Nosotros" />
       </HomeSection>
 
       {/* dirección, horario y redes */}
