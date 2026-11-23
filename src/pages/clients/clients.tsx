@@ -29,7 +29,7 @@ export const Clients = () => {
   if (!token) return null;
 
   return (
-    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-24 pb-16">
       <div className="flex flex-col gap-4">
         <Breadcrumbs items={[{ label: 'Panel', to: '/panel' }, { label: 'Clientes' }]} />
         <div className="flex flex-col gap-2">
@@ -56,7 +56,7 @@ export const Clients = () => {
             <li key={c.id}>
               <Link
                 to={`/panel/clientes/${c.id}`}
-                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-capilar-violet/5 focus-visible:bg-capilar-violet/5 focus-visible:outline-none"
+                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-capilar-violet/5 focus-visible:bg-capilar-violet/5 focus-visible:-outline-offset-2"
               >
                 <Avatar
                   token={token}

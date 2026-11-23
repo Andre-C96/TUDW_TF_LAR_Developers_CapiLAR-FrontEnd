@@ -193,7 +193,7 @@ export const Users = () => {
   const texts = pending && confirmTexts(pending);
 
   return (
-    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 pt-24 pb-16">
       <div className="flex flex-col gap-4">
         <Breadcrumbs items={[{ label: 'Panel', to: '/panel' }, { label: 'Usuarios' }]} />
         <div className="flex flex-col gap-2">
@@ -214,7 +214,7 @@ export const Users = () => {
                 key={filter.label}
                 className={`inline-flex items-center rounded-[6px] border font-inter text-sm transition-colors ${
                   isActive
-                    ? 'border-capilar-violet bg-purple-50 font-semibold text-capilar-violet'
+                    ? 'border-capilar-violet bg-capilar-violet-soft font-semibold text-capilar-violet'
                     : 'border-gray-300 bg-white font-medium text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
                 }`}
               >
@@ -345,7 +345,7 @@ export const Users = () => {
         />
       )}
 
-      <Modal isOpen={pending !== null} onClose={closeModal} ariaLabel={texts?.title}>
+      <Modal isOpen={pending !== null} onClose={closeModal} ariaLabel={texts?.title} closeOnBackdrop>
         {texts && (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2 text-center">

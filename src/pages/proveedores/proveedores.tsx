@@ -229,7 +229,7 @@ export const Proveedores = () => {
   );
 
   return (
-    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-5xl flex-col gap-8 px-6 pt-24 pb-16">
       <div className="flex flex-col gap-4">
         <Breadcrumbs items={[{ label: 'Panel', to: '/panel' }, { label: 'Proveedores' }]} />
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

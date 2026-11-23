@@ -18,6 +18,7 @@ import { Title } from '../../components/title/title';
 import { TurnoCard, TurnoList } from '../../components/turnoCard/turnoCard';
 import { useAuth } from '../../context/auth/useAuth';
 import { useFetch } from '../../customHooks/fetch/useFetch';
+import { HistorialFiltrado } from '../history/historialFiltrado';
 import { FichaEditModal } from '../agenda/fichaEditModal';
 
 const tabs = [
@@ -108,7 +109,7 @@ export const ClientProfile = () => {
   const c = cliente.data;
 
   return (
-    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-24 pb-16">
       <Breadcrumbs
         items={[{ label: 'Panel', to: '/panel' }, { label: 'Clientes', to: '/panel/clientes' }, { label: c ? `${c.nombre} ${c.apellido}` : 'Cliente' }]}
       />
@@ -207,12 +208,21 @@ export const ClientProfile = () => {
             ) : fichas.data?.length === 0 ? (
               <p className="py-8 text-center font-inter text-sm text-capilar-grey">Todavía no tiene fichas técnicas.</p>
             ) : (
-              <div className="flex flex-col gap-2">
-                {/* Todas cerradas: cada una se despliega al tocarla */}
-                {fichas.data?.map((ficha) => (
-                  <FichaTecnica key={ficha.id} token={token} ficha={ficha} onEditar={ficha.legajo === legajo ? () => setEditando(ficha) : undefined} />
-                ))}
-              </div>
+              <HistorialFiltrado fichas={fichas.data ?? []} conProfesional>
+                {(filtradas) => (
+                  <div className="flex flex-col gap-2">
+                    {/* Todas cerradas: cada una se despliega al tocarla */}
+                    {filtradas.map((ficha) => (
+                      <FichaTecnica
+                        key={ficha.id}
+                        token={token}
+                        ficha={ficha}
+                        onEditar={ficha.legajo === legajo ? () => setEditando(ficha) : undefined}
+                      />
+                    ))}
+                  </div>
+                )}
+              </HistorialFiltrado>
             )}
           </div>
         </>

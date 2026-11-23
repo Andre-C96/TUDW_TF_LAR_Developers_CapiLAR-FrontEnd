@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
@@ -82,11 +82,13 @@ type Vista = FiltroFecha | 'busqueda';
 // La búsqueda mira los turnos de los últimos 30 días y los próximos 60 (el máximo para reservar)
 const BUSQUEDA_DIAS_ATRAS = 30;
 
-// Más nuevo arriba: días de la fecha más lejana a la más vieja (dentro del día, por hora)
-const porFechaDesc = (a: Turno, b: Turno) => b.fecha.localeCompare(a.fecha) || a.horaInicio.localeCompare(b.horaInicio);
-
 // Cancelados y rechazados se cuentan aparte (en gris) en cada día
 const esCancelado = (turno: Turno) => turno.estado === 'CANCELADO' || turno.estado === 'RECHAZADO';
+
+// Más nuevo arriba: días de la fecha más lejana a la más vieja. Dentro del día, los cancelados y rechazados al final
+// (para no mezclarlos con los activos) y después por hora
+const porFechaDesc = (a: Turno, b: Turno) =>
+  b.fecha.localeCompare(a.fecha) || Number(esCancelado(a)) - Number(esCancelado(b)) || a.horaInicio.localeCompare(b.horaInicio);
 
 // Sin mayúsculas ni tildes, para comparar lo que se busca
 const normalizar = (texto: string) =>
@@ -112,6 +114,61 @@ const coincide = (turno: Turno, busqueda: string) => {
 
 // Cada cuánto se actualiza la vista Hoy (también al volver a la pestaña)
 const REFRESCO_HOY_MS = 60_000;
+
+// Los turnos de un día: primero los activos y, cerrados en "Cancelados", los cancelados y rechazados (no tienen
+// acciones: se despliegan solo si hacen falta, sin mezclarse con el resto)
+const TurnosDelDia = ({
+  turnos,
+  separarCancelados,
+  tarjeta,
+}: {
+  turnos: Turno[];
+  separarCancelados: boolean;
+  tarjeta: (turno: Turno) => ReactNode;
+}) => {
+  const [verCancelados, setVerCancelados] = useState(false);
+  const contenidoId = useId();
+  if (!separarCancelados) return <TurnoList>{turnos.map(tarjeta)}</TurnoList>;
+
+  const activos = turnos.filter((turno) => !esCancelado(turno));
+  const cancelados = turnos.filter(esCancelado);
+  return (
+    <div className="flex flex-col gap-3">
+      {activos.length > 0 && <TurnoList>{activos.map(tarjeta)}</TurnoList>}
+      {cancelados.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => setVerCancelados(!verCancelados)}
+            aria-expanded={verCancelados}
+            aria-controls={contenidoId}
+            className="flex items-center gap-2 self-start font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey hover:text-black"
+          >
+            Cancelados
+            <CountBadge>{cancelados.length}</CountBadge>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`h-4 w-4 transition-transform duration-300 ${verCancelados ? 'rotate-180' : ''}`}
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+          {verCancelados && (
+            <div id={contenidoId}>
+              <TurnoList>{cancelados.map(tarjeta)}</TurnoList>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Grupos de la vista Hoy, como en el mail de agenda diaria: primero los que avisaron que vienen
 const gruposHoy: { titulo: string; dot: string; incluye: (turno: Turno) => boolean }[] = [
@@ -364,7 +421,7 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
         onClick={() => setFicha({ turno, detalle })}
         className={`ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 align-middle font-inter text-xs font-semibold transition-colors ${
           tiene
-            ? 'border-capilar-violet/40 bg-purple-50 text-capilar-violet-text hover:border-capilar-violet'
+            ? 'border-capilar-violet/40 bg-capilar-violet-soft text-capilar-violet-text hover:border-capilar-violet'
             : 'border-dashed border-gray-300 text-capilar-grey hover:border-capilar-violet hover:text-capilar-violet'
         }`}
       >
@@ -522,8 +579,11 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
                   </span>
                 }
               >
-                <TurnoList>
-                  {delDia.map((turno) => (
+                <TurnosDelDia
+                  turnos={delDia}
+                  // Filtrando por cancelados no hay otros: se muestran directo
+                  separarCancelados={filtroEstado !== 'cancelados'}
+                  tarjeta={(turno) => (
                     <TurnoCard
                       key={turno.id}
                       turno={turno}
@@ -532,8 +592,8 @@ export const AgendaTurnos = ({ token, legajo }: AgendaTurnosProps) => {
                       detalleAction={fichaActionFor(turno)}
                       badge={badgeFor(turno)}
                     />
-                  ))}
-                </TurnoList>
+                  )}
+                />
               </Collapsible>
             );
           })}

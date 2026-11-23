@@ -114,7 +114,7 @@ export const FilterSelect = <T extends string>({ label, value, options, onChange
                       choose(option);
                     }
                   }}
-                  className={`cursor-pointer px-4 py-2 font-inter text-sm whitespace-nowrap outline-none transition-colors hover:bg-purple-50 hover:text-capilar-violet focus:bg-purple-50 focus:text-capilar-violet ${
+                  className={`cursor-pointer px-4 py-2 font-inter text-sm whitespace-nowrap outline-none transition-colors hover:bg-capilar-violet-soft hover:text-capilar-violet focus:bg-capilar-violet-soft focus:text-capilar-violet ${
                     selected ? 'font-semibold text-capilar-violet' : 'text-black'
                   }`}
                 >

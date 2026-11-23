@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getProfessionalServicesRequest, getUpcomingWorkDatesRequest } from '../../api/professionals';
-import { formatDuration, formatPrice } from '../../api/services';
+import { agruparPorCategoria, formatDuration, formatPrice } from '../../api/services';
 import { createTurnoRequest, formatFechaLarga } from '../../api/turnos';
 import type { Usuario } from '../../api/auth';
 import { getClientRequest, searchClientsRequest } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
+import { CategoriaChips } from '../../components/categoriaChips/categoriaChips';
+import { RadioGroup } from '../../components/radioGroup/radioGroup';
 import { Loader } from '../../components/loader/loader';
 import { SearchBox } from '../../components/searchBox/searchBox';
 import { SlotPicker } from '../../components/slotPicker/slotPicker';
@@ -46,6 +48,8 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
   const preset = useFetch(clienteId ? `cliente-${clienteId}` : null, () => getClientRequest(token, clienteId!));
   const cliente = elegido !== undefined ? elegido : preset.data;
   const [servicioId, setServicioId] = useState<number | null>(null);
+  // Chip de categoría elegido; null: todas
+  const [categoriaId, setCategoriaId] = useState<number | null>(null);
   const [slot, setSlot] = useState<Slot>({ fecha: '', hora: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -63,6 +67,7 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
   const availability = useFetch(`disponibilidad-${legajo}`, () => getUpcomingWorkDatesRequest(token, legajo));
 
   const servicio = services.data?.find((s) => s.id === servicioId);
+  const grupos = agruparPorCategoria(services.data ?? []);
 
   const reset = () => {
     setSearch('');
@@ -177,28 +182,45 @@ export const NewTurno = ({ token, legajo, clienteId, onCreated }: NewTurnoProps)
               .
             </p>
           ) : (
-            <div role="radiogroup" aria-label="Servicio" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {services.data.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={s.id === servicioId}
-                  onClick={() => {
-                    setServicioId(s.id);
-                    setSlot({ fecha: '', hora: '' });
-                  }}
-                  className={`flex flex-col items-start gap-1 rounded-lg border-2 px-4 py-3 text-left font-inter text-sm transition-colors ${
-                    s.id === servicioId ? 'border-capilar-violet bg-capilar-violet/10' : 'border-gray-200 bg-white hover:border-capilar-violet/50'
-                  }`}
-                >
-                  <span className="font-semibold text-black">{s.tipo}</span>
-                  <span className="text-capilar-grey">
-                    {formatDuration(s.tiempoDuracion)} · Desde {formatPrice(s.precio)}
-                  </span>
-                </button>
-              ))}
-            </div>
+            // Agrupados por categoría, con chips para dejar una sola (con una sola categoría, ni chips ni subtítulo)
+            <>
+              {grupos.length > 1 && (
+                <CategoriaChips categorias={grupos.map((g) => g.categoria)} value={categoriaId} onChange={setCategoriaId} />
+              )}
+              <RadioGroup aria-label="Servicio" className="flex flex-col gap-5">
+                {grupos
+                  .filter((g) => categoriaId === null || g.categoria.id === categoriaId)
+                  .map(({ categoria, servicios }) => (
+                    <div key={categoria.id} className="flex flex-col gap-3">
+                      {grupos.length > 1 && (
+                        <h3 className="font-inter text-xs font-semibold uppercase tracking-widest text-capilar-grey">{categoria.nombre}</h3>
+                      )}
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {servicios.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={s.id === servicioId}
+                            onClick={() => {
+                              setServicioId(s.id);
+                              setSlot({ fecha: '', hora: '' });
+                            }}
+                            className={`flex flex-col items-start gap-1 rounded-lg border-2 px-4 py-3 text-left font-inter text-sm transition-colors ${
+                              s.id === servicioId ? 'border-capilar-violet bg-capilar-violet/10' : 'border-gray-200 bg-white hover:border-capilar-violet/50'
+                            }`}
+                          >
+                            <span className="font-semibold text-black">{s.tipo}</span>
+                            <span className="text-capilar-grey">
+                              {formatDuration(s.tiempoDuracion)} · Desde {formatPrice(s.precio)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </RadioGroup>
+            </>
           )}
         </div>
       )}

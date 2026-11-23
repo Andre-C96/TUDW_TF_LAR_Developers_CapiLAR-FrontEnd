@@ -12,10 +12,12 @@ interface BaseProps {
   enabledDates?: string[];
   // Fechas resaltadas sin deshabilitar las demás, ej. los días que ya tienen horario (por defecto, enabledDates)
   markedDates?: string[];
+  // Días que el profesional trabaja pero ya no tienen lugar: no se pueden elegir y se ven tachados (ver .rdp-full)
+  fullDates?: string[];
   className?: string;
 }
 
-const disabledDays = ({ min, max, enabledDates }: BaseProps) => {
+const disabledDays = ({ min, max, enabledDates, fullDates }: BaseProps) => {
   const disabled: Matcher[] = [];
   if (min) disabled.push({ before: min });
   if (max) disabled.push({ after: max });
@@ -23,17 +25,25 @@ const disabledDays = ({ min, max, enabledDates }: BaseProps) => {
     const enabled = new Set(enabledDates);
     disabled.push((date: Date) => !enabled.has(toIsoDate(date)));
   }
+  if (fullDates?.length) {
+    const full = new Set(fullDates);
+    disabled.push((date: Date) => full.has(toIsoDate(date)));
+  }
   return disabled;
 };
 
-// Resalta los días de markedDates o enabledDates (ver .rdp-available en index.css)
-const availableDays = ({ enabledDates, markedDates = enabledDates }: BaseProps) => {
-  if (!markedDates) return undefined;
+// Resalta los días de markedDates o enabledDates (ver .rdp-available en index.css) y tacha los completos (.rdp-full)
+const availableDays = ({ enabledDates, markedDates = enabledDates, fullDates }: BaseProps) => {
+  if (!markedDates && !fullDates?.length) return undefined;
   const marked = new Set(markedDates);
-  return { available: (date: Date) => marked.has(toIsoDate(date)) };
+  const full = new Set(fullDates);
+  return {
+    available: (date: Date) => marked.has(toIsoDate(date)),
+    full: (date: Date) => full.has(toIsoDate(date)),
+  };
 };
 
-const modifiersClassNames = { available: 'rdp-available' };
+const modifiersClassNames = { available: 'rdp-available', full: 'rdp-full' };
 
 interface DatePickerProps extends BaseProps {
   // "YYYY-MM-DD" elegido ("" si todavía no hay)

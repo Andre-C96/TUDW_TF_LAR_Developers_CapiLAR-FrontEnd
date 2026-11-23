@@ -1,7 +1,9 @@
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
+import type { Categoria } from '../../api/categorias';
 import { SERVICIO_DESCRIPCION_MAX, SERVICIO_DURACION_MAX, SERVICIO_DURACION_MIN, SERVICIO_TIPO_MAX } from '../../api/services';
 import type { Servicio, ServicioData } from '../../api/services';
+import { SelectField } from '../articuloForm/articuloForm';
 import { Button } from '../button/button';
 import { Form, FormField } from '../form/form';
 import { Title } from '../title/title';
@@ -9,6 +11,8 @@ import { Title } from '../title/title';
 interface ServiceFormProps {
   // Servicio a editar; sin él, el formulario es de alta
   servicio?: Servicio;
+  // Las categorías activas para elegir
+  categorias: Categoria[];
   // Recibe los datos ya validados; quien lo usa llama a la API
   onSubmit: (data: ServicioData) => void;
   onCancel: () => void;
@@ -18,6 +22,7 @@ interface ServiceFormProps {
 }
 
 interface FieldErrors {
+  categoriaId?: string;
   tipo?: string;
   tiempoDuracion?: string;
   precio?: string;
@@ -28,8 +33,9 @@ const PRICE_REGEX = /^\d+([.,]\d{1,2})?$/;
 // La columna del back es Decimal(10, 2)
 const PRICE_MAX = 99_999_999.99;
 
-// Alta y edición de un servicio (ADMIN): nombre, descripción, duración en minutos, precio y si requiere aprobación del profesional
-export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, error }: ServiceFormProps) => {
+// Alta y edición de un servicio (ADMIN): categoría, nombre, descripción, duración en minutos, precio y si requiere aprobación del profesional
+export const ServiceForm = ({ servicio, categorias, onSubmit, onCancel, isLoading = false, error }: ServiceFormProps) => {
+  const [categoriaId, setCategoriaId] = useState(servicio ? String(servicio.categoria.id) : '');
   const [tipo, setTipo] = useState(servicio?.tipo ?? '');
   const [descripcion, setDescripcion] = useState(servicio?.descripcion ?? '');
   const descripcionId = useId();
@@ -46,6 +52,7 @@ export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, e
     const precioNumber = Number(precio.trim().replace(',', '.'));
 
     const errors: FieldErrors = {};
+    if (!categoriaId) errors.categoriaId = 'Elegí la categoría';
     if (!tipo.trim()) errors.tipo = 'Ingresá el nombre del servicio';
     else if (tipo.trim().length > SERVICIO_TIPO_MAX) errors.tipo = `Hasta ${SERVICIO_TIPO_MAX} caracteres`;
 
@@ -67,6 +74,7 @@ export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, e
       tiempoDuracion: duracion,
       precio: precioNumber,
       requiereEvaluacion,
+      categoriaId: Number(categoriaId),
     });
   };
 
@@ -82,6 +90,16 @@ export const ServiceForm = ({ servicio, onSubmit, onCancel, isLoading = false, e
       </div>
 
       <Form onSubmit={handleSubmit} noValidate>
+        <SelectField label="Categoría" value={categoriaId} onChange={setCategoriaId} error={fieldErrors.categoriaId}>
+          <option value="" disabled>
+            {categorias.length === 0 ? 'No hay categorías: creá una en la pestaña Categorías' : 'Elegí una categoría'}
+          </option>
+          {categorias.map((categoria) => (
+            <option key={categoria.id} value={categoria.id}>
+              {categoria.nombre}
+            </option>
+          ))}
+        </SelectField>
         <FormField
           label="Nombre"
           value={tipo}

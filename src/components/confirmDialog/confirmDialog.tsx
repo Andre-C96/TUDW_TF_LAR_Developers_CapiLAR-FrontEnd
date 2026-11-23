@@ -31,7 +31,7 @@ interface ConfirmDialogProps {
 // Modal de confirmación con botones Volver / Confirmar y, si hace falta, un campo para el motivo.
 // El formulario vive dentro del modal: al cerrarlo se desmonta y el motivo vuelve a quedar vacío.
 export const ConfirmDialog = ({ isOpen, onClose, title, ...props }: ConfirmDialogProps) => (
-  <Modal isOpen={isOpen} onClose={() => !props.isLoading && onClose()} ariaLabel={title}>
+  <Modal isOpen={isOpen} onClose={() => !props.isLoading && onClose()} ariaLabel={title} closeOnBackdrop>
     <ConfirmContent title={title} onClose={onClose} {...props} />
   </Modal>
 );

@@ -11,6 +11,8 @@ export interface Servicio {
   precio: string;
   // Servicio exclusivo: el turno queda PENDIENTE hasta que el profesional lo acepta. Si no, se confirma solo
   requiereEvaluacion: boolean;
+  // Para agruparlos (ver api/categorias)
+  categoria: { id: number; nombre: string };
   fechaBaja: string | null;
 }
 
@@ -22,7 +24,20 @@ export interface ServicioData {
   tiempoDuracion: number;
   precio: number;
   requiereEvaluacion: boolean;
+  // Obligatoria y activa; 400 si no existe o está dada de baja
+  categoriaId: number;
 }
+
+// Agrupa los servicios por categoría, con las categorías por nombre (el orden de los servicios se mantiene)
+export const agruparPorCategoria = <T extends Pick<Servicio, 'categoria'>>(servicios: T[]) => {
+  const grupos = new Map<number, { categoria: Servicio['categoria']; servicios: T[] }>();
+  for (const servicio of servicios) {
+    const grupo = grupos.get(servicio.categoria.id) ?? { categoria: servicio.categoria, servicios: [] };
+    grupo.servicios.push(servicio);
+    grupos.set(servicio.categoria.id, grupo);
+  }
+  return [...grupos.values()].sort((a, b) => a.categoria.nombre.localeCompare(b.categoria.nombre, 'es'));
+};
 
 // Mismas reglas que el back: de un diagnóstico de 15 min al máximo de un turno, 7 h
 export const SERVICIO_DURACION_MIN = 15;

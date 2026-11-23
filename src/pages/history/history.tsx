@@ -6,6 +6,7 @@ import { Loader } from '../../components/loader/loader';
 import { Title } from '../../components/title/title';
 import { useAuth } from '../../context/auth/useAuth';
 import { useFetch } from '../../customHooks/fetch/useFetch';
+import { HistorialFiltrado } from './historialFiltrado';
 
 // Historial capilar de la clienta: las fichas de sus turnos completados, de la más nueva a la más vieja,
 // con los cuidados que le indicó su profesional y las fotos de antes y después (sin diagnóstico ni fórmulas)
@@ -16,7 +17,7 @@ export const History = () => {
   if (!token) return null;
 
   return (
-    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-32 pb-16">
+    <section className="mx-auto flex max-w-4xl flex-col gap-8 px-6 pt-24 pb-16">
       <div className="flex flex-col gap-4">
         <Breadcrumbs items={[{ label: 'Inicio', to: '/' }, { label: 'Historial' }]} />
         <div className="flex flex-col gap-2">
@@ -38,12 +39,16 @@ export const History = () => {
           Todavía no tenés fichas. Cuando tu profesional complete la ficha de un servicio, la vas a ver acá.
         </p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {/* Todas cerradas: cada una se despliega al tocarla */}
-          {fichas.data?.map((ficha) => (
-            <FichaTecnica key={ficha.id} token={token} ficha={ficha} />
-          ))}
-        </div>
+        <HistorialFiltrado fichas={fichas.data ?? []}>
+          {(filtradas) => (
+            <div className="flex flex-col gap-2">
+              {/* Todas cerradas: cada una se despliega al tocarla */}
+              {filtradas.map((ficha) => (
+                <FichaTecnica key={ficha.id} token={token} ficha={ficha} />
+              ))}
+            </div>
+          )}
+        </HistorialFiltrado>
       )}
     </section>
   );
