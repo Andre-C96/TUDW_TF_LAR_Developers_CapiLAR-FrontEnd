@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { formatAlergias } from '../../api/alergias';
 import { getArticulosSalonRequest } from '../../api/articulos';
@@ -6,25 +6,32 @@ import type { Articulo } from '../../api/articulos';
 import { ApiError } from '../../api/client';
 import { datosParaGuardar } from '../../api/fichaCambios';
 import {
+  analisisComoTexto,
   createFichaRequest,
   deleteFichaPhotoRequest,
   deleteFichaRequest,
   getClientFichasRequest,
   getFichaRequest,
+  getUltimoDiagnosticoRequest,
   puedeCargarFicha,
+  sugerirFichaRequest,
+  tieneDiagnostico,
   updateFichaRequest,
   uploadFichaPhotoRequest,
 } from '../../api/fichas';
-import type { Ficha, FichaData, FotoFicha, MomentoFoto } from '../../api/fichas';
-import { formatFechaLarga } from '../../api/turnos';
+import type { Ficha, FichaData, FotoFicha, MomentoFoto, SugerenciaIA } from '../../api/fichas';
+import { formatFechaLarga, fromIsoDate } from '../../api/turnos';
 import type { Turno, TurnoDetalle } from '../../api/turnos';
 import { validateFoto } from '../../api/users';
 import { Alert } from '../../components/alert/alert';
 import { Button } from '../../components/button/button';
+import { ConfirmDialog } from '../../components/confirmDialog/confirmDialog';
 import { FichaForm } from '../../components/fichaForm/fichaForm';
+import type { FichaBorrador, FichaFormHandle } from '../../components/fichaForm/fichaForm';
 import { FichaDatos, FichaGaleria, FichaTecnica } from '../../components/fichaTecnica/fichaTecnica';
 import { Loader } from '../../components/loader/loader';
 import { Modal } from '../../components/modal/modal';
+import { SugerenciaIACard } from '../../components/sugerenciaIA/sugerenciaIA';
 import { Title } from '../../components/title/title';
 import { useFetch } from '../../customHooks/fetch/useFetch';
 import { avisarSinStock } from './fichaAvisos';
@@ -78,31 +85,140 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
   // Los productos de las fórmulas se eligen del stock
   const articulos = useFetch(editable ? 'articulos-salon' : null, () => getArticulosSalonRequest(token));
 
+  // Ficha nueva: arranca con el diagnóstico de la última ficha cerrada de la clienta (sin IA, al instante).
+  // Si falla, arranca vacía
+  const ultimo = useFetch(inicialId === null && esSuyo && puedeCargarFicha(turno, detalle) ? `ultimo-diagnostico-${turno.cliente.id}` : null, () =>
+    getUltimoDiagnosticoRequest(token, turno.cliente.id),
+  );
+  const [anteriorDescartado, setAnteriorDescartado] = useState(false);
+  const anterior = !anteriorDescartado && ultimo.data && tieneDiagnostico(ultimo.data) ? ultimo.data : null;
+
+  // F14/F15: el formulario guarda su estado adentro; la IA lo lee y lo completa con este ref
+  const formRef = useRef<FichaFormHandle>(null);
+  // La última sugerencia y el formulario de antes de aplicarla (para descartarla; null después de guardar)
+  const [sugerencia, setSugerencia] = useState<SugerenciaIA | null>(null);
+  const [formulasSugeridas, setFormulasSugeridas] = useState(0);
+  const [antesDeSugerencia, setAntesDeSugerencia] = useState<FichaBorrador | null>(null);
+  const [sugiriendo, setSugiriendo] = useState(false);
+  const [iaError, setIaError] = useState('');
+  // Sugerencia con fórmulas que espera la respuesta: ¿reemplazan a las ya cargadas?
+  const [preguntaFormulas, setPreguntaFormulas] = useState<SugerenciaIA | null>(null);
+  // F15: las alertas se muestran otra vez al guardar, una sola vez por sugerencia
+  const [alertasVistas, setAlertasVistas] = useState(false);
+  const [guardarConAlertas, setGuardarConAlertas] = useState<FichaData | null>(null);
+
   // Con otro modal abierto encima, Escape solo cierra ese
   const close = () => {
-    if (!saving && !editando && !nuevoArticulo) onClose();
+    if (!saving && !editando && !nuevoArticulo && !preguntaFormulas && !guardarConAlertas) onClose();
   };
 
-  const save = async (data: FichaData) => {
+  const guardar = async (data: FichaData): Promise<Ficha | null> => {
     setSaving(true);
     setFormError('');
     try {
+      let guardada: Ficha;
       if (ficha) {
         const { sinStock, ...actualizada } = await updateFichaRequest(token, ficha.id, datosParaGuardar(ficha, data));
-        setLocal(actualizada);
+        guardada = actualizada;
         toast.success('Ficha guardada');
         avisarSinStock(sinStock);
       } else {
-        const nueva = await createFichaRequest(token, turno.id, detalle.id, data);
-        setLocal(nueva);
-        onFichaChange(nueva.id);
+        guardada = await createFichaRequest(token, turno.id, detalle.id, data);
+        onFichaChange(guardada.id);
         toast.success('Ficha guardada', { description: 'Ya podés sumar las fotos de antes y después.' });
       }
+      setLocal(guardada);
+      // Lo sugerido ya quedó guardado: no hay a qué volver
+      setAntesDeSugerencia(null);
+      return guardada;
     } catch (err) {
       setFormError(errorMessage(err));
+      return null;
     } finally {
       setSaving(false);
     }
+  };
+
+  // F15: si la IA marcó alertas, se muestran otra vez antes de guardar (advertencia antes de confirmar la ficha)
+  const save = (data: FichaData) => {
+    if ((sugerencia?.analisis.alertas.length ?? 0) > 0 && !alertasVistas) setGuardarConAlertas(data);
+    else guardar(data);
+  };
+
+  const confirmarAlertas = () => {
+    if (!guardarConAlertas) return;
+    setAlertasVistas(true);
+    guardar(guardarConAlertas).then(() => setGuardarConAlertas(null));
+  };
+
+  // Precarga lo sugerido sin guardar: los campos de diagnóstico que vinieron y, si se pide, las fórmulas
+  const aplicarSugerencia = (nueva: SugerenciaIA, reemplazarFormulas: boolean) => {
+    const form = formRef.current;
+    if (!form) return;
+    // Con una sugerencia anterior sin guardar, "Descartar" vuelve a lo de antes de la primera
+    setAntesDeSugerencia((prev) => prev ?? form.getBorrador());
+    form.aplicarSugerencia(nueva, reemplazarFormulas);
+    setSugerencia(nueva);
+    setFormulasSugeridas(reemplazarFormulas ? nueva.formulas.length : 0);
+    setAlertasVistas(false);
+    // El aviso de la ficha anterior ya no corresponde: el diagnóstico ahora es el de la IA
+    setAnteriorDescartado(true);
+  };
+
+  // La IA trabaja con la ficha guardada: si todavía no existe, primero se guarda con lo cargado (como con las fotos)
+  const sugerir = async () => {
+    setIaError('');
+    let objetivo = ficha;
+    if (!objetivo) {
+      const data = formRef.current?.getData();
+      if (!data) {
+        setIaError('Para pedir la sugerencia se guarda la ficha: revisá los datos marcados.');
+        return;
+      }
+      objetivo = await guardar(data);
+      if (!objetivo) {
+        setIaError('Para pedir la sugerencia se guarda la ficha: revisá el error de abajo.');
+        return;
+      }
+    }
+    setSugiriendo(true);
+    try {
+      const nueva = await sugerirFichaRequest(token, objetivo.id);
+      if (nueva.formulas.length > 0 && formRef.current?.tieneFormulas()) setPreguntaFormulas(nueva);
+      else aplicarSugerencia(nueva, nueva.formulas.length > 0);
+    } catch (err) {
+      setIaError(errorMessage(err));
+    } finally {
+      setSugiriendo(false);
+    }
+  };
+
+  const responderFormulas = (reemplazar: boolean) => {
+    if (preguntaFormulas) aplicarSugerencia(preguntaFormulas, reemplazar);
+    setPreguntaFormulas(null);
+  };
+
+  const descartarSugerencia = () => {
+    if (antesDeSugerencia) formRef.current?.restaurar(antesDeSugerencia);
+    setAntesDeSugerencia(null);
+    setSugerencia(null);
+    setFormulasSugeridas(0);
+  };
+
+  // El análisis no se guarda en ningún lado: copiado a las observaciones internas, queda en la ficha
+  const copiarAnalisis = () => {
+    if (!sugerencia) return;
+    if (formRef.current?.agregarObservaciones(analisisComoTexto(sugerencia))) {
+      toast.success('Análisis copiado', { description: 'Quedó en "Observaciones internas" y se guarda con la ficha.' });
+    } else {
+      toast('El análisis ya está en las observaciones internas');
+    }
+  };
+
+  // Vuelve a dejar vacío el diagnóstico precargado de la ficha anterior
+  const limpiarAnterior = () => {
+    formRef.current?.limpiarDiagnostico();
+    setAnteriorDescartado(true);
   };
 
   const remove = async () => {
@@ -147,7 +263,10 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
   };
 
   const anteriores = (historial.data ?? []).filter((f) => f.id !== ficha?.id);
-  const cargando = inicialId !== null && local === undefined && fetched.isLoading;
+  // La ficha nueva espera al diagnóstico anterior: el formulario toma sus valores iniciales una sola vez
+  const cargando = (inicialId !== null && local === undefined && fetched.isLoading) || (local === undefined && ultimo.isLoading);
+  // La IA solo trabaja con la ficha abierta (el back da 400 si ya está cerrada)
+  const conIA = editable && !ficha?.cerradaEn;
 
   const pestanias: [Pestania, string][] = [
     ['ficha', 'Ficha'],
@@ -241,18 +360,70 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
               </div>
             </div>
           ) : editable ? (
-            <FichaForm
-              key={ficha?.id ?? 'nueva'}
-              ficha={ficha}
-              articulos={articulos.data ?? []}
-              articulosError={articulos.error}
-              onCrearArticulo={(nombre, elegir) => setNuevoArticulo({ nombre, elegir })}
-              onSubmit={save}
-              onCancel={close}
-              onDelete={ficha && !ficha.cerradaEn ? () => setConfirmDelete(true) : undefined}
-              isLoading={saving}
-              error={formError}
-            />
+            <div className="flex flex-col gap-8">
+              {conIA && (
+                <section className="flex flex-col gap-3 rounded-[6px] border border-gray-200 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="font-inter text-sm font-semibold uppercase tracking-widest text-black">Asistente de IA</h3>
+                    {/* Chico y a la derecha: borde degradado de 2px y letra negra */}
+                    <div className="rounded-[4px] bg-capilar-gradient p-[2px] shadow-sm transition-transform active:scale-95">
+                      <button
+                        type="button"
+                        onClick={sugerir}
+                        disabled={sugiriendo || saving}
+                        className="rounded-[2px] bg-white px-3 py-1.5 font-inter text-xs font-semibold uppercase tracking-wider text-black transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {sugiriendo ? 'Analizando...' : sugerencia ? 'Volver a sugerir' : 'Sugerir con IA'}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="font-inter text-sm text-capilar-grey">
+                    Mira las últimas fichas de la clienta, sus alergias, el stock y la foto de antes si la subiste. Sugiere el diagnóstico y la
+                    fórmula, y avisa si hay algo a tener en cuenta antes de trabajar.
+                    {!ficha && ' Para pedirla, primero se guarda la ficha con lo cargado.'}
+                  </p>
+                  {sugiriendo && <p className="font-inter text-xs text-capilar-grey">Analizando el historial de la clienta... puede tardar unos segundos.</p>}
+                  {iaError && (
+                    <p role="alert" className="font-inter text-sm text-red-500">
+                      {iaError}
+                    </p>
+                  )}
+                  {sugerencia && (
+                    <SugerenciaIACard
+                      sugerencia={sugerencia}
+                      formulasPrecargadas={formulasSugeridas}
+                      onDescartar={antesDeSugerencia ? descartarSugerencia : undefined}
+                      onCopiar={copiarAnalisis}
+                    />
+                  )}
+                </section>
+              )}
+              {/* Sin key por ficha: al guardar una nueva sigue el mismo formulario (la IA la guarda antes de sugerir) */}
+              <FichaForm
+                ref={formRef}
+                ficha={ficha}
+                diagnosticoInicial={anterior}
+                avisoDiagnostico={
+                  anterior && (
+                    <p className="rounded-md bg-gray-50 px-3 py-2 font-inter text-xs text-capilar-grey">
+                      Precargado de la ficha del {fromIsoDate(anterior.fecha).toLocaleDateString('es-AR')} ({anterior.servicio}). Revisalo: el pelo
+                      pudo cambiar.{' '}
+                      <button type="button" onClick={limpiarAnterior} className="font-semibold text-capilar-violet-text hover:underline">
+                        Empezar de cero
+                      </button>
+                    </p>
+                  )
+                }
+                articulos={articulos.data ?? []}
+                articulosError={articulos.error}
+                onCrearArticulo={(nombre, elegir) => setNuevoArticulo({ nombre, elegir })}
+                onSubmit={save}
+                onCancel={close}
+                onDelete={ficha && !ficha.cerradaEn ? () => setConfirmDelete(true) : undefined}
+                isLoading={saving || sugiriendo}
+                error={formError}
+              />
+            </div>
           ) : ficha ? (
             <div className="flex flex-col gap-6">
               <p className="rounded-md bg-gray-50 px-3 py-2 font-inter text-xs text-capilar-grey">La cargó {ficha.profesional}: la ves en modo lectura.</p>
@@ -263,6 +434,32 @@ export const FichaModal = ({ token, legajo, turno, detalle, onClose, onFichaChan
           )}
         </div>
       </Modal>
+      <ConfirmDialog
+        isOpen={preguntaFormulas !== null}
+        onClose={() => responderFormulas(false)}
+        title="Fórmulas sugeridas"
+        confirmLabel="Reemplazar"
+        cancelLabel="Mantener las mías"
+        onConfirm={() => responderFormulas(true)}
+      >
+        La IA sugiere {preguntaFormulas?.formulas.length === 1 ? 'una fórmula' : `${preguntaFormulas?.formulas.length} fórmulas`} con productos del
+        stock. ¿Querés reemplazar las que ya cargaste?
+      </ConfirmDialog>
+      <ConfirmDialog
+        isOpen={guardarConAlertas !== null}
+        onClose={() => setGuardarConAlertas(null)}
+        title="Revisá las alertas de la IA"
+        confirmLabel="Ya las revisé"
+        cancelLabel="Volver a la ficha"
+        onConfirm={confirmarAlertas}
+        isLoading={saving}
+      >
+        <ul className="flex list-disc flex-col gap-2 pl-4 text-left text-black">
+          {sugerencia?.analisis.alertas.map((alerta, index) => (
+            <li key={index}>{alerta}</li>
+          ))}
+        </ul>
+      </ConfirmDialog>
       {editando && (
         <FichaEditModal
           token={token}

@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useId, useImperativeHandle, useState } from 'react';
+import type { FormEvent, ReactNode, Ref } from 'react';
 import { formatEnvases, formatMarca, limitarDecimal } from '../../api/articulos';
 import type { Articulo } from '../../api/articulos';
 import {
@@ -16,7 +16,18 @@ import {
   costoDeInsumo,
   totalDeProductos,
 } from '../../api/fichas';
-import type { Ficha, FichaData, InsumoData, NivelCapilar, TipoDePelo, UnidadInsumo, VolumenDePelo } from '../../api/fichas';
+import type {
+  Diagnostico,
+  Ficha,
+  FichaData,
+  FormulaSugerida,
+  InsumoData,
+  NivelCapilar,
+  SugerenciaIA,
+  TipoDePelo,
+  UnidadInsumo,
+  VolumenDePelo,
+} from '../../api/fichas';
 import { formatPrice } from '../../api/services';
 import { parseTratamientos, serializeTratamientos } from '../../api/tratamientos';
 import { Button } from '../button/button';
@@ -84,6 +95,32 @@ const toDraft = (ficha: Ficha): FormulaDraft[] =>
       costoSubtotal: insumo.costoSubtotal,
     })),
   }));
+
+// Fórmula sugerida por la IA al formato del formulario: sus insumos siempre son del stock
+const fromSugerida = (formula: FormulaSugerida): FormulaDraft => ({
+  key: nextKey++,
+  descripcion: formula.descripcion ?? '',
+  zonaOtra: Boolean(formula.descripcion) && !ZONAS_FORMULA.includes(formula.descripcion ?? ''),
+  oxidanteVolumen: formula.oxidanteVolumen?.toString() ?? '',
+  tiempoPoseMin: formula.tiempoPoseMin?.toString() ?? '',
+  insumos: formula.insumos.map((insumo) => ({
+    key: nextKey++,
+    busqueda: '',
+    articuloId: insumo.articuloId,
+    comoTexto: false,
+    producto: insumo.producto,
+    marca: insumo.marca,
+    tono: insumo.tono ?? '',
+    cantidad: String(insumo.cantidad),
+    unidad: insumo.unidad,
+    costoSubtotal: null,
+  })),
+});
+
+// Si una fórmula tiene algo cargado (las vacías o con productos sin elegir no cuentan)
+const formulaConDatos = (formula: FormulaDraft) =>
+  Boolean(formula.descripcion.trim() || formula.tiempoPoseMin.trim() || formula.oxidanteVolumen) ||
+  formula.insumos.some((insumo) => insumo.articuloId !== null || insumo.comoTexto);
 
 // Lo que se manda de las fórmulas, para saber si cambiaron (las filas de producto vacías no cuentan)
 const firmaDeFormulas = (formulas: FormulaDraft[]) =>
@@ -172,9 +209,43 @@ const TextArea = ({ label, hint, value, onChange }: { label: string; hint?: stri
 const FieldError = ({ message }: { message?: string }) =>
   message ? <p className="font-inter text-xs text-red-500">{message}</p> : null;
 
+// Todo lo que está cargado en el formulario, sin validar (para volver atrás una sugerencia de la IA)
+export interface FichaBorrador {
+  porosidad: NivelCapilar | '';
+  elasticidad: NivelCapilar | '';
+  tipoDePelo: TipoDePelo | '';
+  volumenDePelo: VolumenDePelo | '';
+  porcentajeCanas: string;
+  tratamientos: TratamientoDraft[];
+  notasTratamientos: string;
+  indicacionesCliente: string;
+  observacionesInternas: string;
+  formulas: FormulaDraft[];
+}
+
+// Lo que el modal de la ficha le pide al formulario para la IA (F14/F15): el estado vive acá adentro
+export interface FichaFormHandle {
+  // Lo cargado ya validado; null si hay errores (quedan marcados en el formulario)
+  getData: () => FichaData | null;
+  getBorrador: () => FichaBorrador;
+  restaurar: (borrador: FichaBorrador) => void;
+  // Si alguna fórmula tiene algo cargado
+  tieneFormulas: () => boolean;
+  // Pisa los campos de diagnóstico que vinieron y, si se pide, las fórmulas. El resto queda como está
+  aplicarSugerencia: (sugerencia: SugerenciaIA, reemplazarFormulas: boolean) => void;
+  limpiarDiagnostico: () => void;
+  // Suma el texto al final de las observaciones internas; false si ya estaba
+  agregarObservaciones: (texto: string) => boolean;
+}
+
 interface FichaFormProps {
+  ref?: Ref<FichaFormHandle>;
   // Ficha a editar; sin ella, el formulario es de alta
   ficha?: Ficha | null;
+  // Ficha nueva: el diagnóstico con el que arranca (el de la ficha anterior de la clienta)
+  diagnosticoInicial?: Diagnostico | null;
+  // Aviso debajo del título "Diagnóstico" (de dónde salió lo precargado)
+  avisoDiagnostico?: ReactNode;
   // Los artículos que se pueden elegir para las fórmulas
   articulos: Articulo[];
   // No se pudieron cargar los artículos
@@ -193,12 +264,26 @@ interface FichaFormProps {
 
 // Ficha técnica de un servicio: diagnóstico, tratamientos previos, fórmulas con sus productos del stock e indicaciones.
 // Ningún campo es obligatorio: se completa durante el servicio y se puede guardar varias veces, también ya cerrada.
-export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, onSubmit, onCancel, onDelete, isLoading = false, error }: FichaFormProps) => {
-  const [porosidad, setPorosidad] = useState<NivelCapilar | ''>(ficha?.porosidad ?? '');
-  const [elasticidad, setElasticidad] = useState<NivelCapilar | ''>(ficha?.elasticidad ?? '');
-  const [tipoDePelo, setTipoDePelo] = useState<TipoDePelo | ''>(ficha?.tipoDePelo ?? '');
-  const [volumenDePelo, setVolumenDePelo] = useState<VolumenDePelo | ''>(ficha?.volumenDePelo ?? '');
-  const [porcentajeCanas, setPorcentajeCanas] = useState(ficha?.porcentajeCanas?.toString() ?? '');
+export const FichaForm = ({
+  ref,
+  ficha,
+  diagnosticoInicial,
+  avisoDiagnostico,
+  articulos,
+  articulosError,
+  onCrearArticulo,
+  onSubmit,
+  onCancel,
+  onDelete,
+  isLoading = false,
+  error,
+}: FichaFormProps) => {
+  const diagnostico = ficha ?? diagnosticoInicial;
+  const [porosidad, setPorosidad] = useState<NivelCapilar | ''>(diagnostico?.porosidad ?? '');
+  const [elasticidad, setElasticidad] = useState<NivelCapilar | ''>(diagnostico?.elasticidad ?? '');
+  const [tipoDePelo, setTipoDePelo] = useState<TipoDePelo | ''>(diagnostico?.tipoDePelo ?? '');
+  const [volumenDePelo, setVolumenDePelo] = useState<VolumenDePelo | ''>(diagnostico?.volumenDePelo ?? '');
+  const [porcentajeCanas, setPorcentajeCanas] = useState(diagnostico?.porcentajeCanas?.toString() ?? '');
   // Filas y notas salen del mismo texto guardado (ver api/tratamientos.ts): se leen una sola vez, al abrir
   const [tratamientosGuardados] = useState(() => parseTratamientos(ficha?.tratamientosPrevios ?? null));
   const [tratamientos, setTratamientos] = useState<TratamientoDraft[]>(() => tratamientosGuardados.filas.map(toTratamientoDraft));
@@ -243,8 +328,8 @@ export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, o
       unidad: articulo.tipoPeso,
     });
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // Valida y arma los datos para la API; con errores los marca y devuelve null
+  const validar = (): FichaData | null => {
     const errors: Record<string, string> = {};
     // Entero entre min y max, o null si está vacío
     const entero = (value: string, min: number, max: number, errorKey: string, mensaje: string) => {
@@ -300,9 +385,67 @@ export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, o
       })),
     };
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-    onSubmit(data);
+    return Object.keys(errors).length > 0 ? null : data;
   };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = validar();
+    if (data) onSubmit(data);
+  };
+
+  const setDiagnostico = (d: { porosidad: NivelCapilar | ''; elasticidad: NivelCapilar | ''; tipoDePelo: TipoDePelo | ''; volumenDePelo: VolumenDePelo | ''; porcentajeCanas: string }) => {
+    setPorosidad(d.porosidad);
+    setElasticidad(d.elasticidad);
+    setTipoDePelo(d.tipoDePelo);
+    setVolumenDePelo(d.volumenDePelo);
+    setPorcentajeCanas(d.porcentajeCanas);
+  };
+
+  // Sin deps: se arma en cada render, así el modal siempre ve el estado actual (también después de un await)
+  useImperativeHandle(ref, () => ({
+    getData: validar,
+    getBorrador: () => ({
+      porosidad,
+      elasticidad,
+      tipoDePelo,
+      volumenDePelo,
+      porcentajeCanas,
+      tratamientos,
+      notasTratamientos,
+      indicacionesCliente,
+      observacionesInternas,
+      formulas,
+    }),
+    restaurar: (borrador) => {
+      setDiagnostico(borrador);
+      setTratamientos(borrador.tratamientos);
+      setNotasTratamientos(borrador.notasTratamientos);
+      setIndicacionesCliente(borrador.indicacionesCliente);
+      setObservacionesInternas(borrador.observacionesInternas);
+      setFormulas(borrador.formulas);
+      setFieldErrors({});
+    },
+    tieneFormulas: () => formulas.some(formulaConDatos),
+    aplicarSugerencia: (sugerencia, reemplazarFormulas) => {
+      setDiagnostico({
+        porosidad: sugerencia.porosidad ?? porosidad,
+        elasticidad: sugerencia.elasticidad ?? elasticidad,
+        tipoDePelo: sugerencia.tipoDePelo ?? tipoDePelo,
+        volumenDePelo: sugerencia.volumenDePelo ?? volumenDePelo,
+        porcentajeCanas: sugerencia.porcentajeCanas != null ? String(sugerencia.porcentajeCanas) : porcentajeCanas,
+      });
+      if (reemplazarFormulas) setFormulas(sugerencia.formulas.map(fromSugerida));
+      setFieldErrors({});
+    },
+    limpiarDiagnostico: () => setDiagnostico({ porosidad: '', elasticidad: '', tipoDePelo: '', volumenDePelo: '', porcentajeCanas: '' }),
+    agregarObservaciones: (texto) => {
+      const actual = observacionesInternas.trim();
+      if (actual.includes(texto)) return false;
+      setObservacionesInternas((actual ? `${actual}\n\n${texto}` : texto).slice(0, FICHA_TEXTO_MAX));
+      return true;
+    },
+  }));
 
   return (
     <Form onSubmit={handleSubmit} noValidate className="gap-8!">
@@ -313,6 +456,7 @@ export const FichaForm = ({ ficha, articulos, articulosError, onCrearArticulo, o
       )}
       <section className="flex flex-col gap-5">
         <h3 className={sectionTitleClass}>Diagnóstico</h3>
+        {avisoDiagnostico}
         <div className="grid gap-5 sm:grid-cols-2">
           <Opciones label="Porosidad" opciones={NIVELES} value={porosidad} onChange={setPorosidad} />
           <Opciones label="Elasticidad" opciones={NIVELES} value={elasticidad} onChange={setElasticidad} />

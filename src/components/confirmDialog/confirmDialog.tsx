@@ -20,6 +20,8 @@ interface ConfirmDialogProps {
   // Pregunta o explicación de lo que va a pasar
   children: ReactNode;
   confirmLabel: string;
+  // Texto del botón que cierra sin confirmar (por defecto, "Volver")
+  cancelLabel?: string;
   // Recibe el motivo escrito ("" si no hay campo o quedó vacío)
   onConfirm: (motivo: string) => void;
   isLoading?: boolean;
@@ -41,6 +43,7 @@ const ConfirmContent = ({
   title,
   children,
   confirmLabel,
+  cancelLabel = 'Volver',
   onConfirm,
   isLoading = false,
   error,
@@ -104,7 +107,7 @@ const ConfirmContent = ({
 
       <div className="flex gap-3">
         <Button type="button" variant="grey" onClick={onClose} disabled={isLoading} className="flex-1 py-2 text-sm uppercase">
-          Volver
+          {cancelLabel}
         </Button>
         <Button
           type="submit"
