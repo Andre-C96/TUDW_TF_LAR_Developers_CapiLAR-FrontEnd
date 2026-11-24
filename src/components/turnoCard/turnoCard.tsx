@@ -108,8 +108,9 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
+          {/* La clienta ve solo la hora de inicio: la duración la maneja el salón (se superponen turnos en los tiempos de pose) */}
           <span className="font-inter text-base font-semibold text-black">
-            {turno.horaInicio} – {turno.horaFin}
+            {paraCliente ? turno.horaInicio : `${turno.horaInicio} – ${turno.horaFin}`}
           </span>
           <TurnoStatus estado={turno.estado} paraCliente={paraCliente} />
           {badge}
@@ -145,7 +146,8 @@ export const TurnoCard = ({ turno, paraCliente = false, actions, note, detalleAc
           {turno.detalles.map((detalle) => (
             <li key={detalle.id}>
               <span className="text-black">{detalle.servicio}</span>
-              {turno.detalles.length > 1 && ` (${detalle.horaInicio} – ${detalle.horaFin})`} · con {detalle.profesional}
+              {turno.detalles.length > 1 && ` (${paraCliente ? detalle.horaInicio : `${detalle.horaInicio} – ${detalle.horaFin}`})`} · con{' '}
+              {detalle.profesional}
               {detalleAction?.(detalle)}
             </li>
           ))}

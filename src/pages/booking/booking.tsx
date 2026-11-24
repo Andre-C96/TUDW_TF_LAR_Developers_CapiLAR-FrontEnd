@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ApiError } from '../../api/client';
 import { getProfessionalsRequest, getUpcomingWorkDatesRequest } from '../../api/professionals';
-import { agruparPorCategoria, formatDuration, formatPrice, getServicesRequest } from '../../api/services';
+import { agruparPorCategoria, formatPrice, getServicesRequest } from '../../api/services';
 import { HORAS_CANCELACION_CLIENTE, MAX_DIAS_ANTICIPACION, buscarPrimerHorarioLibre, createTurnoRequest, formatFechaLarga, toIsoDate } from '../../api/turnos';
 import { Alert } from '../../components/alert/alert';
 import { Breadcrumbs } from '../../components/breadcrumbs/breadcrumbs';
@@ -198,9 +198,8 @@ export const Booking = () => {
                               {s.descripcion}
                             </span>
                           )}
-                          <span className="text-capilar-grey">
-                            {formatDuration(s.tiempoDuracion)} · Desde {formatPrice(s.precio)}
-                          </span>
+                          {/* Sin la duración: la maneja el salón (se superponen turnos en los tiempos de pose) */}
+                          <span className="text-capilar-grey">Desde {formatPrice(s.precio)}</span>
                         </Option>
                       ))}
                     </div>
@@ -306,9 +305,7 @@ export const Booking = () => {
           <dl className="grid gap-4 font-inter text-sm sm:grid-cols-2">
             <div>
               <dt className="text-xs font-semibold uppercase tracking-widest text-capilar-grey">Servicio</dt>
-              <dd className="text-black">
-                {servicio.tipo} · {formatDuration(servicio.tiempoDuracion)}
-              </dd>
+              <dd className="text-black">{servicio.tipo}</dd>
             </div>
             <div>
               <dt className="text-xs font-semibold uppercase tracking-widest text-capilar-grey">Profesional</dt>
