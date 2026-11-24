@@ -1,4 +1,4 @@
-import { formatDuration, formatPrice } from '../../api/services';
+import { formatPrice } from '../../api/services';
 import type { Servicio } from '../../api/services';
 import { Button } from '../button/button';
 
@@ -8,11 +8,12 @@ interface ServiceCardProps {
   onReserve?: (servicio: Servicio) => void;
 }
 
-// Card de un servicio del catálogo: cómo se confirma, duración mínima, nombre, descripción, precio desde y Reservar.
+// Card de un servicio del catálogo: cómo se confirma, nombre, descripción, precio desde y Reservar.
 // En el carrusel todas las cards tienen el mismo alto: el precio y el botón quedan alineados abajo.
 export const ServiceCard = ({ servicio, onReserve }: ServiceCardProps) => (
   <article className="flex h-full flex-col gap-3 rounded-[6px] border border-gray-200 bg-white p-6 text-left font-inter shadow-md">
-    <div className="flex items-center justify-between gap-3">
+    {/* Sin la duración: la maneja el salón (se superponen turnos en los tiempos de pose) */}
+    <div className="flex items-center gap-3">
       {/* Servicios exclusivos: el profesional evalúa antes de confirmar; el resto se confirma al reservar */}
       <span
         className={`rounded-full px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap uppercase tracking-wider ${
@@ -20,22 +21,6 @@ export const ServiceCard = ({ servicio, onReserve }: ServiceCardProps) => (
         }`}
       >
         {servicio.requiereEvaluacion ? 'Necesita evaluación' : 'Confirmación inmediata'}
-      </span>
-      {/* Tiempo mínimo: según el cabello puede llevar más */}
-      <span className="flex shrink-0 items-center gap-1 text-xs text-capilar-grey" title="Duración mínima del servicio">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          className="h-3.5 w-3.5"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 2" />
-        </svg>
-        Mín. {formatDuration(servicio.tiempoDuracion)}
       </span>
     </div>
 
